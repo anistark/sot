@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.isort]
+profile = "black"
+
+[project]
+name = "sot"
+authors = [{name = "Kumar Anirudha", email = "dev@anirudha.dev"}]
+description = "System Oberving Tool"
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Utilities",
+]
+dynamic = ["version"]
+requires-python = ">=3.7"
+dependencies = [
+   "py-cpuinfo",
+   "distro",
+   "psutil",
+   "rich >= 11.0.0",
+   "textual >=0.1.15, <0.2",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "sot.__about__.__version__"}
+
+[project.urls]
+Code = "https://github.com/anistark/sot"
+Issues = "https://github.com/anistark/sot/issues"
+
+[project.scripts]
+sot = "sot._app:run"
