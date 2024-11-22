@@ -74,7 +74,10 @@ class ProcsList(Widget):
         )
         # table.add_column("👤", no_wrap=True)
         table.add_column(
-            Text("Mem", justify="left"), style="aquamarine3", no_wrap=True, justify="right"
+            Text("Mem", justify="left"),
+            style="aquamarine3",
+            no_wrap=True,
+            justify="right",
         )
         table.add_column(
             Text("CPU %", style="u", justify="left"),
@@ -115,7 +118,7 @@ class ProcsList(Widget):
                 num_threads,
                 # username,
                 mem_info,
-                cpu_percent
+                cpu_percent,
             )
 
         total_num_threads = sum((p["num_threads"] or 0) for p in processes)

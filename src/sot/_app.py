@@ -5,20 +5,20 @@ from sys import version_info
 
 from textual.app import App
 
-from .__about__ import __version__, __current_year__
+from .__about__ import __current_year__, __version__
 from ._cpu import CPU
 from ._disk import Disk
 from ._info import InfoLine
 from ._mem import Mem
 from ._net import Net
 from ._procs_list import ProcsList
-# from ._sot import Sot
+
 
 def run(argv=None):
     parser = argparse.ArgumentParser(
         description="Command-line System Obervation Tool ≈",
         formatter_class=argparse.RawTextHelpFormatter,
-        add_help=False
+        add_help=False,
     )
 
     parser.add_argument(
@@ -26,7 +26,7 @@ def run(argv=None):
         "-H",
         action="help",
         default=argparse.SUPPRESS,
-        help="Show this help message and exit."
+        help="Show this help message and exit.",
     )
 
     parser.add_argument(
