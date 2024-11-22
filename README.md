@@ -10,7 +10,10 @@ Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before p
 <!--pytest-codeblocks: skip-->
 
 ```sh
-pipx install sot
+python3 -m pipx install sot
+python3 -m pipx ensurepath
+sudo pipx ensurepath --global
+
 sot
 ```
 
