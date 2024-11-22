@@ -5,12 +5,12 @@
 
 `sot` is a Command-line System Obervation Tool in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various interesting system stats and graphs them. Works on all operating systems.
 
-Install and run with
+Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before proceeding.
 
 <!--pytest-codeblocks: skip-->
 
 ```sh
-pip install sot
+pipx install sot
 sot
 ```
 
@@ -58,7 +58,19 @@ All supported [colors](https://rich.readthedocs.io/en/latest/appendix/colors.htm
 
 ---
 
-`sot` uses [Textual](https://github.com/willmcgugan/textual/) for layouting, [rich](https://rich.readthedocs.io/en/latest/index.html) for rich text and [psutil](https://github.com/giampaolo/psutil) for fetching system data.
+`sot` uses:
+- [Textual](https://github.com/willmcgugan/textual/) for layouting
+- [rich](https://rich.readthedocs.io/en/latest/index.html) for rich text
+- [psutil](https://github.com/giampaolo/psutil) for fetching system data.
+
+Tested Systems:
+
+- MacOs
+- Ubuntu
+
+_If you use a system that's not listed above, feel free to add to the list. If you're facing any issues, would be happy to take a look._
+
+---
 
 Other top alternatives in alphabetical order:
 
