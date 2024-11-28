@@ -218,6 +218,7 @@ class Net(Widget):
         return self.panel
 
     async def on_resize(self, event):
-        self.sent_stream.reset_width(event.width - 25)
-        self.recv_stream.reset_width(event.width - 25)
+        width = self.size.width - 25
+        self.sent_stream.reset_width(width)
+        self.recv_stream.reset_width(width)
         self.refresh_graphs()

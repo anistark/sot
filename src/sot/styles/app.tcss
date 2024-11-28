@@ -1,0 +1,13 @@
+Grid {
+    grid-columns: 2;
+    grid-rows: 4;
+    layout: grid;
+}
+
+InfoLine {
+    column-span: 2;
+}
+
+ProcsList {
+    row-span: 2;
+}

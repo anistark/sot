@@ -312,11 +312,8 @@ class CPU(Widget):
         return self.panel
 
     async def on_resize(self, event):
-        self.width = event.width
-        self.height = event.height
-
         # reset graph widths
-        graph_width = self.width - self.info_box_width - 5
+        graph_width = self.size.width - self.info_box_width - 5
         self.cpu_total_stream.reset_width(graph_width)
         if self.has_cpu_temp:
             self.temp_total_stream.reset_width(graph_width)
@@ -325,7 +322,7 @@ class CPU(Widget):
 
         # reset graph heights
         # subtract border
-        total_height = self.height - 2
+        total_height = self.size.height - 2
         if self.has_cpu_temp:
             # cpu total stream height: divide by two and round _down_
             self.cpu_total_stream.reset_height(total_height // 2)

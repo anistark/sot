@@ -138,5 +138,8 @@ class ProcsList(Widget):
     def render(self) -> Panel:
         return self.panel
 
-    async def on_resize(self, event):
-        self.max_num_procs = event.height - 3
+    def on_resize(self):
+        # Calculate max processes based on available height
+        # Subtract 3 for borders and header
+        self.max_num_procs = self.size.height - 3
+        self.collect_data()  # Refresh the display with new size
