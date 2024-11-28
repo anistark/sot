@@ -1,5 +1,6 @@
-from textual.widget import Widget
 from rich.panel import Panel
+from textual.widget import Widget
+
 
 class BaseWidget(Widget):
     def __init__(self, title: str, border_style="bright_black"):
@@ -14,4 +15,4 @@ class BaseWidget(Widget):
         )
 
     def render(self):
-        return self.panel 
+        return self.panel

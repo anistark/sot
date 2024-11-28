@@ -4,7 +4,6 @@ import argparse
 from sys import version_info
 
 from textual.app import App
-from textual.containers import Container
 from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
@@ -66,11 +65,11 @@ def run(argv=None):
             grid-columns: 36fr 45fr;
             grid-rows: 1 1fr 1fr 1fr;
         }
-        
+
         #info-line {
             column-span: 2;
         }
-        
+
         #procs-list {
             row-span: 2;
         }

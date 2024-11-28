@@ -3,11 +3,10 @@ from rich import box
 from rich.console import Group
 from rich.panel import Panel
 from rich.text import Text
-from textual.widget import Widget
 
+from ._base_widget import BaseWidget
 from ._helpers import sizeof_fmt
 from .braille_stream import BrailleStream
-from ._base_widget import BaseWidget
 
 
 class Mem(BaseWidget):
