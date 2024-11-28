@@ -76,8 +76,8 @@ class InfoLine(Widget):
         return table
 
     async def on_resize(self, event):
-        self.width = event.width
-        self.height = event.height
+        self.width = self.size.width
+        self.height = self.size.height
 
 
 def seconds_to_h_m(seconds):

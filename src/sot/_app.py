@@ -4,6 +4,8 @@ import argparse
 from sys import version_info
 
 from textual.app import App
+from textual.containers import Container
+from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
 from ._cpu import CPU
@@ -56,44 +58,47 @@ def run(argv=None):
     args = parser.parse_args(argv)
 
     # with a grid
-    class sotApp(App):
-        async def on_mount(self) -> None:
-            grid = await self.view.dock_grid(edge="left")
+    class SotApp(App):
+        CSS = """
+        Screen {
+            layout: grid;
+            grid-size: 2;
+            grid-columns: 36fr 45fr;
+            grid-rows: 1 1fr 1fr 1fr;
+        }
+        
+        #info-line {
+            column-span: 2;
+        }
+        
+        #procs-list {
+            row-span: 2;
+        }
+        """
 
-            grid.add_column(fraction=36, name="left")
-            # grid.add_column(fraction=15, name="middle")
-            # grid.add_column(fraction=36, name="right")
-            grid.add_column(fraction=45, name="right")
+        def compose(self):
+            yield Header()
+            yield InfoLine(id="info-line")
+            yield CPU()
+            yield ProcsList(id="procs-list")
+            yield Mem()
+            yield Disk()
+            yield Net(self.net_interface)
 
-            grid.add_row(size=1, name="r0")
-            grid.add_row(fraction=1, name="r1")
-            grid.add_row(fraction=1, name="r2")
-            grid.add_row(fraction=1, name="r3")
-            grid.add_areas(
-                area0="left-start|right-end,r0",
-                area1="left,r1",
-                # area2a="middle,r1-start|r1-end",
-                # area2b="middle,r2-start|r2-end",
-                # area2c="middle,r3-start|r3-end",
-                area3a="right,r1",
-                area3b="right,r2",
-                area3c="right,r3",
-                area4="left,r2-start|r3-end",
-            )
-            grid.place(
-                area0=InfoLine(),
-                area1=CPU(),
-                # area2b=Sot(),
-                area3a=Mem(),
-                area3b=Disk(),
-                area3c=Net(args.net),
-                area4=ProcsList(),
-            )
+        def __init__(self, net_interface=None):
+            super().__init__()
+            self.net_interface = net_interface
 
         async def on_load(self, _):
-            await self.bind("q", "quit", "quit")
+            self.bind("q", "quit")
 
-    sotApp.run(log=args.log)
+    # Update: Changed how logging is configured
+    if args.log:
+        app = SotApp(net_interface=args.net)
+        app.run(log_file=args.log)  # Changed from log= to log_file=
+    else:
+        app = SotApp(net_interface=args.net)
+        app.run()
 
 
 def _get_version_text():

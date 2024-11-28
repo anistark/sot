@@ -7,10 +7,10 @@ profile = "black"
 
 [project]
 name = "sot"
-authors = [{name = "Kumar Anirudha", email = "dev@anirudha.dev"}]
+authors = [{ name = "Kumar Anirudha", email = "dev@anirudha.dev" }]
 description = "System Oberving Tool"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
@@ -27,15 +27,15 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.7"
 dependencies = [
-   "py-cpuinfo",
-   "distro",
-   "psutil",
-   "rich >= 11.0.0",
-   "textual >=0.1.15, <0.2",
+  "py-cpuinfo>=9.0.0",
+  "distro>=1.9.0",
+  "psutil>=5.9.8",
+  "rich>=13.7.0",
+  "textual>=0.52.1",
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "sot.__about__.__version__"}
+version = { attr = "sot.__about__.__version__" }
 
 [project.urls]
 Code = "https://github.com/anistark/sot"

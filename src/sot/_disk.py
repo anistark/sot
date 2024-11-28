@@ -182,6 +182,7 @@ class Disk(Widget):
 
     async def on_resize(self, event):
         if self.has_io_counters:
-            self.read_stream.reset_width(event.width - 25)
-            self.write_stream.reset_width(event.width - 25)
+            width = self.size.width - 25
+            self.read_stream.reset_width(width)
+            self.write_stream.reset_width(width)
             self.refresh_graphs()
