@@ -1,5 +1,5 @@
 <p align="center" style="background-color: #ffffff;">
-  <a href="https://github.com/anistark/sot"><img alt="sot" src="./images/sot.png" width="200px"/></a>
+  <a href="https://github.com/anistark/sot"><img alt="sot" src="https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/sot.png" width="200px"/></a>
   <p align="center">Command-line system obervation tool.</p>
 </p>
 
@@ -16,6 +16,10 @@ sudo pipx ensurepath --global
 
 sot
 ```
+
+
+!["Preview"](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/preview.png)
+
 
 For all options, see
 
