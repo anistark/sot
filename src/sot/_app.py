@@ -84,6 +84,10 @@ def run(argv=None):
             yield Disk()
             yield Net(self.net_interface)
 
+        def on_mount(self) -> None:
+            self.title = "SOT"
+            self.sub_title = "System Observation Tool"
+
         def __init__(self, net_interface=None):
             super().__init__()
             self.net_interface = net_interface
@@ -106,6 +110,6 @@ def _get_version_text():
     return "\n".join(
         [
             f"sot {__version__} [Python {python_version}]",
-            f"Copyright (c) 2024-{__current_year__} Kumar Anirudha",
+            f"MIT License © 2024-{__current_year__} Kumar Anirudha",
         ]
     )

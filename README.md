@@ -1,6 +1,6 @@
-<p align="center">
-  <a href="https://github.com/anistark/sot"><img alt="tiptop" src="./images/sot.png" width="200px"/></a>
-  <p align="center">Command-line system oberving tool.</p>
+<p align="center" style="background-color: #ffffff;">
+  <a href="https://github.com/anistark/sot"><img alt="sot" src="./images/sot.png" width="200px"/></a>
+  <p align="center">Command-line system obervation tool.</p>
 </p>
 
 `sot` is a Command-line System Obervation Tool in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various interesting system stats and graphs them. Works on all operating systems.

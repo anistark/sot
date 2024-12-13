@@ -147,18 +147,12 @@ class Disk(Widget):
         )
 
     def refresh_disk_usage(self):
-        table = Table(box=None, expand=False, padding=(0, 1), show_header=True)
-        table.add_column("", justify="left", no_wrap=True, style="bold")
-        table.add_column(Text("Free", justify="right"), justify="right", no_wrap=True)
-        table.add_column(Text("Used", justify="right"), justify="right", no_wrap=True)
-        table.add_column(Text("Total", justify="right"), justify="right", no_wrap=True)
-        table.add_column(Text("🍕", justify="right"), justify="right", no_wrap=True)
+        table = Table(box=None, show_header=False, expand=True)
 
         for mp in self.mountpoints:
             try:
                 du = psutil.disk_usage(mp)
             except PermissionError:
-                # https://github.com/nschloe/tiptop/issues/71
                 continue
 
             style = None
@@ -168,13 +162,13 @@ class Disk(Widget):
                 style = "dark_orange"
 
             table.add_row(
-                mp,
-                sizeof_fmt(du.free, fmt=".1f"),
-                sizeof_fmt(du.used, fmt=".1f"),
-                sizeof_fmt(du.total, fmt=".1f"),
-                f"{du.percent:.1f}%",
+                f"[b]Free:[/] {sizeof_fmt(du.free, fmt=".1f")}",
+                f"[b]Used:[/] {sizeof_fmt(du.used, fmt=".1f")}",
+                f"[b]Total:[/] {sizeof_fmt(du.total, fmt=".1f")}",
+                f"[b]🍕[/] {du.percent:.1f}%",
                 style=style,
             )
+
         self.group.renderables[-1] = table
 
     def render(self):
