@@ -13,7 +13,21 @@ Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before p
 python3 -m pipx install sot
 python3 -m pipx ensurepath
 sudo pipx ensurepath --global
+```
 
+or in single line:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+python3 -m pipx install sot && python3 -m pipx ensurepath && sudo pipx ensurepath --global
+```
+
+Run with:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
 sot
 ```
 
@@ -21,6 +35,44 @@ sot
 !["Preview"](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/preview.png)
 
 _Some sections are hidden in this preview as they would expose my internal processes and other details. But this should give an idea of how it would look on your screen._
+
+---
+
+## Features
+
+### System
+
+- CPU Usage
+  - Per Core and Thread level
+- Processes with ID, threads, memory and cpu usage
+
+### Disk
+
+- Disk Usage
+  - Per Read/Write
+- Capacity
+  - Free
+  - Used
+  - Total
+  - Percent
+
+### Memory
+
+- Memory Usage
+- Capacity
+  - Free
+  - Available
+  - Used
+  - Swap
+
+### Network
+
+- Local IP
+- Upload/Download Speed
+- Bandwidth
+- Network Usage
+
+---
 
 For all options, see
 
