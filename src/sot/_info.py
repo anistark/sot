@@ -59,6 +59,10 @@ class InfoLine(Widget):
                 bat_string = "🪫 [slate_blue1]" + bat_string + "[/]"
             elif bat.percent < 20:
                 bat_string = "🔋 [yellow]" + bat_string + "[/]"
+
+            if bat.percent < 0 or bat.percent > 100:
+                bat_string = "[red3 reverse bold]⚠ [/] " + bat_string
+
             right.append(bat_string)
 
         table = Table(show_header=False, expand=True, box=None, padding=0)
