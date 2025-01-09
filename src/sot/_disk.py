@@ -162,9 +162,9 @@ class Disk(Widget):
                 style = "dark_orange"
 
             table.add_row(
-                f"[b]Free:[/] {sizeof_fmt(du.free, fmt=".1f")}",
-                f"[b]Used:[/] {sizeof_fmt(du.used, fmt=".1f")}",
-                f"[b]Total:[/] {sizeof_fmt(du.total, fmt=".1f")}",
+                f"[b]Free:[/] {sizeof_fmt(du.free, fmt='.1f')}",
+                f"[b]Used:[/] {sizeof_fmt(du.used, fmt='.1f')}",
+                f"[b]Total:[/] {sizeof_fmt(du.total, fmt='.1f')}",
                 f"[b]🍕[/] {du.percent:.1f}%",
                 style=style,
             )
