@@ -29,7 +29,7 @@ requires-python = ">=3.7"
 dependencies = [
   "py-cpuinfo>=9.0.0",
   "distro>=1.9.0",
-  "psutil>=5.9.8",
+  "psutil>=6.1.1",
   "rich>=13.7.0",
   "textual>=0.52.1",
 ]
