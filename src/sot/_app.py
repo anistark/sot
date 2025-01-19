@@ -3,8 +3,9 @@ from __future__ import annotations
 import argparse
 from sys import version_info
 
-from textual.app import App
+from textual.app import App, ComposeResult
 from textual.widgets import Header
+from textual.containers import Grid
 
 from .__about__ import __current_year__, __version__
 from ._cpu import CPU
@@ -75,7 +76,7 @@ def run(argv=None):
         }
         """
 
-        def compose(self):
+        def compose(self) -> ComposeResult:
             yield Header()
             yield InfoLine(id="info-line")
             yield CPU()
