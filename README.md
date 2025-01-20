@@ -5,6 +5,8 @@
 
 `sot` is a Command-line System Obervation Tool in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various interesting system stats and graphs them. Works on all operating systems.
 
+[![PyPI Downloads](https://static.pepy.tech/badge/sot)](https://pepy.tech/projects/sot)
+
 Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before proceeding.
 
 <!--pytest-codeblocks: skip-->
