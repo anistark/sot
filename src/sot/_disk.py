@@ -24,8 +24,6 @@ class Disk(Widget):
             if not item.device.startswith("/dev/loop")
         ]
 
-        # io counters aren't always available, see
-        # <https://github.com/nschloe/tiptop/issues/79>
         self.has_io_counters = False
         try:
             psutil.disk_io_counters()

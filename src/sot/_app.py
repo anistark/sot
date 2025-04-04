@@ -63,8 +63,8 @@ def run(argv=None):
         Screen {
             layout: grid;
             grid-size: 2;
-            grid-columns: 36fr 45fr;
-            grid-rows: 1 1fr 1fr 1fr;
+            grid-columns: 36fr 55fr;
+            grid-rows: 1 1fr 1.1fr 0.9fr;
         }
 
         #info-line {
