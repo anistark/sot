@@ -4,8 +4,8 @@ import argparse
 from sys import version_info
 
 from textual.app import App, ComposeResult
-from textual.widgets import Header
 from textual.containers import Grid
+from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
 from ._cpu import CPU

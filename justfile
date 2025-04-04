@@ -21,3 +21,7 @@ format:
 lint:
 	black --check .
 	flake8 .
+
+publish-test: clean
+	python3 -m build --sdist --wheel .
+	twine check dist/*

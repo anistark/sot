@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=78"]
 build-backend = "setuptools.build_meta"
 
 [tool.isort]
@@ -18,14 +18,15 @@ classifiers = [
   "Operating System :: MacOS",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.7",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Utilities",
 ]
+keywords = ["cli", "system", "monitor", "linux", "tools"]
 dynamic = ["version"]
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 dependencies = [
   "py-cpuinfo>=9.0.0",
   "distro>=1.9.0",
@@ -40,6 +41,12 @@ version = { attr = "sot.__about__.__version__" }
 [project.urls]
 Code = "https://github.com/anistark/sot"
 Issues = "https://github.com/anistark/sot/issues"
+Homepage = "https://github.com/anistark/sot"
+Documentation = "https://github.com/anistark/sot#readme"
 
 [project.scripts]
 sot = "sot._app:run"
+
+[tool.setuptools]
+packages = ["sot"]
+package-dir = { "" = "src" }
