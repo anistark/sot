@@ -139,7 +139,10 @@ class Disk(Widget):
     def refresh_graphs(self):
         # Textual 3.4.0+: Updated table cell access pattern
         # Use _cells list for direct manipulation
-        if hasattr(self.table.columns[0], '_cells') and len(self.table.columns[0]._cells) >= 2:
+        if (
+            hasattr(self.table.columns[0], "_cells")
+            and len(self.table.columns[0]._cells) >= 2
+        ):
             self.table.columns[0]._cells[0] = Text(
                 "\n".join(self.read_stream.graph), style="aquamarine3"
             )
@@ -149,23 +152,22 @@ class Disk(Widget):
         else:
             # Fallback: recreate table rows
             # Clear existing rows
-            if hasattr(self.table, '_clear'):
+            if hasattr(self.table, "_clear"):
                 self.table._clear()
             else:
                 # Alternative method for clearing table
                 self.table = Table(expand=True, show_header=False, padding=0, box=None)
                 self.table.add_column("graph", no_wrap=True, ratio=1)
                 self.table.add_column("box", no_wrap=True, width=20)
-            
+
             self.table.add_row(
                 Text("\n".join(self.read_stream.graph), style="aquamarine3"),
-                self.down_box
+                self.down_box,
             )
             self.table.add_row(
-                Text("\n".join(self.write_stream.graph), style="yellow"),
-                self.up_box
+                Text("\n".join(self.write_stream.graph), style="yellow"), self.up_box
             )
-            
+
             # Update the group with the new table
             if len(self.group.renderables) > 0:
                 self.group.renderables[0] = self.table

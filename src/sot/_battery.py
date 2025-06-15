@@ -34,9 +34,15 @@ class Battery(Widget):
             status = "charging"
         else:
             # psutil 7.0.0: secsleft might be POWER_TIME_UNLIMITED or POWER_TIME_UNKNOWN
-            if hasattr(psutil, 'POWER_TIME_UNLIMITED') and bat.secsleft == psutil.POWER_TIME_UNLIMITED:
+            if (
+                hasattr(psutil, "POWER_TIME_UNLIMITED")
+                and bat.secsleft == psutil.POWER_TIME_UNLIMITED
+            ):
                 status = "unlimited"
-            elif hasattr(psutil, 'POWER_TIME_UNKNOWN') and bat.secsleft == psutil.POWER_TIME_UNKNOWN:
+            elif (
+                hasattr(psutil, "POWER_TIME_UNKNOWN")
+                and bat.secsleft == psutil.POWER_TIME_UNKNOWN
+            ):
                 status = "unknown"
             elif bat.secsleft is None:
                 status = "unknown"
