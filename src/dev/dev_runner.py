@@ -78,6 +78,45 @@ class SotDevelopmentApp(App):
         """Quit the application gracefully."""
         self.exit()
 
+    def on_procs_list_process_selected(self, message: ProcsList.ProcessSelected) -> None:
+        """Handle process selection."""
+        process_info = message.process_info
+        process_name = process_info.get("name", "Unknown")
+        process_id = process_info.get("pid", "N/A")
+        self.notify(f"Selected: {process_name} (PID: {process_id})")
+
+    def on_procs_list_process_action(self, message: ProcsList.ProcessAction) -> None:
+        """Handle process actions like kill/terminate."""
+        import psutil
+        
+        action = message.action
+        process_info = message.process_info
+        process_id = process_info.get("pid")
+        process_name = process_info.get("name", "Unknown")
+        
+        if not process_id:
+            self.notify("❌ Invalid process ID", severity="error")
+            return
+            
+        try:
+            target_process = psutil.Process(process_id)
+            
+            if action == "kill":
+                target_process.kill()
+                self.notify(f"💥 Killed {process_name} (PID: {process_id})", severity="warning")
+            elif action == "terminate":
+                target_process.terminate()
+                self.notify(f"🛑 Terminated {process_name} (PID: {process_id})", severity="information")
+            else:
+                self.notify(f"❓ Unknown action: {action}", severity="error")
+                
+        except psutil.NoSuchProcess:
+            self.notify(f"❌ Process {process_id} no longer exists", severity="error")
+        except psutil.AccessDenied:
+            self.notify(f"🔒 Access denied to {process_name} (PID: {process_id})", severity="error")
+        except Exception as error:
+            self.notify(f"❌ Error {action}ing process: {error}", severity="error")
+
 
 def main():
     argument_parser = argparse.ArgumentParser(description="SOT Development Runner")
@@ -139,6 +178,7 @@ def main():
     # Run with appropriate logging
     try:
         if parsed_arguments.log:
+            # Textual 3.4.0+: Use TEXTUAL_LOG environment variable instead
             os.environ['TEXTUAL_LOG'] = parsed_arguments.log
         elif parsed_arguments.debug:
             os.environ['TEXTUAL_LOG'] = "sot_debug.log"
