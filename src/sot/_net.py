@@ -157,7 +157,6 @@ class Net(Widget):
         ipv4 = "\n      ".join(ipv4)
         ipv6 = "\n      ".join(ipv6)
 
-        # Textual 3.4.0+: Group renderables can be modified in place
         if len(self.group.renderables) >= 3:
             self.group.renderables[1] = f"[b]IPv4:[/] {ipv4}"
             self.group.renderables[2] = f"[b]IPv6:[/] {ipv6}"
@@ -210,7 +209,6 @@ class Net(Widget):
         self.refresh()
 
     def refresh_graphs(self):
-        # Textual 3.4.0+: Updated table cell access pattern
         if hasattr(self.table.columns[0], "_cells"):
             self.table.columns[0]._cells[0] = Text(
                 "\n".join(self.recv_stream.graph), style="aquamarine3"
@@ -219,7 +217,6 @@ class Net(Widget):
                 "\n".join(self.sent_stream.graph), style="yellow"
             )
         else:
-            # Fallback: recreate table rows
             self.table._clear()
             self.table.add_row(
                 Text("\n".join(self.recv_stream.graph), style="aquamarine3"),

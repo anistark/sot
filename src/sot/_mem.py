@@ -82,11 +82,9 @@ class Mem(BaseWidget):
             graph = "\n".join(
                 [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
             )
-            # Textual 3.4.0+: Group renderables can be modified in place
             if k < len(self.group.renderables):
                 self.group.renderables[k] = Text(graph, style=col)
             else:
-                # Fallback for safety
                 pass
 
         self.refresh()

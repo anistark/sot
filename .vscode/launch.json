@@ -1,0 +1,41 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "SOT Development",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/dev/dev_runner.py",
+            "args": ["--debug"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "SOT with Network Interface",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/dev/dev_runner.py",
+            "args": ["--debug", "--net", "en0"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "SOT Production Mode",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/sot/_app.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        }
+    ]
+}

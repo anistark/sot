@@ -137,8 +137,6 @@ class Disk(Widget):
         self.refresh_graphs()
 
     def refresh_graphs(self):
-        # Textual 3.4.0+: Updated table cell access pattern
-        # Use _cells list for direct manipulation
         if (
             hasattr(self.table.columns[0], "_cells")
             and len(self.table.columns[0]._cells) >= 2
@@ -150,12 +148,9 @@ class Disk(Widget):
                 "\n".join(self.write_stream.graph), style="yellow"
             )
         else:
-            # Fallback: recreate table rows
-            # Clear existing rows
             if hasattr(self.table, "_clear"):
                 self.table._clear()
             else:
-                # Alternative method for clearing table
                 self.table = Table(expand=True, show_header=False, padding=0, box=None)
                 self.table.add_column("graph", no_wrap=True, ratio=1)
                 self.table.add_column("box", no_wrap=True, width=20)
@@ -168,7 +163,6 @@ class Disk(Widget):
                 Text("\n".join(self.write_stream.graph), style="yellow"), self.up_box
             )
 
-            # Update the group with the new table
             if len(self.group.renderables) > 0:
                 self.group.renderables[0] = self.table
 
@@ -195,15 +189,12 @@ class Disk(Widget):
                 style=style,
             )
 
-        # Textual 3.4.0+: Group renderables can be modified in place
         if len(self.group.renderables) > 1:
             self.group.renderables[-1] = table
         else:
-            # If we only have one renderable (no IO counters), replace it
             if len(self.group.renderables) == 1:
                 self.group.renderables[0] = table
             else:
-                # No renderables yet, add the table
                 self.group.renderables.append(table)
 
     def render(self):
