@@ -96,10 +96,10 @@ def run(argv=None):
         async def on_load(self, _):
             self.bind("q", "quit")
 
-    # Update: Changed how logging is configured
+    # Textual 3.4.0+ uses 'log_file' parameter in run()
     if args.log:
         app = SotApp(net_interface=args.net)
-        app.run(log_file=args.log)  # Changed from log= to log_file=
+        app.run(log_file=args.log)
     else:
         app = SotApp(net_interface=args.net)
         app.run()

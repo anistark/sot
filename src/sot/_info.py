@@ -33,7 +33,7 @@ class InfoLine(Widget):
             system_list.append(f"{platform.architecture()[0]} / {platform.release()}")
             system_string = " ".join(system_list)
         elif system == "Darwin":
-            system_string = f" macOS {platform.mac_ver()[0]}"
+            system_string = f" macOS {platform.mac_ver()[0]}"
         else:
             # fallback
             system_string = ""

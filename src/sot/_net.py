@@ -150,14 +150,17 @@ class Net(Widget):
                 ipv4.append(addr.address + " / " + addr.netmask)
         ipv6 = []
         for addr in addrs:
-            # ipv4?
+            # ipv6?
             if addr.family == socket.AF_INET6:
                 ipv6.append(addr.address)
 
         ipv4 = "\n      ".join(ipv4)
         ipv6 = "\n      ".join(ipv6)
-        self.group.renderables[1] = f"[b]IPv4:[/] {ipv4}"
-        self.group.renderables[2] = f"[b]IPv6:[/] {ipv6}"
+        
+        # Textual 3.4.0+: Group renderables can be modified in place
+        if len(self.group.renderables) >= 3:
+            self.group.renderables[1] = f"[b]IPv4:[/] {ipv4}"
+            self.group.renderables[2] = f"[b]IPv6:[/] {ipv6}"
 
     # would love to collect data upon each render(), but render is called too often
     # <https://github.com/willmcgugan/textual/issues/162>
@@ -207,12 +210,25 @@ class Net(Widget):
         self.refresh()
 
     def refresh_graphs(self):
-        self.table.columns[0]._cells[0] = Text(
-            "\n".join(self.recv_stream.graph), style="aquamarine3"
-        )
-        self.table.columns[0]._cells[1] = Text(
-            "\n".join(self.sent_stream.graph), style="yellow"
-        )
+        # Textual 3.4.0+: Updated table cell access pattern
+        if hasattr(self.table.columns[0], '_cells'):
+            self.table.columns[0]._cells[0] = Text(
+                "\n".join(self.recv_stream.graph), style="aquamarine3"
+            )
+            self.table.columns[0]._cells[1] = Text(
+                "\n".join(self.sent_stream.graph), style="yellow"
+            )
+        else:
+            # Fallback: recreate table rows
+            self.table._clear()
+            self.table.add_row(
+                Text("\n".join(self.recv_stream.graph), style="aquamarine3"),
+                self.down_box
+            )
+            self.table.add_row(
+                Text("\n".join(self.sent_stream.graph), style="yellow"),
+                self.up_box
+            )
 
     def render(self):
         return self.panel

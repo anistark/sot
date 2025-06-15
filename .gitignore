@@ -11,3 +11,4 @@ build/
 .tox/
 venv
 __pycache__
+.DS_Store

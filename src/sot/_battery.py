@@ -33,14 +33,22 @@ class Battery(Widget):
         if bat.power_plugged:
             status = "charging"
         else:
-            mm = bat.secsleft // 60
-            hh, mm = divmod(mm, 60)
-            time_left_str = []
-            if hh > 0:
-                time_left_str.append(f"{hh}h")
-            if mm > 0:
-                time_left_str.append(f"{mm}min")
-            status = " ".join(time_left_str) + " left"
+            # psutil 7.0.0: secsleft might be POWER_TIME_UNLIMITED or POWER_TIME_UNKNOWN
+            if hasattr(psutil, 'POWER_TIME_UNLIMITED') and bat.secsleft == psutil.POWER_TIME_UNLIMITED:
+                status = "unlimited"
+            elif hasattr(psutil, 'POWER_TIME_UNKNOWN') and bat.secsleft == psutil.POWER_TIME_UNKNOWN:
+                status = "unknown"
+            elif bat.secsleft is None:
+                status = "unknown"
+            else:
+                mm = bat.secsleft // 60
+                hh, mm = divmod(mm, 60)
+                time_left_str = []
+                if hh > 0:
+                    time_left_str.append(f"{hh}h")
+                if mm > 0:
+                    time_left_str.append(f"{mm}min")
+                status = " ".join(time_left_str) + " left"
 
         title = f"[b]battery[/] - {self.bat_stream.values[-1]:.1f}% - {status}"
         if bat.percent < 15 and not bat.power_plugged:

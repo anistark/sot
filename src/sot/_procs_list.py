@@ -61,7 +61,7 @@ class ProcsList(Widget):
             padding=(0, 1),
             expand=True,
         )
-        # set ration=1 on all columns that should be expanded
+        # set ratio=1 on all columns that should be expanded
         # <https://github.com/Textualize/rich/issues/2030>
         table.add_column(Text("PID", justify="left"), no_wrap=True, justify="right")
         table.add_column("Process", style="aquamarine3", no_wrap=True, ratio=1)
@@ -138,7 +138,7 @@ class ProcsList(Widget):
     def render(self) -> Panel:
         return self.panel
 
-    def on_resize(self):
+    async def on_resize(self, event):
         # Calculate max processes based on available height
         # Subtract 3 for borders and header
         self.max_num_procs = self.size.height - 3

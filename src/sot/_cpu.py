@@ -109,9 +109,7 @@ def get_current_freq():
         # https://github.com/nschloe/tiptop/issues/25#issuecomment-1061390966
         return None
 
-    if psutil.__version__ == "5.9.0" and cpu_freq < 10:
-        # Work around <https://github.com/giampaolo/psutil/issues/2049>
-        cpu_freq *= 1000
+    # Note: The psutil 5.9.0 bug workaround has been removed as it's fixed in 7.0.0
     return cpu_freq
 
 
@@ -319,25 +317,3 @@ class CPU(Widget):
             self.temp_total_stream.reset_width(graph_width)
         if self.has_fan_rpm:
             self.fan_stream.reset_width(graph_width)
-
-        # reset graph heights
-        # subtract border
-        total_height = self.size.height - 2
-        if self.has_cpu_temp:
-            # cpu total stream height: divide by two and round _down_
-            self.cpu_total_stream.reset_height(total_height // 2)
-            #
-            # temp total stream height: divide by two and round _up_. Subtract
-            # one if a fan stream is present.
-            temp_stream_height = -((-total_height) // 2)
-            if self.has_fan_rpm:
-                temp_stream_height -= 1
-
-            self.temp_total_stream.reset_height(temp_stream_height)
-        else:
-            # full size cpu stream
-            cpu_stream_height = total_height
-            if self.has_fan_rpm:
-                cpu_stream_height -= 1
-
-            self.cpu_total_stream.reset_height(cpu_stream_height)
