@@ -1,17 +1,23 @@
+"""
+Memory Widget
+
+Displays memory usage information including virtual memory and swap.
+"""
+
 import psutil
-from rich import box
 from rich.console import Group
-from rich.panel import Panel
 from rich.text import Text
 
-from ._base_widget import BaseWidget
-from ._helpers import sizeof_fmt
-from .braille_stream import BrailleStream
+from .base_widget import BaseWidget
+from .._helpers import sizeof_fmt
+from ..braille_stream import BrailleStream
 
 
-class Mem(BaseWidget):
-    def __init__(self):
-        super().__init__(title="Mem")
+class MemoryWidget(BaseWidget):
+    """Memory widget displaying virtual memory and swap usage."""
+
+    def __init__(self, **kwargs):
+        super().__init__(title="Memory", **kwargs)
         self._color_list = ["yellow", "aquamarine3", "sky_blue3", "slate_blue1", "red3"]
         self.attrs = []
         self.mem_streams = []
@@ -21,7 +27,6 @@ class Mem(BaseWidget):
         mem = psutil.virtual_memory()
         self.mem_total_bytes = mem.total
 
-        # check which mem sections are available on the machine
         self.attrs = []
         for attr in ["free", "available", "cached", "used"]:
             if hasattr(mem, attr):
@@ -31,12 +36,10 @@ class Mem(BaseWidget):
         if swap is not None:
             self.attrs.append("swap")
 
-        # append spaces to make all names equally long
         maxlen = max(len(string) for string in self.attrs)
         maxlen = min(maxlen, 5)
         self.labels = [attr[:maxlen].ljust(maxlen) for attr in self.attrs]
 
-        # Initialize streams
         for attr in self.attrs:
             total = swap.total if attr == "swap" else self.mem_total_bytes
             self.mem_streams.append(BrailleStream(40, 4, 0.0, total))
@@ -44,13 +47,7 @@ class Mem(BaseWidget):
         self.group = Group("", "", "", "", "")
 
         mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
-        self.panel = Panel(
-            self.group,
-            title=f"[b]Mem[/] - {mem_total_string}",
-            title_align="left",
-            border_style="bright_black",
-            box=box.SQUARE,
-        )
+        self.panel.title = f"[b]Memory[/] - {mem_total_string}"
 
         self.refresh_table()
         self.set_interval(2.0, self.refresh_table)
@@ -84,19 +81,13 @@ class Mem(BaseWidget):
             )
             if k < len(self.group.renderables):
                 self.group.renderables[k] = Text(graph, style=col)
-            else:
-                pass
 
-        self.refresh()
-
-    def render(self) -> Panel:
-        return self.panel
+        self.update_panel_content(self.group)
 
     async def on_resize(self, event):
         for ms in self.mem_streams:
             ms.reset_width(self.size.width - 4)
 
-        # split the available height-2 into n even blocks
         n = len(self.attrs)
         available_height = self.size.height - 2
         heights = [available_height // n] * n

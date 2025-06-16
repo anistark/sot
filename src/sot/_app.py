@@ -7,13 +7,17 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
-from ._cpu import CPU
-from ._disk import Disk
-from ._info import InfoLine
-from ._mem import Mem
-from ._net import Net
-from ._procs_list import ProcsList
-from ._middle_widgets import HealthScoreWidget, LogoWidget, NetworkConnectionsWidget
+from .widgets import (
+    CPUWidget,
+    DiskWidget,
+    InfoWidget,
+    MemoryWidget,
+    NetworkWidget,
+    ProcessesWidget,
+    HealthScoreWidget,
+    SotWidget,
+    NetworkConnectionsWidget
+)
 
 
 # Main SOT Application
@@ -45,12 +49,12 @@ class SotApp(App):
         yield Header()
         
         # Row 1: Info line (spans all 3 columns)
-        info_line = InfoLine()
+        info_line = InfoWidget()
         info_line.id = "info-line"
         yield info_line
         
         # Row 2: CPU, Health Score, Process List (starts)
-        cpu_widget = CPU()
+        cpu_widget = CPUWidget()
         cpu_widget.id = "cpu-widget"
         yield cpu_widget
         
@@ -58,21 +62,21 @@ class SotApp(App):
         health_widget.id = "health-widget"
         yield health_widget
         
-        procs_list = ProcsList()
+        procs_list = ProcessesWidget()
         procs_list.id = "procs-list"
         yield procs_list
         
-        # Row 3: Memory, Logo Widget (Process List continues)
-        mem_widget = Mem()
+        # Row 3: Memory, Sot Widget (Process List continues)
+        mem_widget = MemoryWidget()
         mem_widget.id = "mem-widget"
         yield mem_widget
         
-        logo_widget = LogoWidget()
-        logo_widget.id = "logo-widget"
-        yield logo_widget
+        sot_widget = SotWidget()
+        sot_widget.id = "sot-widget"
+        yield sot_widget
         
         # Row 4: Disk, Network Connections, Network Widget
-        disk_widget = Disk()
+        disk_widget = DiskWidget()
         disk_widget.id = "disk-widget"
         yield disk_widget
         
@@ -80,20 +84,21 @@ class SotApp(App):
         connections_widget.id = "connections-widget"
         yield connections_widget
         
-        net_widget = Net(self.net_interface)
+        net_widget = NetworkWidget(self.net_interface)
         net_widget.id = "net-widget"
         yield net_widget
 
     def on_mount(self) -> None:
         self.title = "SOT"
         self.sub_title = "System Observation Tool"
+        # Set initial focus to the process list for interactive features
         self.set_focus(self.query_one("#procs-list"))
 
     async def on_load(self, _):
         self.bind("q", "quit")
 
     def on_procs_list_process_selected(
-        self, message: ProcsList.ProcessSelected
+        self, message: ProcessesWidget.ProcessSelected
     ) -> None:
         """Handle process selection from the process list."""
         process_info = message.process_info
@@ -101,6 +106,7 @@ class SotApp(App):
         process_id = process_info.get("pid", "N/A")
         cpu_percent = process_info.get("cpu_percent", 0) or 0
 
+        # Show detailed process information
         memory_info = process_info.get("memory_info")
         memory_str = ""
         if memory_info:
@@ -116,7 +122,7 @@ class SotApp(App):
         )
 
     def on_procs_list_process_action(
-        self, message: ProcsList.ProcessAction
+        self, message: ProcessesWidget.ProcessAction
     ) -> None:
         """Handle process actions like kill/terminate from the process list."""
         import psutil
@@ -219,6 +225,7 @@ def run(argv=None):
 
     args = parser.parse_args(argv)
 
+    # Configure logging and run the application
     if args.log:
         import os
 

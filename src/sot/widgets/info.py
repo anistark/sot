@@ -1,3 +1,9 @@
+"""
+Info Widget
+
+Displays system information line with user, hostname, OS, uptime, and battery.
+"""
+
 import getpass
 import platform
 import time
@@ -6,18 +12,27 @@ from datetime import datetime, timedelta
 import distro
 import psutil
 from rich.table import Table
-from textual.widget import Widget
+
+from .base_widget import BaseWidget
 
 
-class InfoLine(Widget):
+def seconds_to_h_m(seconds):
+    """Convert seconds to hours and minutes."""
+    return seconds // 3600, (seconds // 60) % 60
+
+
+class InfoWidget(BaseWidget):
+    """Info line widget displaying system and user information."""
+
+    def __init__(self, **kwargs):
+        super().__init__(title="", border_style="", **kwargs)
+
     def on_mount(self):
         self.width = 0
         self.height = 0
-        self.set_interval(1.0, self.refresh)
+        self.set_interval(1.0, self.update_info)
 
-        # The getlogin docs say:
-        # > For most purposes, it is more useful to use getpass.getuser() [...]
-        # username = os.getlogin()
+        # Get user and system information
         username = getpass.getuser()
         ustring = f"{username} @"
         node = platform.node()
@@ -35,13 +50,12 @@ class InfoLine(Widget):
         elif system == "Darwin":
             system_string = f" macOS {platform.mac_ver()[0]}"
         else:
-            # fallback
             system_string = ""
 
         self.left_string = " ".join([ustring, system_string])
         self.boot_time = psutil.boot_time()
 
-    def render(self):
+    def update_info(self):
         uptime = timedelta(seconds=time.time() - self.boot_time)
         h, m = seconds_to_h_m(uptime.seconds)
 
@@ -49,7 +63,6 @@ class InfoLine(Widget):
 
         bat = psutil.sensors_battery()
         if bat is not None:
-            # hh, mm = seconds_to_h_m(bat.secsleft)
             bat_string = f"{bat.percent:.1f}%"
             if bat.power_plugged:
                 bat_string = "🔋 [aquamarine3]" + bat_string + "[/]"
@@ -60,9 +73,7 @@ class InfoLine(Widget):
             elif bat.percent < 20:
                 bat_string = "🔋 [yellow]" + bat_string + "[/]"
 
-            # The battery percentage may report invalid values due to
-            # hardware or system inaccuracies. These values are
-            # displayed with a warning to alert users to the anomaly.
+            # Handle invalid battery percentages
             if bat.percent < 0 or bat.percent > 100:
                 bat_string = "[red3 reverse bold]⚠ [/] " + bat_string
 
@@ -80,12 +91,12 @@ class InfoLine(Widget):
             table.add_row(
                 self.left_string, datetime.now().strftime("%c"), "  ".join(right)
             )
-        return table
+        
+        self.update_panel_content(table)
+
+    def render(self):
+        return getattr(self, "panel", Table()).renderable or Table()
 
     async def on_resize(self, event):
         self.width = self.size.width
         self.height = self.size.height
-
-
-def seconds_to_h_m(seconds):
-    return seconds // 3600, (seconds // 60) % 60

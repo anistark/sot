@@ -1,4 +1,8 @@
-from __future__ import annotations
+"""
+Disk Widget
+
+Displays disk usage and I/O statistics.
+"""
 
 import psutil
 from rich import box
@@ -6,18 +10,19 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from textual.widget import Widget
 
-from ._helpers import sizeof_fmt
-from .braille_stream import BrailleStream
+from .base_widget import BaseWidget
+from .._helpers import sizeof_fmt
+from ..braille_stream import BrailleStream
 
 
-class Disk(Widget):
-    def __init__(self):
-        super().__init__()
+class DiskWidget(BaseWidget):
+    """Disk widget displaying usage and I/O statistics."""
+
+    def __init__(self, **kwargs):
+        super().__init__(title="Disk", **kwargs)
 
     def on_mount(self):
-        # kick out /dev/loop* devices
         self.mountpoints = [
             item.mountpoint
             for item in psutil.disk_partitions()
@@ -50,7 +55,6 @@ class Disk(Widget):
                 box=box.SQUARE,
             )
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
-            # Add ratio 1 to expand that column as much as possible
             self.table.add_column("graph", no_wrap=True, ratio=1)
             self.table.add_column("box", no_wrap=True, width=20)
             self.table.add_row("", self.down_box)
@@ -69,15 +73,6 @@ class Disk(Widget):
         else:
             self.group = Group("")
 
-        self.panel = Panel(
-            self.group,
-            title="[b]Disk[/]",
-            # border_style="slate_blue1",
-            border_style="bright_black",
-            title_align="left",
-            box=box.SQUARE,
-        )
-
         self.refresh_panel()
 
         self.interval_s = 2.0
@@ -88,7 +83,7 @@ class Disk(Widget):
             self.refresh_io_counters()
 
         self.refresh_disk_usage()
-        self.refresh()
+        self.update_panel_content(self.group)
 
     def refresh_io_counters(self):
         io = psutil.disk_io_counters()
@@ -196,9 +191,6 @@ class Disk(Widget):
                 self.group.renderables[0] = table
             else:
                 self.group.renderables.append(table)
-
-    def render(self):
-        return self.panel
 
     async def on_resize(self, event):
         if self.has_io_counters:

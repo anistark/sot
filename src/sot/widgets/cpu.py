@@ -1,3 +1,9 @@
+"""
+CPU Widget
+
+Displays CPU usage, temperature, and frequency information with per-core breakdown.
+"""
+
 import re
 from pathlib import Path
 
@@ -6,9 +12,9 @@ from rich import box
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from textual.widget import Widget
 
-from .braille_stream import BrailleStream
+from .base_widget import BaseWidget
+from ..braille_stream import BrailleStream
 
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
@@ -17,44 +23,39 @@ def val_to_color(val: float, minval: float, maxval: float) -> str:
     return {0: "yellow", 1: "dark_orange", 2: "sky_blue3", 3: "aquamarine3"}[k]
 
 
-# https://stackoverflow.com/a/312464/353337
 def chunks(lst, n):
+    """Split list into chunks of size n."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
 
-# https://stackoverflow.com/a/6473724/353337
 def transpose(lst):
+    """Transpose a list of lists."""
     return list(map(list, zip(*lst)))
 
 
 def flatten(lst):
+    """Flatten a list of lists."""
     return [item for sublist in lst for item in sublist]
 
 
 def get_cpu_model():
-    # cpuinfo does computation in addition to reading data, see
-    # <https://github.com/workhorsy/py-cpuinfo/issues/155#issuecomment-678923252>.
-    # Try to work around this.
-    # TODO keep an eye on the above bug.
+    """Get CPU model name."""
     try:
-        # On Linux, the file contains lines like
-        # ```
-        # model name	: Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz
-        # ```
+        # On Linux, read from /proc/cpuinfo
         with open("/proc/cpuinfo") as f:
             content = f.read()
         m = re.search(r"model name\t: (.*)", content)
         model_name = m.group(1)
     except Exception:
         import cpuinfo
-
         model_name = cpuinfo.get_cpu_info()["brand_raw"]
     return model_name
 
 
 def get_current_temps():
-    # First try manually reading the temperatures. (pyutil is slow.)
+    """Get current CPU temperatures."""
+    # First try manually reading the temperatures
     for key in ["coretemp", "k10temp"]:
         path = Path(f"/sys/devices/platform/{key}.0/hwmon/hwmon6/")
         if not path.is_dir():
@@ -73,15 +74,13 @@ def get_current_temps():
 
         return temps
 
-    # Not try psutil.sensors_temperatures().
-    # Slow, see <https://github.com/giampaolo/psutil/issues/2082>.
+    # Try psutil.sensors_temperatures()
     try:
         temps = psutil.sensors_temperatures()
     except AttributeError:
         return None
     else:
         # coretemp: intel, k10temp: amd
-        # <https://github.com/nschloe/tiptop/issues/37>
         for key in ["coretemp", "k10temp"]:
             if key not in temps:
                 continue
@@ -91,8 +90,8 @@ def get_current_temps():
 
 
 def get_current_freq():
-    # psutil.cpu_freq() is slow, so first try something else:
-    # <https://github.com/nschloe/tiptop/issues/37>
+    """Get current CPU frequency."""
+    # Try reading from sys filesystem first
     candidates = [
         "/sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq",
         "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq",
@@ -106,24 +105,24 @@ def get_current_freq():
     try:
         cpu_freq = psutil.cpu_freq().current
     except Exception:
-        # https://github.com/nschloe/tiptop/issues/25#issuecomment-1061390966
         return None
 
-    # Note: The psutil 5.9.0 bug workaround has been removed as it's fixed in 7.0.0
     return cpu_freq
 
 
-class CPU(Widget):
+class CPUWidget(BaseWidget):
+    """CPU widget displaying usage, temperature, and frequency information."""
+
+    def __init__(self, **kwargs):
+        super().__init__(title="CPU", **kwargs)
+
     def on_mount(self):
         self.width = 0
         self.height = 0
 
-        # self.max_graph_width = 200
-
         self.num_cores = psutil.cpu_count(logical=False)
         num_threads = psutil.cpu_count(logical=True)
 
-        # 8 threads, 4 cores -> [[0, 4], [1, 5], [2, 6], [3, 7]]
         assert num_threads % self.num_cores == 0
         self.core_threads = transpose(list(chunks(range(num_threads), self.num_cores)))
 
@@ -132,7 +131,6 @@ class CPU(Widget):
         self.thread_load_streams = [
             BrailleStream(10, 1, 0.0, 100.0)
             for _ in range(num_threads)
-            # BlockCharStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
         temps = get_current_temps()
@@ -145,7 +143,6 @@ class CPU(Widget):
             self.has_core_temps = len(temps) == 1 + self.num_cores
 
             temp_low = 30.0
-            # TODO read from file
             temp_high = 100.0
 
             if self.has_cpu_temp:
@@ -167,8 +164,6 @@ class CPU(Widget):
         else:
             self.has_fan_rpm = True
             fan_low = 0
-            # Sometimes, psutil/computers will incorrectly report a fan
-            # speed of 2 ** 16 - 1; dismiss that.
             if fan_current == 65535:
                 fan_current = 1
             fan_high = max(fan_current, 1)
@@ -191,22 +186,19 @@ class CPU(Widget):
             expand=False,
         )
 
-        self.panel = Panel(
-            "",
-            title=f"[b]CPU[/] - {get_cpu_model()}",
-            title_align="left",
-            border_style="bright_black",
-            box=box.SQUARE,
-        )
+        try:
+            cpu_model = get_cpu_model()
+            self.panel.title = f"[b]CPU[/] - {cpu_model}"
+        except:
+            self.panel.title = "[b]CPU[/]"
 
-        # immediately collect data to refresh info_box_width
         self.collect_data()
         self.set_interval(2.0, self.collect_data)
 
     def collect_data(self):
         # CPU loads
         self.cpu_total_stream.add_value(psutil.cpu_percent())
-        #
+        
         load_per_thread = psutil.cpu_percent(percpu=True)
         assert isinstance(load_per_thread, list)
         for stream, load in zip(self.thread_load_streams, load_per_thread):
@@ -228,9 +220,9 @@ class CPU(Widget):
         current_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
         lines0 = lines_cpu[0][: -len(current_val_string)] + current_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
-        #
+        
         cpu_total_graph = "[yellow]" + "\n".join(lines_cpu) + "[/]\n"
-        #
+        
         if self.has_cpu_temp:
             lines_temp = self.temp_total_stream.graph
             current_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
@@ -238,11 +230,9 @@ class CPU(Widget):
             lines_temp = lines_temp[:-1] + [lines0]
             cpu_total_graph += "[slate_blue1]" + "\n".join(lines_temp) + "[/]"
 
-        # construct right info box
         self._refresh_info_box(load_per_thread)
 
         t = Table(expand=True, show_header=False, padding=0, box=None)
-        # Add ratio 1 to expand that column as much as possible
         t.add_column("graph", no_wrap=True, ratio=1)
         t.add_column("box", no_wrap=True, justify="left", vertical="middle")
         t.add_row(cpu_total_graph, self.info_box)
@@ -250,12 +240,10 @@ class CPU(Widget):
         if self.has_fan_rpm:
             fan_current = list(psutil.sensors_fans().values())[0][0].current
 
-            # See comment above
             if fan_current == 65535:
                 fan_current = self.fan_stream.maxval
 
             if fan_current > self.fan_stream.maxval:
-                # TODO There should be a method that also rewrites all previous values
                 self.fan_stream.maxval = fan_current
 
             self.fan_stream.add_value(fan_current)
@@ -266,10 +254,7 @@ class CPU(Widget):
             )
             t.add_row(graph, "")
 
-        self.panel.renderable = t
-
-        # textual method
-        self.refresh()
+        self.update_panel_content(t)
 
     def _refresh_info_box(self, load_per_thread):
         lines = []
@@ -298,19 +283,13 @@ class CPU(Widget):
         cpu_freq = get_current_freq()
 
         if cpu_freq is None:
-            # https://github.com/nschloe/tiptop/issues/25
             self.info_box.subtitle = None
         else:
             self.info_box.subtitle = f"{round(cpu_freq):4d} MHz"
 
-        # https://github.com/willmcgugan/rich/discussions/1559#discussioncomment-1459008
         self.info_box_width = 4 + len(Text.from_markup(lines[0]))
 
-    def render(self):
-        return self.panel
-
     async def on_resize(self, event):
-        # reset graph widths
         graph_width = self.size.width - self.info_box_width - 5
         self.cpu_total_stream.reset_width(graph_width)
         if self.has_cpu_temp:

@@ -1,16 +1,21 @@
+"""
+Processes Widget
+
+Displays interactive process list with keyboard navigation and process management.
+"""
+
 import psutil
-from rich import box
-from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from textual import events
 from textual.message import Message
-from textual.widget import Widget
 
-from ._helpers import sizeof_fmt
+from .base_widget import BaseWidget
+from .._helpers import sizeof_fmt
 
 
 def get_process_list(num_procs: int):
+    """Get list of running processes sorted by CPU usage."""
     processes = list(
         psutil.process_iter(
             [
@@ -27,19 +32,12 @@ def get_process_list(num_procs: int):
     )
 
     if processes and processes[0].pid == 0:
-        # Remove process with PID 0. On Windows, that's SYSTEM IDLE, and we
-        # don't want that to appear at the top of the list.
-        # <https://twitter.com/andre_roberge/status/1488885893716975622/photo/1>
         processes = processes[1:]
 
     processes = [p.info for p in processes]
 
     processes = sorted(
         processes,
-        # The item.info["cpu_percent"] can be `ad_value` (default None).
-        # It gets assigned to a dict key in case AccessDenied or
-        # ZombieProcess exception is raised when retrieving that particular
-        # process information.
         key=lambda p: (p["cpu_percent"] or 0.0),
         reverse=True,
     )
@@ -47,10 +45,9 @@ def get_process_list(num_procs: int):
     return processes
 
 
-class ProcsList(Widget):
+class ProcessesWidget(BaseWidget):
     """Interactive process list with arrow key navigation and actions."""
 
-    # Make the widget focusable
     can_focus = True
 
     class ProcessSelected(Message):
@@ -69,7 +66,7 @@ class ProcsList(Widget):
             super().__init__()
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(title="Processes", **kwargs)
         self.max_num_procs = 1000
         self.visible_rows = 10
         self.selected_process_index = 0
@@ -294,26 +291,21 @@ class ProcsList(Widget):
             f"{num_sleeping_processes} 😴",
         ]
 
+        focus_indicator = "🔍" if self.has_focus else "○"
         if self.is_interactive_mode:
             title_parts.append(
-                "[dim]↑↓ | R refresh | T terminate | K kill[/]"
+                f"[dim]{focus_indicator} ↑↓ | K kill | T terminate | R refresh[/]"
             )
         else:
-            title_parts.append("[dim]Press I for interactive mode[/]")
+            title_parts.append(f"[dim]{focus_indicator} Press I for interactive mode[/]")
 
         panel_title = " - ".join(title_parts)
+        self.panel.title = panel_title
 
         border_style = "bright_white" if self.has_focus else "bright_black"
+        self.panel.border_style = border_style
 
-        self.panel = Panel(
-            process_table,
-            title=panel_title,
-            title_align="left",
-            border_style=border_style,
-            box=box.SQUARE,
-        )
-
-        self.refresh()
+        self.update_panel_content(process_table)
 
     def on_click(self, event) -> None:
         """Handle mouse clicks to focus the widget."""
@@ -327,11 +319,6 @@ class ProcsList(Widget):
     def on_blur(self) -> None:
         """Handle widget losing focus."""
         self.refresh_display()
-
-    def render(self) -> Panel:
-        return getattr(
-            self, "panel", Panel("Loading processes...", title="📋 Processes")
-        )
 
     async def on_resize(self, event):
         new_visible_rows = max(5, self.size.height - 3)
