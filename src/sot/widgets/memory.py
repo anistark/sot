@@ -8,9 +8,9 @@ import psutil
 from rich.console import Group
 from rich.text import Text
 
-from .base_widget import BaseWidget
 from .._helpers import sizeof_fmt
 from ..braille_stream import BrailleStream
+from .base_widget import BaseWidget
 
 
 class MemoryWidget(BaseWidget):

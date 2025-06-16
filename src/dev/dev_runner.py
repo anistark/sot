@@ -18,7 +18,7 @@ class SotDevelopmentApp(SotApp):
 
     def on_mount(self) -> None:
         super().on_mount()
-        
+
         self.title = "SOT (Development Mode)"
         self.sub_title = "System Observation Tool - DEV"
 

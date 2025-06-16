@@ -10,8 +10,8 @@ from rich.text import Text
 from textual import events
 from textual.message import Message
 
-from .base_widget import BaseWidget
 from .._helpers import sizeof_fmt
+from .base_widget import BaseWidget
 
 
 def get_process_list(num_procs: int):
@@ -297,7 +297,9 @@ class ProcessesWidget(BaseWidget):
                 f"[dim]{focus_indicator} ↑↓ | K kill | T terminate | R refresh[/]"
             )
         else:
-            title_parts.append(f"[dim]{focus_indicator} Press I for interactive mode[/]")
+            title_parts.append(
+                f"[dim]{focus_indicator} Press I for interactive mode[/]"
+            )
 
         panel_title = " - ".join(title_parts)
         self.panel.title = panel_title

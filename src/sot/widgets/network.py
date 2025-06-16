@@ -11,10 +11,10 @@ from rich.console import Group
 from rich.table import Table
 from rich.text import Text
 
-from .base_widget import BaseWidget
+from ..__about__ import __version__
 from .._helpers import sizeof_fmt
 from ..braille_stream import BrailleStream
-from ..__about__ import __version__
+from .base_widget import BaseWidget
 
 
 def _autoselect_interface():
@@ -56,7 +56,7 @@ class NetworkWidget(BaseWidget):
     def on_mount(self):
         from rich import box
         from rich.panel import Panel
-        
+
         self.down_box = Panel(
             "",
             title="▼ down",

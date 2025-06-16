@@ -11,7 +11,7 @@ from textual.widget import Widget
 
 class BaseWidget(Widget):
     """Base class for all SOT widgets with common functionality."""
-    
+
     def __init__(self, title: str, border_style="bright_black", **kwargs):
         super().__init__(**kwargs)
         self.title = title
@@ -26,7 +26,7 @@ class BaseWidget(Widget):
 
     def render(self):
         return getattr(self, "panel", Panel("Loading...", title=f"[b]{self.title}[/]"))
-    
+
     def update_panel_content(self, content):
         """Update the panel content with new data."""
         self.panel.renderable = content

@@ -91,7 +91,7 @@ class InfoWidget(BaseWidget):
             table.add_row(
                 self.left_string, datetime.now().strftime("%c"), "  ".join(right)
             )
-        
+
         self.update_panel_content(table)
 
     def render(self):

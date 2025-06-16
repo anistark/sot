@@ -10,13 +10,13 @@ from .__about__ import __current_year__, __version__
 from .widgets import (
     CPUWidget,
     DiskWidget,
+    HealthScoreWidget,
     InfoWidget,
     MemoryWidget,
+    NetworkConnectionsWidget,
     NetworkWidget,
     ProcessesWidget,
-    HealthScoreWidget,
     SotWidget,
-    NetworkConnectionsWidget
 )
 
 
@@ -47,43 +47,43 @@ class SotApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        
+
         # Row 1: Info line (spans all 3 columns)
         info_line = InfoWidget()
         info_line.id = "info-line"
         yield info_line
-        
+
         # Row 2: CPU, Health Score, Process List (starts)
         cpu_widget = CPUWidget()
         cpu_widget.id = "cpu-widget"
         yield cpu_widget
-        
+
         health_widget = HealthScoreWidget()
         health_widget.id = "health-widget"
         yield health_widget
-        
+
         procs_list = ProcessesWidget()
         procs_list.id = "procs-list"
         yield procs_list
-        
+
         # Row 3: Memory, Sot Widget (Process List continues)
         mem_widget = MemoryWidget()
         mem_widget.id = "mem-widget"
         yield mem_widget
-        
+
         sot_widget = SotWidget()
         sot_widget.id = "sot-widget"
         yield sot_widget
-        
+
         # Row 4: Disk, Network Connections, Network Widget
         disk_widget = DiskWidget()
         disk_widget.id = "disk-widget"
         yield disk_widget
-        
+
         connections_widget = NetworkConnectionsWidget()
         connections_widget.id = "connections-widget"
         yield connections_widget
-        
+
         net_widget = NetworkWidget(self.net_interface)
         net_widget.id = "net-widget"
         yield net_widget
@@ -112,9 +112,7 @@ class SotApp(App):
         if memory_info:
             from ._helpers import sizeof_fmt
 
-            memory_str = (
-                f" | Memory: {sizeof_fmt(memory_info.rss, suffix='', sep='')}"
-            )
+            memory_str = f" | Memory: {sizeof_fmt(memory_info.rss, suffix='', sep='')}"
 
         self.notify(
             f"📋 {process_name} (PID: {process_id}) | CPU: {cpu_percent:.1f}%{memory_str}",
@@ -154,9 +152,7 @@ class SotApp(App):
                     timeout=4,
                 )
             else:
-                self.notify(
-                    f"❓ Unknown action: {action}", severity="error", timeout=3
-                )
+                self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
 
         except psutil.NoSuchProcess:
             self.notify(

@@ -13,8 +13,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .base_widget import BaseWidget
 from ..braille_stream import BrailleStream
+from .base_widget import BaseWidget
 
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
@@ -49,6 +49,7 @@ def get_cpu_model():
         model_name = m.group(1)
     except Exception:
         import cpuinfo
+
         model_name = cpuinfo.get_cpu_info()["brand_raw"]
     return model_name
 
@@ -129,8 +130,7 @@ class CPUWidget(BaseWidget):
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
         self.thread_load_streams = [
-            BrailleStream(10, 1, 0.0, 100.0)
-            for _ in range(num_threads)
+            BrailleStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
         temps = get_current_temps()
@@ -189,7 +189,7 @@ class CPUWidget(BaseWidget):
         try:
             cpu_model = get_cpu_model()
             self.panel.title = f"[b]CPU[/] - {cpu_model}"
-        except:
+        except Exception:
             self.panel.title = "[b]CPU[/]"
 
         self.collect_data()
@@ -198,7 +198,7 @@ class CPUWidget(BaseWidget):
     def collect_data(self):
         # CPU loads
         self.cpu_total_stream.add_value(psutil.cpu_percent())
-        
+
         load_per_thread = psutil.cpu_percent(percpu=True)
         assert isinstance(load_per_thread, list)
         for stream, load in zip(self.thread_load_streams, load_per_thread):
@@ -220,9 +220,9 @@ class CPUWidget(BaseWidget):
         current_val_string = f"{self.cpu_total_stream.values[-1]:5.1f}%"
         lines0 = lines_cpu[0][: -len(current_val_string)] + current_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
-        
+
         cpu_total_graph = "[yellow]" + "\n".join(lines_cpu) + "[/]\n"
-        
+
         if self.has_cpu_temp:
             lines_temp = self.temp_total_stream.graph
             current_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"

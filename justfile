@@ -40,6 +40,7 @@ setup-dev: install-dev-deps
 	@echo "✅ Development environment ready!"
 	@echo "💡 Run 'just dev-watch' to start coding with hot reload"
 	@echo "🔍 Version: $(python3 -c "import sys; sys.path.insert(0, 'src'); from sot.__about__ import __version__; print(__version__)")"
+	python3 -m black isort flake8 blacken-docs build twine
 
 # Publishing commands
 publish: clean format lint

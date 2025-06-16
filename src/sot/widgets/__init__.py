@@ -10,21 +10,21 @@ from .cpu import CPUWidget
 from .disk import DiskWidget
 from .health_score import HealthScoreWidget
 from .info import InfoWidget
-from .sot import SotWidget
 from .memory import MemoryWidget
 from .network import NetworkWidget
 from .network_connections import NetworkConnectionsWidget
 from .processes import ProcessesWidget
+from .sot import SotWidget
 
 __all__ = [
     "BaseWidget",
     "CPUWidget",
-    "DiskWidget", 
+    "DiskWidget",
     "HealthScoreWidget",
     "InfoWidget",
     "SotWidget",
     "MemoryWidget",
     "NetworkWidget",
     "NetworkConnectionsWidget",
-    "ProcessesWidget"
+    "ProcessesWidget",
 ]
