@@ -1,4 +1,4 @@
 from datetime import datetime
 
-__version__ = "3.2.1"
+__version__ = "4.0.0"
 __current_year__ = datetime.now().year

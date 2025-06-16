@@ -13,6 +13,7 @@ from ._info import InfoLine
 from ._mem import Mem
 from ._net import Net
 from ._procs_list import ProcsList
+from ._middle_widgets import HealthScoreWidget, LogoWidget, NetworkConnectionsWidget
 
 
 # Main SOT Application
@@ -22,13 +23,13 @@ class SotApp(App):
     CSS = """
     Screen {
         layout: grid;
-        grid-size: 2;
-        grid-columns: 36fr 55fr;
-        grid-rows: 1 1fr 1.1fr 0.9fr;
+        grid-size: 3;
+        grid-columns: 35fr 20fr 45fr;
+        grid-rows: 1 1fr 1.2fr 1.1fr;
     }
 
     #info-line {
-        column-span: 2;
+        column-span: 3;
     }
 
     #procs-list {
@@ -42,12 +43,46 @@ class SotApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield InfoLine(id="info-line")
-        yield CPU()
-        yield ProcsList(id="procs-list")
-        yield Mem()
-        yield Disk()
-        yield Net(self.net_interface)
+        
+        # Row 1: Info line (spans all 3 columns)
+        info_line = InfoLine()
+        info_line.id = "info-line"
+        yield info_line
+        
+        # Row 2: CPU, Health Score, Process List (starts)
+        cpu_widget = CPU()
+        cpu_widget.id = "cpu-widget"
+        yield cpu_widget
+        
+        health_widget = HealthScoreWidget()
+        health_widget.id = "health-widget"
+        yield health_widget
+        
+        procs_list = ProcsList()
+        procs_list.id = "procs-list"
+        yield procs_list
+        
+        # Row 3: Memory, Logo Widget (Process List continues)
+        mem_widget = Mem()
+        mem_widget.id = "mem-widget"
+        yield mem_widget
+        
+        logo_widget = LogoWidget()
+        logo_widget.id = "logo-widget"
+        yield logo_widget
+        
+        # Row 4: Disk, Network Connections, Network Widget
+        disk_widget = Disk()
+        disk_widget.id = "disk-widget"
+        yield disk_widget
+        
+        connections_widget = NetworkConnectionsWidget()
+        connections_widget.id = "connections-widget"
+        yield connections_widget
+        
+        net_widget = Net(self.net_interface)
+        net_widget.id = "net-widget"
+        yield net_widget
 
     def on_mount(self) -> None:
         self.title = "SOT"

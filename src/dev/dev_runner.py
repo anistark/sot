@@ -10,7 +10,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sot._app import run, _get_version_text  # noqa: E402
 from sot._app import SotApp  # noqa: E402
 
 
