@@ -8,60 +8,22 @@ import argparse
 import sys
 from pathlib import Path
 
-# Add src to path so we can import sot
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Now import everything at the top
-from textual.app import App, ComposeResult  # noqa: E402
-from textual.widgets import Header  # noqa: E402
-
-from sot._cpu import CPU  # noqa: E402
-from sot._disk import Disk  # noqa: E402
-from sot._info import InfoLine  # noqa: E402
-from sot._mem import Mem  # noqa: E402
-from sot._net import Net  # noqa: E402
-from sot._procs_list import ProcsList  # noqa: E402
+from sot._app import run, _get_version_text  # noqa: E402
+from sot._app import SotApp  # noqa: E402
 
 
-class SotDevelopmentApp(App):
+class SotDevelopmentApp(SotApp):
     """Development version of SOT with enhanced debugging and performance optimizations."""
 
-    CSS = """
-    Screen {
-        layout: grid;
-        grid-size: 2;
-        grid-columns: 36fr 55fr;
-        grid-rows: 1 1fr 1.1fr 0.9fr;
-    }
-
-    #info-line {
-        column-span: 2;
-    }
-
-    #procs-list {
-        row-span: 2;
-    }
-    """
-
-    def __init__(self, network_interface_name=None, **kwargs):
-        super().__init__(**kwargs)
-        self.network_interface_name = network_interface_name
-
-    def compose(self) -> ComposeResult:
-        yield Header()
-        yield InfoLine(id="info-line")
-        yield CPU()
-        yield ProcsList(id="procs-list")
-        yield Mem()
-        yield Disk()
-        yield Net(self.network_interface_name)
-
     def on_mount(self) -> None:
+        super().on_mount()
+        
         self.title = "SOT (Development Mode)"
         self.sub_title = "System Observation Tool - DEV"
 
-        # Performance optimization: reduce refresh frequency during startup
-        self.refresh_rate = 30  # 30 FPS instead of default 60
+        self.refresh_rate = 30  # 30 FPS for dev
 
     def action_toggle_dark(self) -> None:
         """Toggle between dark and light themes."""
@@ -80,55 +42,6 @@ class SotDevelopmentApp(App):
     def action_quit(self) -> None:
         """Quit the application gracefully."""
         self.exit()
-
-    def on_procs_list_process_selected(
-        self, message: ProcsList.ProcessSelected
-    ) -> None:
-        """Handle process selection."""
-        process_info = message.process_info
-        process_name = process_info.get("name", "Unknown")
-        process_id = process_info.get("pid", "N/A")
-        self.notify(f"Selected: {process_name} (PID: {process_id})")
-
-    def on_procs_list_process_action(self, message: ProcsList.ProcessAction) -> None:
-        """Handle process actions like kill/terminate."""
-        import psutil
-
-        action = message.action
-        process_info = message.process_info
-        process_id = process_info.get("pid")
-        process_name = process_info.get("name", "Unknown")
-
-        if not process_id:
-            self.notify("❌ Invalid process ID", severity="error")
-            return
-
-        try:
-            target_process = psutil.Process(process_id)
-
-            if action == "kill":
-                target_process.kill()
-                self.notify(
-                    f"💥 Killed {process_name} (PID: {process_id})", severity="warning"
-                )
-            elif action == "terminate":
-                target_process.terminate()
-                self.notify(
-                    f"🛑 Terminated {process_name} (PID: {process_id})",
-                    severity="information",
-                )
-            else:
-                self.notify(f"❓ Unknown action: {action}", severity="error")
-
-        except psutil.NoSuchProcess:
-            self.notify(f"❌ Process {process_id} no longer exists", severity="error")
-        except psutil.AccessDenied:
-            self.notify(
-                f"🔒 Access denied to {process_name} (PID: {process_id})",
-                severity="error",
-            )
-        except Exception as error:
-            self.notify(f"❌ Error {action}ing process: {error}", severity="error")
 
 
 def main():
@@ -149,34 +62,30 @@ def main():
 
     parsed_arguments = argument_parser.parse_args()
 
-    # Set environment variables for better compatibility
     import os
 
     if parsed_arguments.no_color:
         os.environ["NO_COLOR"] = "1"
 
-    # Force UTF-8 encoding
+    # UTF-8 encoding
     os.environ["PYTHONIOENCODING"] = "utf-8"
 
-    # Textual performance settings
     os.environ["TEXTUAL_DRIVER"] = "auto"  # Let Textual choose best driver
 
-    # Configure the app
     app_configuration = {}
     if parsed_arguments.css_hot_reload:
         app_configuration["watch_css"] = True
 
     sot_development_app = SotDevelopmentApp(
-        network_interface_name=parsed_arguments.net, **app_configuration
+        net_interface=parsed_arguments.net, **app_configuration
     )
 
-    # Add development key bindings
+    # dev key bindings
     sot_development_app.bind("d", "toggle_dark")
     sot_development_app.bind("s", "screenshot")
     sot_development_app.bind("q", "quit")
     sot_development_app.bind("ctrl+c", "quit")
 
-    # Run with appropriate logging
     try:
         if parsed_arguments.log:
             os.environ["TEXTUAL_LOG"] = parsed_arguments.log

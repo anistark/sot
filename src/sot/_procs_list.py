@@ -296,7 +296,7 @@ class ProcsList(Widget):
 
         if self.is_interactive_mode:
             title_parts.append(
-                "[dim]↑↓ nav | PgUp/PgDn page | Home/End | Enter select | K kill | T term | R refresh[/]"
+                "[dim]↑↓ | R refresh | T terminate | K kill[/]"
             )
         else:
             title_parts.append("[dim]Press I for interactive mode[/]")
