@@ -9,16 +9,14 @@ from .base_widget import BaseWidget
 
 
 class SotWidget(BaseWidget):
-    """Simple Sot widget displaying the SOT symbol ≈"""
-
+    """SOT widget displaying ASCII art logo."""
+    
     def __init__(self, **kwargs):
         super().__init__(title="SOT", **kwargs)
-
+        
     def on_mount(self):
-        big_logo = Text()
-        big_logo.append("\n\n")
-        big_logo.append("    ≈", style="bold sky_blue3")
-        big_logo.append("\n\n")
+        ascii_art = """≈"""
 
-        centered_logo = Align.center(big_logo, vertical="middle")
-        self.update_panel_content(centered_logo)
+        ascii_text = Text(ascii_art, style="bold sky_blue3")
+        centered_ascii = Align.center(ascii_text, vertical="middle")
+        self.update_panel_content(centered_ascii)
