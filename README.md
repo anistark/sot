@@ -33,7 +33,7 @@ Run with:
 sot
 ```
 
-!["Preview"](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/sot.gif)
+!["Preview"](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/sot-demo.gif)
 
 ---
 
