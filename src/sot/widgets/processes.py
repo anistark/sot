@@ -86,6 +86,7 @@ class ProcessesWidget(BaseWidget):
                 self.selected_process_index -= 1
                 if self.selected_process_index < self.current_scroll_position:
                     self.current_scroll_position = self.selected_process_index
+                self.refresh_display()
             return True
 
         elif key_pressed == "down":
@@ -99,6 +100,7 @@ class ProcessesWidget(BaseWidget):
                     self.current_scroll_position = (
                         self.selected_process_index - self.visible_rows + 1
                     )
+                self.refresh_display()
             return True
 
         elif key_pressed == "pageup" or key_pressed == "ctrl+u":
@@ -108,6 +110,7 @@ class ProcessesWidget(BaseWidget):
             self.current_scroll_position = max(
                 0, self.current_scroll_position - self.visible_rows
             )
+            self.refresh_display()
             return True
 
         elif key_pressed == "pagedown" or key_pressed == "ctrl+d":
@@ -119,17 +122,20 @@ class ProcessesWidget(BaseWidget):
                 max(0, len(self.process_list_data) - self.visible_rows),
                 self.current_scroll_position + self.visible_rows,
             )
+            self.refresh_display()
             return True
 
         elif key_pressed == "home" or key_pressed == "ctrl+home":
             self.selected_process_index = 0
             self.current_scroll_position = 0
+            self.refresh_display()
             return True
 
         elif key_pressed == "end" or key_pressed == "ctrl+end":
             max_index = len(self.process_list_data) - 1
             self.selected_process_index = max_index
             self.current_scroll_position = max(0, max_index - self.visible_rows + 1)
+            self.refresh_display()
             return True
 
         return False
@@ -156,6 +162,7 @@ class ProcessesWidget(BaseWidget):
             return True
         elif key_pressed == "i":
             self.is_interactive_mode = not self.is_interactive_mode
+            self.refresh_display()
             return True
 
         return False
@@ -167,23 +174,24 @@ class ProcessesWidget(BaseWidget):
 
         key_pressed = event.key
 
+        # Handle navigation keys
         if self.handle_navigation_keys(key_pressed):
-            self.refresh_display()
             event.prevent_default()
             return
 
+        # Handle action keys
         if self.handle_action_keys(key_pressed):
-            if key_pressed != "r":
-                self.refresh_display()
             event.prevent_default()
             return
 
     def collect_data(self):
         self.process_list_data = get_process_list(self.max_num_procs)
 
+        # Ensure selected index is within bounds
         if self.selected_process_index >= len(self.process_list_data):
             self.selected_process_index = max(0, len(self.process_list_data) - 1)
 
+        # Ensure scroll position is within bounds
         max_scroll = max(0, len(self.process_list_data) - self.visible_rows)
         self.current_scroll_position = min(self.current_scroll_position, max_scroll)
 
@@ -200,7 +208,7 @@ class ProcessesWidget(BaseWidget):
         )
 
         process_table.add_column(
-            Text("PID", justify="left"), no_wrap=True, justify="right"
+            Text("PID", justify="left"), no_wrap=True, justify="right", width=8
         )
         process_table.add_column("Process", style="aquamarine3", no_wrap=True, ratio=1)
         process_table.add_column(
@@ -208,17 +216,20 @@ class ProcessesWidget(BaseWidget):
             style="aquamarine3",
             no_wrap=True,
             justify="right",
+            width=4
         )
         process_table.add_column(
-            Text("Mem", justify="left"),
+            Text("Memory", justify="left"),
             style="aquamarine3",
             no_wrap=True,
             justify="right",
+            width=8
         )
         process_table.add_column(
             Text("CPU %", style="u", justify="left"),
             no_wrap=True,
             justify="right",
+            width=7
         )
 
         end_index = min(
@@ -294,7 +305,7 @@ class ProcessesWidget(BaseWidget):
         focus_indicator = "🔍" if self.has_focus else "○"
         if self.is_interactive_mode:
             title_parts.append(
-                f"[dim]{focus_indicator} ↑↓ | K kill | T terminate | R refresh[/]"
+                f"[dim]{focus_indicator} ↑↓ | ⏎ info | K kill | T terminate | R refresh[/]"
             )
         else:
             title_parts.append(

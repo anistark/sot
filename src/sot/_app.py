@@ -97,7 +97,7 @@ class SotApp(App):
     async def on_load(self, _):
         self.bind("q", "quit")
 
-    def on_procs_list_process_selected(
+    def on_processes_widget_process_selected(
         self, message: ProcessesWidget.ProcessSelected
     ) -> None:
         """Handle process selection from the process list."""
@@ -119,7 +119,7 @@ class SotApp(App):
             timeout=3,
         )
 
-    def on_procs_list_process_action(
+    def on_processes_widget_process_action(
         self, message: ProcessesWidget.ProcessAction
     ) -> None:
         """Handle process actions like kill/terminate from the process list."""
