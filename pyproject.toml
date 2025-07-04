@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=78"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.isort]
 profile = "black"
@@ -10,7 +10,8 @@ name = "sot"
 authors = [{ name = "Kumar Anirudha", email = "dev@anirudha.dev" }]
 description = "System Oberving Tool"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
@@ -35,8 +36,13 @@ dependencies = [
   "textual>=3.4.0",
 ]
 
-[tool.setuptools.dynamic]
-version = { attr = "sot.__about__.__version__" }
+[tool.hatch.version]
+path = "src/sot/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "images",
+]
 
 [project.urls]
 Code = "https://github.com/anistark/sot"
@@ -46,7 +52,3 @@ Documentation = "https://github.com/anistark/sot#readme"
 
 [project.scripts]
 sot = "sot._app:run"
-
-[tool.setuptools]
-packages = ["sot"]
-package-dir = { "" = "src" }

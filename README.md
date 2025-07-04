@@ -33,10 +33,7 @@ Run with:
 sot
 ```
 
-
-!["Preview"](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/preview.png)
-
-_Some sections are hidden in this preview as they would expose my internal processes and other details. But this should give an idea of how it would look on your screen._
+![sot-demo](https://github.com/user-attachments/assets/780449fd-27e0-40ee-ae9a-7527bf99d7de)
 
 ---
 
