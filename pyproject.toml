@@ -35,8 +35,8 @@ dependencies = [
   "textual>=3.4.0",
 ]
 
-[tool.setuptools.dynamic]
-version = { attr = "sot.__about__.__version__" }
+[tool.hatch.version]
+path = "src/sot/__about__.py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
