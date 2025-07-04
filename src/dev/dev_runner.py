@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Development runner for SOT with hot reloading.
-Usage: python src/dev/dev_runner.py [--debug] [--log LOG_FILE]
 """
 
 import argparse
@@ -20,7 +19,12 @@ class SotDevelopmentApp(SotApp):
         super().on_mount()
 
         self.title = "SOT (Development Mode)"
-        self.sub_title = "System Observation Tool - DEV"
+        
+        # Show which interface we're using in the subtitle
+        if self.net_interface:
+            self.sub_title = f"System Observation Tool - DEV - Net: {self.net_interface}"
+        else:
+            self.sub_title = "System Observation Tool - DEV"
 
         self.refresh_rate = 30  # 30 FPS for dev
 
@@ -43,6 +47,16 @@ class SotDevelopmentApp(SotApp):
         self.exit()
 
 
+def validate_network_interface(interface_name):
+    """Validate that the network interface exists."""
+    try:
+        import psutil
+        available_interfaces = list(psutil.net_if_stats().keys())
+        return interface_name in available_interfaces, available_interfaces
+    except Exception:
+        return False, []
+
+
 def main():
     argument_parser = argparse.ArgumentParser(description="SOT Development Runner")
     argument_parser.add_argument(
@@ -50,6 +64,9 @@ def main():
     )
     argument_parser.add_argument("--log", type=str, help="Log file path for debugging")
     argument_parser.add_argument("--net", type=str, help="Network interface to monitor")
+    argument_parser.add_argument(
+        "--version", "-V", action="store_true", help="Display version information"
+    )
     argument_parser.add_argument(
         "--css-hot-reload",
         action="store_true",
@@ -60,6 +77,28 @@ def main():
     )
 
     parsed_arguments = argument_parser.parse_args()
+
+    # Handle version display
+    if parsed_arguments.version:
+        from sot._app import _show_styled_version
+        print("🛠️  [Development Mode]\n")
+        _show_styled_version()
+        return 0
+
+    # Validate network interface if specified
+    if parsed_arguments.net:
+        is_valid, available_interfaces = validate_network_interface(parsed_arguments.net)
+        if not is_valid:
+            print(f"❌ Error: Network interface '{parsed_arguments.net}' not found.")
+            if available_interfaces:
+                print(f"📡 Available interfaces: {', '.join(available_interfaces)}")
+                print("💡 Run 'just network-discovery' to see detailed interface info")
+            else:
+                print("📡 No network interfaces detected or psutil error")
+            print("🔧 SOT will fall back to auto-detection if you continue...")
+            response = input("Continue anyway? (y/N): ")
+            if response.lower() not in ['y', 'yes']:
+                return 1
 
     import os
 
@@ -75,8 +114,23 @@ def main():
     if parsed_arguments.css_hot_reload:
         app_configuration["watch_css"] = True
 
+    # Print startup information
+    print("🚀 Starting SOT Development Mode")
+    if parsed_arguments.net:
+        print(f"📡 Network interface: {parsed_arguments.net}")
+    if parsed_arguments.log:
+        print(f"📋 Logging to: {parsed_arguments.log}")
+    if parsed_arguments.debug:
+        print("🐛 Debug mode enabled")
+    print("🔧 Press 'd' to toggle dark/light mode")
+    print("📸 Press 's' to take screenshot")
+    print("🚪 Press 'q' or Ctrl+C to quit")
+    print()
+
     sot_development_app = SotDevelopmentApp(
-        net_interface=parsed_arguments.net, **app_configuration
+        net_interface=parsed_arguments.net, 
+        log_file=parsed_arguments.log,
+        **app_configuration
     )
 
     # dev key bindings
@@ -93,9 +147,16 @@ def main():
 
         sot_development_app.run()
     except KeyboardInterrupt:
-        print("\nExiting SOT development mode...")
-        sys.exit(0)
+        print("\n👋 Exiting SOT development mode...")
+        return 0
+    except Exception as e:
+        print(f"\n💥 SOT development mode crashed: {e}")
+        if parsed_arguments.log:
+            print(f"📋 Check log file for details: {parsed_arguments.log}")
+        return 1
+
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())

@@ -6,6 +6,10 @@ default:
 	just help
 
 # Development commands
+version:
+	@echo "🎯 SOT Version Information:"
+	python3 src/dev/dev_runner.py --version
+
 dev:
 	@echo "🚀 Starting SOT in development mode..."
 	python3 src/dev/dev_runner.py --debug
@@ -20,9 +24,21 @@ dev-debug:
 	python3 src/dev/dev_runner.py --debug --log sot_debug.log
 	@echo "📋 Debug log saved to sot_debug.log"
 
+dev-net INTERFACE:
+	@echo "📡 Starting SOT with network interface: {{INTERFACE}}"
+	python3 src/dev/dev_runner.py --debug --net {{INTERFACE}}
+
+dev-full INTERFACE LOG_FILE:
+	@echo "🚀 Starting SOT with interface {{INTERFACE}} and logging to {{LOG_FILE}}"
+	python3 src/dev/dev_runner.py --debug --net {{INTERFACE}} --log {{LOG_FILE}}
+
 terminal-test:
 	@echo "🔍 Testing terminal compatibility..."
 	python3 src/dev/terminal_test.py
+
+network-discovery:
+	@echo "📡 Discovering available network interfaces..."
+	python3 src/dev/network_discovery.py
 
 dev-console:
 	@echo "🕹️  Starting SOT with Textual console..."
@@ -78,23 +94,32 @@ lint:
 help:
 	@echo "🔧 SOT Development Commands:"
 	@echo ""
+	@echo "Info:"
+	@echo "  just version                - Show detailed version information"
+	@echo ""
 	@echo "Development:"
-	@echo "  just dev          - Run SOT in development mode"
-	@echo "  just dev-fast     - Run SOT with performance optimizations"
-	@echo "  just dev-watch    - Run SOT with auto-restart on file changes"
-	@echo "  just dev-debug    - Run SOT with debug logging"
-	@echo "  just dev-console  - Run SOT with textual console for debugging"
-	@echo "  just terminal-test - Test terminal compatibility and performance"
-	@echo "  just setup-dev    - Set up development environment"
+	@echo "  just dev                    - Run SOT in development mode"
+	@echo "  just dev-watch              - Run SOT with auto-restart on file changes"
+	@echo "  just dev-debug              - Run SOT with debug logging"
+	@echo "  just dev-net INTERFACE      - Run SOT with specific network interface"
+	@echo "  just dev-full IF LOG        - Run SOT with interface and log file"
+	@echo "  just dev-console            - Run SOT with textual console for debugging"
+	@echo "  just terminal-test          - Test terminal compatibility and performance"
+	@echo "  just network-discovery      - List available network interfaces"
+	@echo "  just setup-dev              - Set up development environment"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  just lint         - Run linting (black + flake8)"
-	@echo "  just format       - Format code with black and isort"
+	@echo "  just lint                   - Run linting (black + flake8)"
+	@echo "  just format                 - Format code with black and isort"
 	@echo ""
 	@echo "Publishing:"
-	@echo "  just publish      - Publish to PyPI (main branch only)"
-	@echo "  just publish-test - Test build without publishing"
+	@echo "  just publish                - Publish to PyPI (main branch only)"
+	@echo "  just publish-test           - Test build without publishing"
 	@echo ""
 	@echo "Maintenance:"
-	@echo "  just clean        - Clean up development files"
-	@echo "  just help         - Show this help message"
+	@echo "  just clean                  - Clean up development files"
+	@echo "  just help                   - Show this help message"
+	@echo ""
+	@echo "Examples:"
+	@echo "  just dev-net eth0           - Use ethernet interface eth0"
+	@echo "  just dev-full wlan0 debug.log - Use wlan0 with logging"

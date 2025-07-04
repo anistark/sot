@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import os
+import platform
 from sys import version_info
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.widgets import Header
 
@@ -41,9 +47,14 @@ class SotApp(App):
     }
     """
 
-    def __init__(self, net_interface=None):
+    def __init__(self, net_interface=None, log_file=None):
         super().__init__()
         self.net_interface = net_interface
+        self.log_file = log_file
+        
+        # Set up logging if specified
+        if log_file:
+            os.environ["TEXTUAL_LOG"] = log_file
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -84,13 +95,20 @@ class SotApp(App):
         connections_widget.id = "connections-widget"
         yield connections_widget
 
+        # Pass the network interface to the NetworkWidget
         net_widget = NetworkWidget(self.net_interface)
         net_widget.id = "net-widget"
         yield net_widget
 
     def on_mount(self) -> None:
         self.title = "SOT"
-        self.sub_title = "System Observation Tool"
+        
+        # Update subtitle to show active interface if specified
+        if self.net_interface:
+            self.sub_title = f"System Observation Tool - Net: {self.net_interface}"
+        else:
+            self.sub_title = "System Observation Tool"
+            
         # Set initial focus to the process list for interactive features
         self.set_focus(self.query_one("#procs-list"))
 
@@ -114,6 +132,10 @@ class SotApp(App):
 
             memory_str = f" | Memory: {sizeof_fmt(memory_info.rss, suffix='', sep='')}"
 
+        # Log the selection if logging is enabled
+        if self.log_file:
+            self.log(f"Process selected: {process_name} (PID: {process_id})")
+
         self.notify(
             f"📋 {process_name} (PID: {process_id}) | CPU: {cpu_percent:.1f}%{memory_str}",
             timeout=3,
@@ -134,11 +156,17 @@ class SotApp(App):
             self.notify("❌ Invalid process ID", severity="error", timeout=3)
             return
 
+        # Log the action attempt if logging is enabled
+        if self.log_file:
+            self.log(f"Attempting to {action} process: {process_name} (PID: {process_id})")
+
         try:
             target_process = psutil.Process(process_id)
 
             if action == "kill":
                 target_process.kill()
+                if self.log_file:
+                    self.log(f"Successfully killed process: {process_name} (PID: {process_id})")
                 self.notify(
                     f"💥 Killed {process_name} (PID: {process_id})",
                     severity="warning",
@@ -146,6 +174,8 @@ class SotApp(App):
                 )
             elif action == "terminate":
                 target_process.terminate()
+                if self.log_file:
+                    self.log(f"Successfully terminated process: {process_name} (PID: {process_id})")
                 self.notify(
                     f"🛑 Terminated {process_name} (PID: {process_id})",
                     severity="information",
@@ -155,29 +185,111 @@ class SotApp(App):
                 self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
 
         except psutil.NoSuchProcess:
+            error_msg = f"Process {process_id} no longer exists"
+            if self.log_file:
+                self.log(f"Error: {error_msg}")
             self.notify(
-                f"❌ Process {process_id} no longer exists",
+                f"❌ {error_msg}",
                 severity="error",
                 timeout=3,
             )
         except psutil.AccessDenied:
+            error_msg = f"Access denied to {process_name} (PID: {process_id})"
+            if self.log_file:
+                self.log(f"Error: {error_msg}")
             self.notify(
-                f"🔒 Access denied to {process_name} (PID: {process_id}). Try running with elevated privileges.",
+                f"🔒 {error_msg}. Try running with elevated privileges.",
                 severity="error",
                 timeout=5,
             )
         except psutil.ZombieProcess:
+            error_msg = f"Process {process_name} (PID: {process_id}) is a zombie process"
+            if self.log_file:
+                self.log(f"Warning: {error_msg}")
             self.notify(
-                f"🧟 Process {process_name} (PID: {process_id}) is a zombie process",
+                f"🧟 {error_msg}",
                 severity="warning",
                 timeout=4,
             )
         except Exception as error:
+            error_msg = f"Error {action}ing process {process_name}: {str(error)}"
+            if self.log_file:
+                self.log(f"Exception: {error_msg}")
             self.notify(
-                f"❌ Error {action}ing process {process_name}: {str(error)}",
+                f"❌ {error_msg}",
                 severity="error",
                 timeout=5,
             )
+
+
+def _show_styled_version():
+    """Display a clean and focused version information."""
+    console = Console()
+    
+    title_text = Text()
+    title_text.append("      ▄▀▀  ▄▀▀▄  ▀█▀      \n", style="bold bright_yellow")
+    title_text.append("      ▀▀▄  █  █   █       \n", style="bold bright_yellow") 
+    title_text.append("      ▄▄▀  ▀▄▄▀   █       \n", style="bold bright_yellow")
+    title_text.append("\n")
+    title_text.append("System Observation Tool", style="bold bright_cyan")
+    
+    version_table = Table(show_header=False, box=None, padding=(0, 1))
+    version_table.add_column("Label", style="dim", width=12)
+    version_table.add_column("Value", style="bold")
+    
+    python_version = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
+    system_info = platform.system()
+    if system_info == "Darwin":
+        system_info = f"macOS {platform.mac_ver()[0]}"
+    elif system_info == "Linux":
+        try:
+            import distro
+            system_info = f"Linux ({distro.name()} {distro.version()})"
+        except ImportError:
+            system_info = f"Linux {platform.release()}"
+    
+    version_table.add_row("Version:", f"[bright_green]{__version__}[/]")
+    version_table.add_row("Python:", f"[bright_blue]{python_version}[/]")
+    version_table.add_row("Platform:", f"[bright_magenta]{system_info}[/]")
+    version_table.add_row("Architecture:", f"[bright_yellow]{platform.machine()}[/]")
+    
+    main_panel = Panel(
+        title_text,
+        title="[bold bright_white]System Observation Tool[/]",
+        title_align="center",
+        border_style="bright_cyan",
+        padding=(1, 2)
+    )
+    
+    info_panel = Panel(
+        version_table,
+        title="[bold]📋 Version Information[/]",
+        border_style="bright_green",
+        padding=(1, 2)
+    )
+    
+    console.print(main_panel)
+    console.print()
+    console.print(info_panel)
+    console.print()
+    
+    # Footer with copyright and links
+    footer_text = Text()
+    footer_text.append("MIT License © 2024-", style="dim")
+    footer_text.append(f"{__current_year__}", style="dim")
+    footer_text.append(" Kumar Anirudha\n", style="dim")
+    footer_text.append("🔗 ", style="bright_blue")
+    footer_text.append("https://github.com/anistark/sot", style="link https://github.com/anistark/sot")
+    footer_text.append(" | 📖 ", style="bright_green")
+    footer_text.append("sot --help", style="bold bright_white")
+    footer_text.append(" | 🚀 ", style="bright_yellow")
+    footer_text.append("sot", style="bold bright_cyan")
+    
+    console.print(Panel(
+        footer_text,
+        border_style="dim",
+        padding=(0, 2)
+    ))
 
 
 def run(argv=None):
@@ -198,9 +310,8 @@ def run(argv=None):
     parser.add_argument(
         "--version",
         "-V",
-        action="version",
-        version=_get_version_text(),
-        help="Display version information",
+        action="store_true",
+        help="Display version information with styling",
     )
 
     parser.add_argument(
@@ -208,7 +319,7 @@ def run(argv=None):
         "-L",
         type=str,
         default=None,
-        help="Debug log file",
+        help="Debug log file path (enables debug logging)",
     )
 
     parser.add_argument(
@@ -216,25 +327,51 @@ def run(argv=None):
         "-N",
         type=str,
         default=None,
-        help="Network interface to display (default: auto)",
+        help="Network interface to display (default: auto-detect best interface)",
     )
 
     args = parser.parse_args(argv)
 
-    # Configure logging and run the application
+    # Handle version display
+    if args.version:
+        _show_styled_version()
+        return 0
+
+    # Validate network interface if specified
+    if args.net:
+        import psutil
+        
+        available_interfaces = list(psutil.net_if_stats().keys())
+        if args.net not in available_interfaces:
+            print(f"❌ Error: Network interface '{args.net}' not found.")
+            print(f"📡 Available interfaces: {', '.join(available_interfaces)}")
+            return 1
+    
+    # Create and run the application with the specified options
+    app = SotApp(net_interface=args.net, log_file=args.log)
+    
     if args.log:
-        import os
-
-        os.environ["TEXTUAL_LOG"] = args.log
-        app = SotApp(net_interface=args.net)
+        print(f"🐛 Debug logging enabled: {args.log}")
+    if args.net:
+        print(f"📡 Using network interface: {args.net}")
+    
+    try:
         app.run()
-    else:
-        app = SotApp(net_interface=args.net)
-        app.run()
+    except KeyboardInterrupt:
+        print("\n👋 SOT terminated by user")
+        return 0
+    except Exception as e:
+        print(f"💥 SOT crashed: {e}")
+        if args.log:
+            print(f"📋 Check log file for details: {args.log}")
+        return 1
+    
+    return 0
 
 
+# Deprecated. Can remove in future versions.
 def _get_version_text():
-    """Generate version information string."""
+    """Generate simple version information string for fallback."""
     python_version = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
 
     return "\n".join(
