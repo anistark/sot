@@ -38,8 +38,10 @@ dependencies = [
 [tool.hatch.version]
 path = "src/sot/__about__.py"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "images",
+]
 
 [project.urls]
 Code = "https://github.com/anistark/sot"
