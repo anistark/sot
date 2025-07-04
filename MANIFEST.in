@@ -1,2 +1,0 @@
-graft src
-global-exclude __pycache__ *.py[cod]
