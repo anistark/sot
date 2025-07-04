@@ -33,9 +33,7 @@ Run with:
 sot
 ```
 
-# Preview
-
-See the [`images/`](images/) folder for screenshots of the tool in action.
+![sot-demo](https://github.com/user-attachments/assets/780449fd-27e0-40ee-ae9a-7527bf99d7de)
 
 ---
 
