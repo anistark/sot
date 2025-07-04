@@ -33,7 +33,9 @@ Run with:
 sot
 ```
 
-!["Preview"](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/sot-demo.gif)
+# Preview
+
+See the [`images/`](images/) folder for screenshots of the tool in action.
 
 ---
 
