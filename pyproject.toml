@@ -10,7 +10,8 @@ name = "sot"
 authors = [{ name = "Kumar Anirudha", email = "dev@anirudha.dev" }]
 description = "System Oberving Tool"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
