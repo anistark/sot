@@ -30,18 +30,12 @@ def get_process_list(num_procs: int):
     ]):
         try:
             proc_info = proc.info.copy()
-            
-            # Get network connections for this process
             try:
                 connections = proc.connections(kind='inet')
                 proc_info['num_connections'] = len(connections)
-                
-                # Try to get network I/O counters (Linux only)
                 try:
                     io_counters = proc.io_counters()
                     if hasattr(io_counters, 'read_bytes') and hasattr(io_counters, 'write_bytes'):
-                        # Note: these are total I/O bytes (file + network), not just network
-                        # but it's the best approximation we can get per-process
                         proc_info['io_read_bytes'] = io_counters.read_bytes
                         proc_info['io_write_bytes'] = io_counters.write_bytes
                     else:
@@ -61,11 +55,9 @@ def get_process_list(num_procs: int):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-    # Filter out kernel thread with PID 0 if present
     if processes and processes[0].get('pid') == 0:
         processes = processes[1:]
 
-    # Sort by CPU usage
     processes = sorted(
         processes,
         key=lambda p: (p.get("cpu_percent") or 0.0),
@@ -102,9 +94,9 @@ class ProcessesWidget(BaseWidget):
         self.selected_process_index = 0
         self.current_scroll_position = 0
         self.process_list_data = []
-        self.previous_process_data = {}  # Store previous I/O data for rate calculation
+        self.previous_process_data = {}
         self.is_interactive_mode = True
-        self.show_network_details = True  # Toggle for network column visibility
+        self.show_network_details = True
 
     def on_mount(self):
         self.collect_data()
@@ -113,8 +105,7 @@ class ProcessesWidget(BaseWidget):
 
     def calculate_io_rates(self, current_processes):
         """Calculate I/O rates by comparing with previous data."""
-        interval_seconds = 6.0  # Match the collection interval
-        
+        interval_seconds = 6.0
         for proc in current_processes:
             pid = proc.get('pid')
             if not pid:
@@ -137,8 +128,7 @@ class ProcessesWidget(BaseWidget):
                 proc['io_read_rate'] = 0
                 proc['io_write_rate'] = 0
                 proc['total_io_rate'] = 0
-        
-        # Update previous data
+
         self.previous_process_data = {
             proc.get('pid'): {
                 'io_read_bytes': proc.get('io_read_bytes', 0),
@@ -247,12 +237,10 @@ class ProcessesWidget(BaseWidget):
 
         key_pressed = event.key
 
-        # Handle navigation keys
         if self.handle_navigation_keys(key_pressed):
             event.prevent_default()
             return
 
-        # Handle action keys
         if self.handle_action_keys(key_pressed):
             event.prevent_default()
             return
@@ -262,11 +250,9 @@ class ProcessesWidget(BaseWidget):
         self.calculate_io_rates(new_process_data)
         self.process_list_data = new_process_data
 
-        # Ensure selected index is within bounds
         if self.selected_process_index >= len(self.process_list_data):
             self.selected_process_index = max(0, len(self.process_list_data) - 1)
 
-        # Ensure scroll position is within bounds
         max_scroll = max(0, len(self.process_list_data) - self.visible_rows)
         self.current_scroll_position = min(self.current_scroll_position, max_scroll)
 
@@ -282,7 +268,6 @@ class ProcessesWidget(BaseWidget):
             expand=True,
         )
 
-        # Add columns based on what we want to show
         process_table.add_column(
             Text("PID", justify="left"), no_wrap=True, justify="right", width=8
         )
@@ -362,7 +347,6 @@ class ProcessesWidget(BaseWidget):
                 "" if cpu_percentage is None else f"{cpu_percentage:.1f}"
             )
 
-            # Network usage formatting
             if self.show_network_details:
                 total_io_rate = process_info.get('total_io_rate', 0)
                 if total_io_rate > 0:
@@ -378,7 +362,6 @@ class ProcessesWidget(BaseWidget):
                 row_style = "black on white"
                 process_name = f"▶ {process_name}"
 
-            # Build row data based on what columns we're showing
             row_data = [
                 process_id_str,
                 process_name,
@@ -393,7 +376,6 @@ class ProcessesWidget(BaseWidget):
 
             process_table.add_row(*row_data, style=row_style)
 
-        # Calculate summary statistics
         total_num_threads = sum((p.get("num_threads") or 0) for p in self.process_list_data)
         num_sleeping_processes = sum(
             p.get("status") == "sleeping" for p in self.process_list_data

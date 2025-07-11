@@ -51,7 +51,7 @@ class SotApp(App):
         super().__init__()
         self.net_interface = net_interface
         self.log_file = log_file
-        
+
         # Set up logging if specified
         if log_file:
             os.environ["TEXTUAL_LOG"] = log_file
@@ -102,13 +102,13 @@ class SotApp(App):
 
     def on_mount(self) -> None:
         self.title = "SOT"
-        
+
         # Update subtitle to show active interface if specified
         if self.net_interface:
             self.sub_title = f"System Observation Tool - Net: {self.net_interface}"
         else:
             self.sub_title = "System Observation Tool"
-            
+
         # Set initial focus to the process list for interactive features
         self.set_focus(self.query_one("#procs-list"))
 
@@ -118,27 +118,55 @@ class SotApp(App):
     def on_processes_widget_process_selected(
         self, message: ProcessesWidget.ProcessSelected
     ) -> None:
-        """Handle process selection from the process list."""
+        """Handle process selection from the process list with enhanced network details."""
         process_info = message.process_info
         process_name = process_info.get("name", "Unknown")
         process_id = process_info.get("pid", "N/A")
         cpu_percent = process_info.get("cpu_percent", 0) or 0
 
-        # Show detailed process information
+        details = [f"📋 {process_name} (PID: {process_id})"]
+        details.append(f"💻 CPU: {cpu_percent:.1f}%")
         memory_info = process_info.get("memory_info")
-        memory_str = ""
         if memory_info:
             from ._helpers import sizeof_fmt
 
-            memory_str = f" | Memory: {sizeof_fmt(memory_info.rss, suffix='', sep='')}"
+            memory_str = sizeof_fmt(memory_info.rss, suffix="", sep="")
+            details.append(f"🧠 Memory: {memory_str}")
 
-        # Log the selection if logging is enabled
+        num_threads = process_info.get("num_threads")
+        if num_threads:
+            details.append(f"🧵 Threads: {num_threads}")
+
+        total_io_rate = process_info.get("total_io_rate", 0)
+        if total_io_rate > 0:
+            from ._helpers import sizeof_fmt
+
+            net_io_str = sizeof_fmt(total_io_rate, fmt=".1f", suffix="", sep="") + "/s"
+            details.append(f"🌐 Net I/O: {net_io_str}")
+
+        num_connections = process_info.get("num_connections", 0)
+        if num_connections > 0:
+            details.append(f"🔗 Connections: {num_connections}")
+
+        status = process_info.get("status")
+        if status:
+            status_emoji = {
+                "running": "🏃",
+                "sleeping": "😴",
+                "stopped": "⏸️",
+                "zombie": "🧟",
+                "idle": "💤",
+            }.get(status, "❓")
+            details.append(f"{status_emoji} Status: {status}")
+
         if self.log_file:
             self.log(f"Process selected: {process_name} (PID: {process_id})")
 
+        detailed_message = "\n".join(details)
+
         self.notify(
-            f"📋 {process_name} (PID: {process_id}) | CPU: {cpu_percent:.1f}%{memory_str}",
-            timeout=3,
+            detailed_message,
+            timeout=5,
         )
 
     def on_processes_widget_process_action(
@@ -158,7 +186,9 @@ class SotApp(App):
 
         # Log the action attempt if logging is enabled
         if self.log_file:
-            self.log(f"Attempting to {action} process: {process_name} (PID: {process_id})")
+            self.log(
+                f"Attempting to {action} process: {process_name} (PID: {process_id})"
+            )
 
         try:
             target_process = psutil.Process(process_id)
@@ -166,7 +196,9 @@ class SotApp(App):
             if action == "kill":
                 target_process.kill()
                 if self.log_file:
-                    self.log(f"Successfully killed process: {process_name} (PID: {process_id})")
+                    self.log(
+                        f"Successfully killed process: {process_name} (PID: {process_id})"
+                    )
                 self.notify(
                     f"💥 Killed {process_name} (PID: {process_id})",
                     severity="warning",
@@ -175,7 +207,9 @@ class SotApp(App):
             elif action == "terminate":
                 target_process.terminate()
                 if self.log_file:
-                    self.log(f"Successfully terminated process: {process_name} (PID: {process_id})")
+                    self.log(
+                        f"Successfully terminated process: {process_name} (PID: {process_id})"
+                    )
                 self.notify(
                     f"🛑 Terminated {process_name} (PID: {process_id})",
                     severity="information",
@@ -203,7 +237,9 @@ class SotApp(App):
                 timeout=5,
             )
         except psutil.ZombieProcess:
-            error_msg = f"Process {process_name} (PID: {process_id}) is a zombie process"
+            error_msg = (
+                f"Process {process_name} (PID: {process_id}) is a zombie process"
+            )
             if self.log_file:
                 self.log(f"Warning: {error_msg}")
             self.notify(
@@ -225,18 +261,18 @@ class SotApp(App):
 def _show_styled_version():
     """Display a clean and focused version information."""
     console = Console()
-    
+
     title_text = Text()
     title_text.append("      ▄▀▀  ▄▀▀▄  ▀█▀      \n", style="bold bright_yellow")
-    title_text.append("      ▀▀▄  █  █   █       \n", style="bold bright_yellow") 
+    title_text.append("      ▀▀▄  █  █   █       \n", style="bold bright_yellow")
     title_text.append("      ▄▄▀  ▀▄▄▀   █       \n", style="bold bright_yellow")
     title_text.append("\n")
     title_text.append("System Observation Tool", style="bold bright_cyan")
-    
+
     version_table = Table(show_header=False, box=None, padding=(0, 1))
     version_table.add_column("Label", style="dim", width=12)
     version_table.add_column("Value", style="bold")
-    
+
     python_version = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
     system_info = platform.system()
     if system_info == "Darwin":
@@ -244,52 +280,51 @@ def _show_styled_version():
     elif system_info == "Linux":
         try:
             import distro
+
             system_info = f"Linux ({distro.name()} {distro.version()})"
         except ImportError:
             system_info = f"Linux {platform.release()}"
-    
+
     version_table.add_row("Version:", f"[bright_green]{__version__}[/]")
     version_table.add_row("Python:", f"[bright_blue]{python_version}[/]")
     version_table.add_row("Platform:", f"[bright_magenta]{system_info}[/]")
     version_table.add_row("Architecture:", f"[bright_yellow]{platform.machine()}[/]")
-    
+
     main_panel = Panel(
         title_text,
         title="[bold bright_white]System Observation Tool[/]",
         title_align="center",
         border_style="bright_cyan",
-        padding=(1, 2)
+        padding=(1, 2),
     )
-    
+
     info_panel = Panel(
         version_table,
         title="[bold]📋 Version Information[/]",
         border_style="bright_green",
-        padding=(1, 2)
+        padding=(1, 2),
     )
-    
+
     console.print(main_panel)
     console.print()
     console.print(info_panel)
     console.print()
-    
+
     # Footer with copyright and links
     footer_text = Text()
     footer_text.append("MIT License © 2024-", style="dim")
     footer_text.append(f"{__current_year__}", style="dim")
     footer_text.append(" Kumar Anirudha\n", style="dim")
     footer_text.append("🔗 ", style="bright_blue")
-    footer_text.append("https://github.com/anistark/sot", style="link https://github.com/anistark/sot")
+    footer_text.append(
+        "https://github.com/anistark/sot", style="link https://github.com/anistark/sot"
+    )
     footer_text.append(" | 📖 ", style="bright_green")
     footer_text.append("sot --help", style="bold bright_white")
     footer_text.append(" | 🚀 ", style="bright_yellow")
     footer_text.append("sot", style="bold bright_cyan")
-    
-    console.print(Panel(
-        footer_text,
-        border_style="dim",
-        padding=(0, 2)
-    ))
+
+    console.print(Panel(footer_text, border_style="dim", padding=(0, 2)))
 
 
 def run(argv=None):
@@ -340,21 +375,21 @@ def run(argv=None):
     # Validate network interface if specified
     if args.net:
         import psutil
-        
+
         available_interfaces = list(psutil.net_if_stats().keys())
         if args.net not in available_interfaces:
             print(f"❌ Error: Network interface '{args.net}' not found.")
             print(f"📡 Available interfaces: {', '.join(available_interfaces)}")
             return 1
-    
+
     # Create and run the application with the specified options
     app = SotApp(net_interface=args.net, log_file=args.log)
-    
+
     if args.log:
         print(f"🐛 Debug logging enabled: {args.log}")
     if args.net:
         print(f"📡 Using network interface: {args.net}")
-    
+
     try:
         app.run()
     except KeyboardInterrupt:
@@ -365,7 +400,7 @@ def run(argv=None):
         if args.log:
             print(f"📋 Check log file for details: {args.log}")
         return 1
-    
+
     return 0
 
 
