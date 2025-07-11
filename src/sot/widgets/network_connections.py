@@ -63,13 +63,13 @@ class NetworkConnectionsWidget(BaseWidget):
         static_line = glitch * 15
 
         lock_art = f"""{top_border}
-║  {warning}  ║
-║      {lock_hook}      ║
-║      {lock_body}      ║
-║   {warning2}   ║
-║ {static_line[:13]} ║
-║ UNAUTHORIZED ║
-║   {glitch}{glitch} ZONE {glitch}{glitch}   ║
+{warning}
+{lock_hook}
+{lock_body}
+{warning2}
+{static_line[:13]}
+UNAUTHORIZED
+{glitch}{glitch} ZONE {glitch}{glitch}
 ╚═══════════════╝"""
 
         return lock_art
