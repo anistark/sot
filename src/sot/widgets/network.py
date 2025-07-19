@@ -43,7 +43,7 @@ def _autoselect_interface():
 
         if not score_dict:
             return "lo"
-            
+
         max_score = max(score_dict.values())
         max_keys = [key for key, score in score_dict.items() if score == max_score]
         return sorted(max_keys)[0]
@@ -75,13 +75,15 @@ class NetworkWidget(BaseWidget):
         else:
             self.interface = _autoselect_interface()
             self.interface_source = f"fallback ('{interface}' not found)"
-            
+
         self.sot_string = f"sot v{__version__}"
         super().__init__(title=f"Network - {self.interface}", **kwargs)
-        
+
         self.interface_error = None
         if interface and not _validate_interface(interface):
-            self.interface_error = f"Interface '{interface}' not found, using '{self.interface}'"
+            self.interface_error = (
+                f"Interface '{interface}' not found, using '{self.interface}'"
+            )
 
     def on_mount(self):
         from rich import box
@@ -118,7 +120,7 @@ class NetworkWidget(BaseWidget):
             title_suffix = " (fallback)"
         elif self.interface_source == "user-specified":
             title_suffix = " (specified)"
-            
+
         self.panel.title = f"[b]Network - {self.interface}[/]{title_suffix}"
         self.panel.subtitle = self.sot_string
         self.panel.subtitle_align = "right"
@@ -162,7 +164,9 @@ class NetworkWidget(BaseWidget):
                 self.group.renderables[2] = f"[b]IPv6:[/] {ipv6_str}"
         except KeyError:
             if len(self.group.renderables) >= 3:
-                self.group.renderables[1] = f"[b]IPv4:[/] Interface '{self.interface}' not found"
+                self.group.renderables[1] = (
+                    f"[b]IPv4:[/] Interface '{self.interface}' not found"
+                )
                 self.group.renderables[2] = f"[b]IPv6:[/] ---"
         except Exception as e:
             if len(self.group.renderables) >= 3:
@@ -224,7 +228,10 @@ class NetworkWidget(BaseWidget):
         self.update_panel_content(self.group)
 
     def refresh_graphs(self):
-        if hasattr(self.table.columns[0], "_cells") and len(self.table.columns[0]._cells) >= 2:
+        if (
+            hasattr(self.table.columns[0], "_cells")
+            and len(self.table.columns[0]._cells) >= 2
+        ):
             self.table.columns[0]._cells[0] = Text(
                 "\n".join(self.recv_stream.graph), style="aquamarine3"
             )
@@ -232,7 +239,7 @@ class NetworkWidget(BaseWidget):
                 "\n".join(self.sent_stream.graph), style="yellow"
             )
         else:
-            if hasattr(self.table, '_clear'):
+            if hasattr(self.table, "_clear"):
                 self.table._clear()
             else:
                 self.table = Table(expand=True, show_header=False, padding=0, box=None)

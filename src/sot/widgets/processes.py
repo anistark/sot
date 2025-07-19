@@ -17,45 +17,49 @@ from .base_widget import BaseWidget
 def get_process_list(num_procs: int):
     """Get list of running processes sorted by CPU usage with network I/O information."""
     processes = []
-    
-    for proc in psutil.process_iter([
-        "pid",
-        "name", 
-        "username",
-        "cmdline",
-        "cpu_percent",
-        "num_threads",
-        "memory_info",
-        "status",
-    ]):
+
+    for proc in psutil.process_iter(
+        [
+            "pid",
+            "name",
+            "username",
+            "cmdline",
+            "cpu_percent",
+            "num_threads",
+            "memory_info",
+            "status",
+        ]
+    ):
         try:
             proc_info = proc.info.copy()
             try:
-                connections = proc.connections(kind='inet')
-                proc_info['num_connections'] = len(connections)
+                connections = proc.connections(kind="inet")
+                proc_info["num_connections"] = len(connections)
                 try:
                     io_counters = proc.io_counters()
-                    if hasattr(io_counters, 'read_bytes') and hasattr(io_counters, 'write_bytes'):
-                        proc_info['io_read_bytes'] = io_counters.read_bytes
-                        proc_info['io_write_bytes'] = io_counters.write_bytes
+                    if hasattr(io_counters, "read_bytes") and hasattr(
+                        io_counters, "write_bytes"
+                    ):
+                        proc_info["io_read_bytes"] = io_counters.read_bytes
+                        proc_info["io_write_bytes"] = io_counters.write_bytes
                     else:
-                        proc_info['io_read_bytes'] = 0
-                        proc_info['io_write_bytes'] = 0
+                        proc_info["io_read_bytes"] = 0
+                        proc_info["io_write_bytes"] = 0
                 except (psutil.AccessDenied, psutil.NoSuchProcess, AttributeError):
-                    proc_info['io_read_bytes'] = 0
-                    proc_info['io_write_bytes'] = 0
-                    
+                    proc_info["io_read_bytes"] = 0
+                    proc_info["io_write_bytes"] = 0
+
             except (psutil.AccessDenied, psutil.NoSuchProcess):
-                proc_info['num_connections'] = 0
-                proc_info['io_read_bytes'] = 0
-                proc_info['io_write_bytes'] = 0
-                
+                proc_info["num_connections"] = 0
+                proc_info["io_read_bytes"] = 0
+                proc_info["io_write_bytes"] = 0
+
             processes.append(proc_info)
-            
+
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-    if processes and processes[0].get('pid') == 0:
+    if processes and processes[0].get("pid") == 0:
         processes = processes[1:]
 
     processes = sorted(
@@ -63,7 +67,7 @@ def get_process_list(num_procs: int):
         key=lambda p: (p.get("cpu_percent") or 0.0),
         reverse=True,
     )
-    
+
     return processes[:num_procs]
 
 
@@ -107,35 +111,35 @@ class ProcessesWidget(BaseWidget):
         """Calculate I/O rates by comparing with previous data."""
         interval_seconds = 6.0
         for proc in current_processes:
-            pid = proc.get('pid')
+            pid = proc.get("pid")
             if not pid:
                 continue
-                
-            current_read = proc.get('io_read_bytes', 0)
-            current_write = proc.get('io_write_bytes', 0)
-            
+
+            current_read = proc.get("io_read_bytes", 0)
+            current_write = proc.get("io_write_bytes", 0)
+
             if pid in self.previous_process_data:
-                prev_read = self.previous_process_data[pid].get('io_read_bytes', 0)
-                prev_write = self.previous_process_data[pid].get('io_write_bytes', 0)
-                
+                prev_read = self.previous_process_data[pid].get("io_read_bytes", 0)
+                prev_write = self.previous_process_data[pid].get("io_write_bytes", 0)
+
                 read_rate = max(0, (current_read - prev_read) / interval_seconds)
                 write_rate = max(0, (current_write - prev_write) / interval_seconds)
-                
-                proc['io_read_rate'] = read_rate
-                proc['io_write_rate'] = write_rate
-                proc['total_io_rate'] = read_rate + write_rate
+
+                proc["io_read_rate"] = read_rate
+                proc["io_write_rate"] = write_rate
+                proc["total_io_rate"] = read_rate + write_rate
             else:
-                proc['io_read_rate'] = 0
-                proc['io_write_rate'] = 0
-                proc['total_io_rate'] = 0
+                proc["io_read_rate"] = 0
+                proc["io_write_rate"] = 0
+                proc["total_io_rate"] = 0
 
         self.previous_process_data = {
-            proc.get('pid'): {
-                'io_read_bytes': proc.get('io_read_bytes', 0),
-                'io_write_bytes': proc.get('io_write_bytes', 0)
+            proc.get("pid"): {
+                "io_read_bytes": proc.get("io_read_bytes", 0),
+                "io_write_bytes": proc.get("io_write_bytes", 0),
             }
             for proc in current_processes
-            if proc.get('pid')
+            if proc.get("pid")
         }
 
     def handle_navigation_keys(self, key_pressed: str) -> bool:
@@ -274,40 +278,40 @@ class ProcessesWidget(BaseWidget):
         process_table.add_column("Process", style="aquamarine3", no_wrap=True, ratio=1)
         process_table.add_column(
             Text("🧵", justify="left"),
-            style="aquamarine3", 
+            style="aquamarine3",
             no_wrap=True,
             justify="right",
-            width=4
+            width=4,
         )
         process_table.add_column(
             Text("Memory", justify="left"),
             style="aquamarine3",
             no_wrap=True,
-            justify="right", 
-            width=8
+            justify="right",
+            width=8,
         )
-        
+
         if self.show_network_details:
             process_table.add_column(
                 Text("Net I/O", justify="left"),
                 style="yellow",
                 no_wrap=True,
                 justify="right",
-                width=9
+                width=9,
             )
             process_table.add_column(
                 Text("Conn", justify="left"),
                 style="sky_blue3",
                 no_wrap=True,
                 justify="right",
-                width=4
+                width=4,
             )
-        
+
         process_table.add_column(
             Text("CPU %", style="u", justify="left"),
             no_wrap=True,
             justify="right",
-            width=7
+            width=7,
         )
 
         end_index = min(
@@ -348,13 +352,15 @@ class ProcessesWidget(BaseWidget):
             )
 
             if self.show_network_details:
-                total_io_rate = process_info.get('total_io_rate', 0)
+                total_io_rate = process_info.get("total_io_rate", 0)
                 if total_io_rate > 0:
-                    net_io_str = sizeof_fmt(total_io_rate, fmt=".1f", suffix="", sep="") + "/s"
+                    net_io_str = (
+                        sizeof_fmt(total_io_rate, fmt=".1f", suffix="", sep="") + "/s"
+                    )
                 else:
                     net_io_str = "-"
-                
-                num_connections = process_info.get('num_connections', 0)
+
+                num_connections = process_info.get("num_connections", 0)
                 connections_str = str(num_connections) if num_connections > 0 else "-"
 
             row_style = None
@@ -368,19 +374,23 @@ class ProcessesWidget(BaseWidget):
                 num_threads_str,
                 memory_info_str,
             ]
-            
+
             if self.show_network_details:
                 row_data.extend([net_io_str, connections_str])
-            
+
             row_data.append(cpu_percentage_str)
 
             process_table.add_row(*row_data, style=row_style)
 
-        total_num_threads = sum((p.get("num_threads") or 0) for p in self.process_list_data)
+        total_num_threads = sum(
+            (p.get("num_threads") or 0) for p in self.process_list_data
+        )
         num_sleeping_processes = sum(
             p.get("status") == "sleeping" for p in self.process_list_data
         )
-        total_connections = sum((p.get("num_connections") or 0) for p in self.process_list_data)
+        total_connections = sum(
+            (p.get("num_connections") or 0) for p in self.process_list_data
+        )
 
         total_processes = len(self.process_list_data)
         if total_processes > self.visible_rows:
@@ -395,7 +405,7 @@ class ProcessesWidget(BaseWidget):
             f"{total_processes} {scroll_info} ({total_num_threads} 🧵)",
             f"{num_sleeping_processes} 😴",
         ]
-        
+
         if self.show_network_details:
             title_parts.append(f"{total_connections} 🌐")
 
@@ -408,7 +418,9 @@ class ProcessesWidget(BaseWidget):
                 help_text += " | N show net"
             title_parts.append(f"[dim]{focus_indicator} {help_text}[/]")
         else:
-            title_parts.append(f"[dim]{focus_indicator} Press I for interactive mode[/]")
+            title_parts.append(
+                f"[dim]{focus_indicator} Press I for interactive mode[/]"
+            )
 
         panel_title = " - ".join(title_parts)
         self.panel.title = panel_title

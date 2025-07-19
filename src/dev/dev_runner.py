@@ -19,10 +19,12 @@ class SotDevelopmentApp(SotApp):
         super().on_mount()
 
         self.title = "SOT (Development Mode)"
-        
+
         # Show which interface we're using in the subtitle
         if self.net_interface:
-            self.sub_title = f"System Observation Tool - DEV - Net: {self.net_interface}"
+            self.sub_title = (
+                f"System Observation Tool - DEV - Net: {self.net_interface}"
+            )
         else:
             self.sub_title = "System Observation Tool - DEV"
 
@@ -51,6 +53,7 @@ def validate_network_interface(interface_name):
     """Validate that the network interface exists."""
     try:
         import psutil
+
         available_interfaces = list(psutil.net_if_stats().keys())
         return interface_name in available_interfaces, available_interfaces
     except Exception:
@@ -81,13 +84,16 @@ def main():
     # Handle version display
     if parsed_arguments.version:
         from sot._app import _show_styled_version
+
         print("🛠️  [Development Mode]\n")
         _show_styled_version()
         return 0
 
     # Validate network interface if specified
     if parsed_arguments.net:
-        is_valid, available_interfaces = validate_network_interface(parsed_arguments.net)
+        is_valid, available_interfaces = validate_network_interface(
+            parsed_arguments.net
+        )
         if not is_valid:
             print(f"❌ Error: Network interface '{parsed_arguments.net}' not found.")
             if available_interfaces:
@@ -97,7 +103,7 @@ def main():
                 print("📡 No network interfaces detected or psutil error")
             print("🔧 SOT will fall back to auto-detection if you continue...")
             response = input("Continue anyway? (y/N): ")
-            if response.lower() not in ['y', 'yes']:
+            if response.lower() not in ["y", "yes"]:
                 return 1
 
     import os
@@ -128,9 +134,9 @@ def main():
     print()
 
     sot_development_app = SotDevelopmentApp(
-        net_interface=parsed_arguments.net, 
+        net_interface=parsed_arguments.net,
         log_file=parsed_arguments.log,
-        **app_configuration
+        **app_configuration,
     )
 
     # dev key bindings
