@@ -5,9 +5,10 @@ Network Discovery Tool
 Discovers and lists available network interfaces with their properties.
 """
 
-import psutil
 import socket
 from typing import List, Optional
+
+import psutil
 
 
 class NetworkInterfaceInfo:
@@ -45,15 +46,15 @@ def classify_interface_type(name: str) -> str:
     """Classify the interface type based on its name."""
     name_lower = name.lower()
 
-    if name_lower.startswith(('lo', 'loopback')):
+    if name_lower.startswith(("lo", "loopback")):
         return "loopback"
-    elif name_lower.startswith(('docker', 'anpi', 'veth')):
+    elif name_lower.startswith(("docker", "anpi", "veth")):
         return "virtual"
-    elif name_lower.startswith(('fw', 'bluetooth')):
+    elif name_lower.startswith(("fw", "bluetooth")):
         return "special"
-    elif name_lower.startswith(('en', 'eth')):
+    elif name_lower.startswith(("en", "eth")):
         return "ethernet"
-    elif name_lower.startswith(('wl', 'wifi', 'wlan')):
+    elif name_lower.startswith(("wl", "wifi", "wlan")):
         return "wireless"
     else:
         return "other"
@@ -97,7 +98,7 @@ def calculate_interface_score(info: NetworkInterfaceInfo) -> int:
         "special": 2,
         "other": 3,
         "wireless": 4,
-        "ethernet": 5
+        "ethernet": 5,
     }
 
     base_score = type_scores.get(info.interface_type, 1)
@@ -130,14 +131,16 @@ def format_interface_display(info: NetworkInterfaceInfo) -> str:
 
     traffic = ""
     if info.bytes_sent > 0 or info.bytes_recv > 0:
-        traffic = f" (↑{_format_bytes(info.bytes_sent)} ↓{_format_bytes(info.bytes_recv)})"
+        traffic = (
+            f" (↑{_format_bytes(info.bytes_sent)} ↓{_format_bytes(info.bytes_recv)})"
+        )
 
     return f"{info.name:<12} [{status:<4}] {type_display:<8} {addr_display}{traffic}"
 
 
 def _format_bytes(bytes_val: int) -> str:
     """Format bytes in human readable format."""
-    for unit in ['B', 'KB', 'MB', 'GB']:
+    for unit in ["B", "KB", "MB", "GB"]:
         if bytes_val < 1024:
             return f"{bytes_val:.1f}{unit}"
         bytes_val /= 1024
@@ -191,7 +194,9 @@ def print_interface_summary(interfaces: List[NetworkInterfaceInfo]) -> None:
 
     best_interface = next((i for i in interfaces if i.is_up and i.score > 1), None)
     if best_interface:
-        print(f"\n🎯 Recommended: {best_interface.name} (score: {best_interface.score})")
+        print(
+            f"\n🎯 Recommended: {best_interface.name} (score: {best_interface.score})"
+        )
 
 
 def get_best_interface() -> Optional[str]:

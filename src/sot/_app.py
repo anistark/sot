@@ -192,7 +192,9 @@ class SotApp(App):
 
         try:
             target_process = psutil.Process(process_id)
-            self._execute_process_action(target_process, action, process_name, process_id)
+            self._execute_process_action(
+                target_process, action, process_name, process_id
+            )
 
         except psutil.NoSuchProcess:
             self._handle_no_such_process_error(process_id)
@@ -254,9 +256,7 @@ class SotApp(App):
 
     def _handle_zombie_process_error(self, process_name, process_id):
         """Handle the case when a process is a zombie."""
-        error_msg = (
-            f"Process {process_name} (PID: {process_id}) is a zombie process"
-        )
+        error_msg = f"Process {process_name} (PID: {process_id}) is a zombie process"
         if self.log_file:
             self.log(f"Warning: {error_msg}")
         self.notify(
