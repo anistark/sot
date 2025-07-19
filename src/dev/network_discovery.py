@@ -1,160 +1,221 @@
 #!/usr/bin/env python3
 """
-Network interface discovery utility for SOT.
+Network Discovery Tool
+
+Discovers and lists available network interfaces with their properties.
 """
 
-import socket
-
 import psutil
-from rich.console import Console
-from rich.table import Table
+import socket
+from typing import List, Optional
 
 
-def discover_network_interfaces():
-    """Discover and display all available network interfaces."""
-    console = Console()
+class NetworkInterfaceInfo:
+    """Data class for network interface information."""
 
-    console.print("🔍 [bold blue]SOT Network Interface Discovery[/bold blue]")
-    console.print()
+    def __init__(self, name: str):
+        self.name = name
+        self.is_up = False
+        self.has_ipv4 = False
+        self.has_ipv6 = False
+        self.ipv4_addresses = []
+        self.ipv6_addresses = []
+        self.bytes_sent = 0
+        self.bytes_recv = 0
+        self.score = 0
+        self.interface_type = "unknown"
+
+
+def get_interface_basic_info(name: str) -> Optional[NetworkInterfaceInfo]:
+    """Get basic interface information (up/down status, type classification)."""
+    try:
+        stats = psutil.net_if_stats().get(name)
+        if not stats:
+            return None
+
+        info = NetworkInterfaceInfo(name)
+        info.is_up = stats.isup
+        info.interface_type = classify_interface_type(name)
+        return info
+    except Exception:
+        return None
+
+
+def classify_interface_type(name: str) -> str:
+    """Classify the interface type based on its name."""
+    name_lower = name.lower()
+
+    if name_lower.startswith(('lo', 'loopback')):
+        return "loopback"
+    elif name_lower.startswith(('docker', 'anpi', 'veth')):
+        return "virtual"
+    elif name_lower.startswith(('fw', 'bluetooth')):
+        return "special"
+    elif name_lower.startswith(('en', 'eth')):
+        return "ethernet"
+    elif name_lower.startswith(('wl', 'wifi', 'wlan')):
+        return "wireless"
+    else:
+        return "other"
+
+
+def get_interface_addresses(name: str, info: NetworkInterfaceInfo) -> None:
+    """Populate IP address information for the interface."""
+    try:
+        addrs = psutil.net_if_addrs().get(name, [])
+
+        for addr in addrs:
+            if addr.family == socket.AF_INET:
+                info.has_ipv4 = True
+                info.ipv4_addresses.append(f"{addr.address}/{addr.netmask}")
+            elif addr.family == socket.AF_INET6:
+                info.has_ipv6 = True
+                info.ipv6_addresses.append(addr.address)
+    except Exception:
+        pass
+
+
+def get_interface_stats(name: str, info: NetworkInterfaceInfo) -> None:
+    """Get traffic statistics for the interface."""
+    try:
+        counters = psutil.net_io_counters(pernic=True).get(name)
+        if counters:
+            info.bytes_sent = counters.bytes_sent
+            info.bytes_recv = counters.bytes_recv
+    except Exception:
+        pass
+
+
+def calculate_interface_score(info: NetworkInterfaceInfo) -> int:
+    """Calculate priority score for interface selection."""
+    if not info.is_up:
+        return 0
+
+    type_scores = {
+        "loopback": 1,
+        "virtual": 1,
+        "special": 2,
+        "other": 3,
+        "wireless": 4,
+        "ethernet": 5
+    }
+
+    base_score = type_scores.get(info.interface_type, 1)
+
+    # Bonus points for having IP addresses
+    if info.has_ipv4:
+        base_score += 2
+    if info.has_ipv6:
+        base_score += 1
+
+    # Bonus for traffic (indicates active usage)
+    if info.bytes_sent > 0 or info.bytes_recv > 0:
+        base_score += 1
+
+    return base_score
+
+
+def format_interface_display(info: NetworkInterfaceInfo) -> str:
+    """Format interface information for display."""
+    status = "UP" if info.is_up else "DOWN"
+    type_display = info.interface_type.upper()
+
+    addresses = []
+    if info.ipv4_addresses:
+        addresses.extend(info.ipv4_addresses[:2])
+    if info.ipv6_addresses:
+        addresses.append(info.ipv6_addresses[0][:30] + "...")
+
+    addr_display = ", ".join(addresses) if addresses else "No IP"
+
+    traffic = ""
+    if info.bytes_sent > 0 or info.bytes_recv > 0:
+        traffic = f" (↑{_format_bytes(info.bytes_sent)} ↓{_format_bytes(info.bytes_recv)})"
+
+    return f"{info.name:<12} [{status:<4}] {type_display:<8} {addr_display}{traffic}"
+
+
+def _format_bytes(bytes_val: int) -> str:
+    """Format bytes in human readable format."""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if bytes_val < 1024:
+            return f"{bytes_val:.1f}{unit}"
+        bytes_val /= 1024
+    return f"{bytes_val:.1f}TB"
+
+
+def discover_network_interfaces() -> List[NetworkInterfaceInfo]:
+    """
+    Discover all network interfaces with their properties.
+
+    Returns:
+        List of NetworkInterfaceInfo objects sorted by priority score.
+    """
+    interfaces = []
 
     try:
-        # Get interface statistics
-        if_stats = psutil.net_if_stats()
-        if_addrs = psutil.net_if_addrs()
-        if_counters = psutil.net_io_counters(pernic=True)
+        interface_names = list(psutil.net_if_stats().keys())
+    except Exception:
+        return interfaces
 
-        # Create table
-        table = Table(title="📡 Available Network Interfaces")
-        table.add_column("Interface", style="cyan", no_wrap=True)
-        table.add_column("Status", style="green")
-        table.add_column("IPv4 Address", style="blue")
-        table.add_column("IPv6 Address", style="purple")
-        table.add_column("Bytes Sent", style="yellow", justify="right")
-        table.add_column("Bytes Recv", style="aquamarine3", justify="right")
-        table.add_column("Recommendation", style="dim")
+    for name in interface_names:
+        info = get_interface_basic_info(name)
+        if not info:
+            continue
 
-        # Auto-selection scoring (same as in NetworkWidget)
-        recommendations = {}
-        for name, stats in if_stats.items():
-            if not stats.isup:
-                recommendations[name] = "❌ Down"
-            elif (
-                name.startswith("lo")
-                or name.lower().startswith("loopback")
-                or name.lower().startswith("docker")
-                or name.lower().startswith("anpi")
-            ):
-                recommendations[name] = "🔄 Loopback/Virtual"
-            elif name.lower().startswith("fw") or name.lower().startswith("bluetooth"):
-                recommendations[name] = "📶 Wireless/FW"
-            elif name.lower().startswith("en"):
-                recommendations[name] = "⭐ Ethernet (Recommended)"
-            else:
-                recommendations[name] = "✅ Available"
+        get_interface_addresses(name, info)
+        get_interface_stats(name, info)
 
-        # Find the auto-selected interface
-        auto_selected = None
-        best_score = 0
-        for name, stats in if_stats.items():
-            if not stats.isup:
-                score = 0
-            elif (
-                name.startswith("lo")
-                or name.lower().startswith("loopback")
-                or name.lower().startswith("docker")
-                or name.lower().startswith("anpi")
-            ):
-                score = 1
-            elif name.lower().startswith("fw") or name.lower().startswith("bluetooth"):
-                score = 2
-            elif name.lower().startswith("en"):
-                score = 4
-            else:
-                score = 3
+        info.score = calculate_interface_score(info)
 
-            if score > best_score:
-                best_score = score
-                auto_selected = name
+        interfaces.append(info)
 
-        # Populate table
-        for interface_name in sorted(if_stats.keys()):
-            stats = if_stats[interface_name]
-            status = "🟢 UP" if stats.isup else "🔴 DOWN"
+    # Sort by score (highest first), then by name
+    interfaces.sort(key=lambda x: (-x.score, x.name))
 
-            # Get IPv4 address
-            ipv4_addr = "None"
-            ipv6_addr = "None"
-            if interface_name in if_addrs:
-                for addr in if_addrs[interface_name]:
-                    if addr.family == socket.AF_INET:
-                        ipv4_addr = addr.address
-                    elif addr.family == socket.AF_INET6 and not addr.address.startswith(
-                        "fe80"
-                    ):
-                        ipv6_addr = (
-                            addr.address[:30] + "..."
-                            if len(addr.address) > 30
-                            else addr.address
-                        )
+    return interfaces
 
-            # Get traffic stats
-            bytes_sent = "0"
-            bytes_recv = "0"
-            if interface_name in if_counters:
-                counters = if_counters[interface_name]
-                bytes_sent = f"{counters.bytes_sent:,}"
-                bytes_recv = f"{counters.bytes_recv:,}"
 
-            # Add special marking for auto-selected interface
-            recommendation = recommendations.get(interface_name, "❓ Unknown")
-            if interface_name == auto_selected:
-                recommendation += " [bold](AUTO-SELECTED)[/bold]"
+def print_interface_summary(interfaces: List[NetworkInterfaceInfo]) -> None:
+    """Print a summary of discovered interfaces."""
+    if not interfaces:
+        print("❌ No network interfaces found")
+        return
 
-            table.add_row(
-                interface_name,
-                status,
-                ipv4_addr,
-                ipv6_addr,
-                bytes_sent,
-                bytes_recv,
-                recommendation,
-            )
+    print(f"📡 Found {len(interfaces)} network interfaces:")
+    print("-" * 80)
 
-        console.print(table)
-        console.print()
+    for info in interfaces:
+        score_indicator = "⭐" * min(info.score, 5)
+        print(f"{score_indicator:<6} {format_interface_display(info)}")
 
-        # Show usage examples
-        console.print("💡 [bold yellow]Usage Examples:[/bold yellow]")
-        console.print(f"   sot                    # Use auto-selected: {auto_selected}")
-        console.print(
-            f"   sot --net {auto_selected}        # Explicitly specify auto-selected"
-        )
+    best_interface = next((i for i in interfaces if i.is_up and i.score > 1), None)
+    if best_interface:
+        print(f"\n🎯 Recommended: {best_interface.name} (score: {best_interface.score})")
 
-        # Show first few available interfaces as examples
-        available_interfaces = [name for name, stats in if_stats.items() if stats.isup]
-        for interface in available_interfaces[:3]:
-            if interface != auto_selected:
-                console.print(f"   sot --net {interface}        # Use {interface}")
 
-        console.print()
-        console.print("🔧 [bold]Current Network Interface Check:[/bold]")
-        console.print(f"   Auto-selected interface: [green]{auto_selected}[/green]")
-        console.print(f"   Status: {status}")
-        console.print(f"   IPv4: {ipv4_addr}")
-
-    except Exception as e:
-        console.print(f"❌ [red]Error discovering interfaces: {e}[/red]")
-        return False
-
-    return True
+def get_best_interface() -> Optional[str]:
+    """Get the name of the best available interface."""
+    interfaces = discover_network_interfaces()
+    best = next((i for i in interfaces if i.is_up and i.score > 1), None)
+    return best.name if best else None
 
 
 def main():
-    success = discover_network_interfaces()
-    if not success:
-        return 1
-    return 0
+    """Main entry point for the network discovery tool."""
+    print("🔍 Discovering network interfaces...\n")
+
+    interfaces = discover_network_interfaces()
+    print_interface_summary(interfaces)
+
+    print("\n📊 Interface type breakdown:")
+    type_counts = {}
+    for info in interfaces:
+        type_counts[info.interface_type] = type_counts.get(info.interface_type, 0) + 1
+
+    for iface_type, count in sorted(type_counts.items()):
+        print(f"  {iface_type}: {count}")
 
 
 if __name__ == "__main__":
-    exit(main())
+    main()

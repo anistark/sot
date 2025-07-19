@@ -167,11 +167,11 @@ class NetworkWidget(BaseWidget):
                 self.group.renderables[1] = (
                     f"[b]IPv4:[/] Interface '{self.interface}' not found"
                 )
-                self.group.renderables[2] = f"[b]IPv6:[/] ---"
+                self.group.renderables[2] = "[b]IPv6:[/] ---"
         except Exception as e:
             if len(self.group.renderables) >= 3:
                 self.group.renderables[1] = f"[b]IPv4:[/] Error: {str(e)}"
-                self.group.renderables[2] = f"[b]IPv6:[/] ---"
+                self.group.renderables[2] = "[b]IPv6:[/] ---"
 
     def refresh_panel(self):
         try:

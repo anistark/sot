@@ -21,9 +21,9 @@ num_to_braille_upside_down = [
 ]
 
 
-def _transpose(l):
+def _transpose(lst):
     # https://stackoverflow.com/a/6473724/353337
-    return map(list, zip(*l))
+    return map(list, zip(*lst))
 
 
 class BrailleStream:

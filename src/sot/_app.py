@@ -192,70 +192,89 @@ class SotApp(App):
 
         try:
             target_process = psutil.Process(process_id)
-
-            if action == "kill":
-                target_process.kill()
-                if self.log_file:
-                    self.log(
-                        f"Successfully killed process: {process_name} (PID: {process_id})"
-                    )
-                self.notify(
-                    f"💥 Killed {process_name} (PID: {process_id})",
-                    severity="warning",
-                    timeout=4,
-                )
-            elif action == "terminate":
-                target_process.terminate()
-                if self.log_file:
-                    self.log(
-                        f"Successfully terminated process: {process_name} (PID: {process_id})"
-                    )
-                self.notify(
-                    f"🛑 Terminated {process_name} (PID: {process_id})",
-                    severity="information",
-                    timeout=4,
-                )
-            else:
-                self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
+            self._execute_process_action(target_process, action, process_name, process_id)
 
         except psutil.NoSuchProcess:
-            error_msg = f"Process {process_id} no longer exists"
-            if self.log_file:
-                self.log(f"Error: {error_msg}")
-            self.notify(
-                f"❌ {error_msg}",
-                severity="error",
-                timeout=3,
-            )
+            self._handle_no_such_process_error(process_id)
         except psutil.AccessDenied:
-            error_msg = f"Access denied to {process_name} (PID: {process_id})"
-            if self.log_file:
-                self.log(f"Error: {error_msg}")
-            self.notify(
-                f"🔒 {error_msg}. Try running with elevated privileges.",
-                severity="error",
-                timeout=5,
-            )
+            self._handle_access_denied_error(process_name, process_id)
         except psutil.ZombieProcess:
-            error_msg = (
-                f"Process {process_name} (PID: {process_id}) is a zombie process"
-            )
+            self._handle_zombie_process_error(process_name, process_id)
+        except Exception as error:
+            self._handle_general_process_error(action, process_name, error)
+
+    def _execute_process_action(self, target_process, action, process_name, process_id):
+        """Execute the specified action on the target process."""
+        if action == "kill":
+            target_process.kill()
             if self.log_file:
-                self.log(f"Warning: {error_msg}")
+                self.log(
+                    f"Successfully killed process: {process_name} (PID: {process_id})"
+                )
             self.notify(
-                f"🧟 {error_msg}",
+                f"💥 Killed {process_name} (PID: {process_id})",
                 severity="warning",
                 timeout=4,
             )
-        except Exception as error:
-            error_msg = f"Error {action}ing process {process_name}: {str(error)}"
+        elif action == "terminate":
+            target_process.terminate()
             if self.log_file:
-                self.log(f"Exception: {error_msg}")
+                self.log(
+                    f"Successfully terminated process: {process_name} (PID: {process_id})"
+                )
             self.notify(
-                f"❌ {error_msg}",
-                severity="error",
-                timeout=5,
+                f"🛑 Terminated {process_name} (PID: {process_id})",
+                severity="information",
+                timeout=4,
             )
+        else:
+            self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
+
+    def _handle_no_such_process_error(self, process_id):
+        """Handle the case when a process no longer exists."""
+        error_msg = f"Process {process_id} no longer exists"
+        if self.log_file:
+            self.log(f"Error: {error_msg}")
+        self.notify(
+            f"❌ {error_msg}",
+            severity="error",
+            timeout=3,
+        )
+
+    def _handle_access_denied_error(self, process_name, process_id):
+        """Handle the case when access is denied to a process."""
+        error_msg = f"Access denied to {process_name} (PID: {process_id})"
+        if self.log_file:
+            self.log(f"Error: {error_msg}")
+        self.notify(
+            f"🔒 {error_msg}. Try running with elevated privileges.",
+            severity="error",
+            timeout=5,
+        )
+
+    def _handle_zombie_process_error(self, process_name, process_id):
+        """Handle the case when a process is a zombie."""
+        error_msg = (
+            f"Process {process_name} (PID: {process_id}) is a zombie process"
+        )
+        if self.log_file:
+            self.log(f"Warning: {error_msg}")
+        self.notify(
+            f"🧟 {error_msg}",
+            severity="warning",
+            timeout=4,
+        )
+
+    def _handle_general_process_error(self, action, process_name, error):
+        """Handle general process action errors."""
+        error_msg = f"Error {action}ing process {process_name}: {str(error)}"
+        if self.log_file:
+            self.log(f"Exception: {error_msg}")
+        self.notify(
+            f"❌ {error_msg}",
+            severity="error",
+            timeout=5,
+        )
 
 
 def _show_styled_version():
