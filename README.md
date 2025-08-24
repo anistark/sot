@@ -7,6 +7,20 @@
 
 [![PyPI Downloads](https://static.pepy.tech/badge/sot)](https://pepy.tech/projects/sot)
 
+## Installation
+
+### Using uv (Recommended)
+
+Install and run with [`uv`](https://github.com/astral-sh/uv):
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+uv tool install sot
+```
+
+### Using pipx
+
 Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before proceeding.
 
 <!--pytest-codeblocks: skip-->

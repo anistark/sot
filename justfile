@@ -8,67 +8,94 @@ default:
 # Development commands
 version:
 	@echo "🎯 SOT Version Information:"
-	python3 src/dev/dev_runner.py --version
+	uv run python src/dev/dev_runner.py --version
 
 dev:
 	@echo "🚀 Starting SOT in development mode..."
-	python3 src/dev/dev_runner.py --debug
+	uv run python src/dev/dev_runner.py --debug
 
 dev-watch:
 	@echo "👀 Starting SOT with file watching..."
 	@just install-dev-deps
-	python3 src/dev/watch_dev.py
+	uv run python src/dev/watch_dev.py
 
 dev-debug:
 	@echo "🐛 Starting SOT with debug logging..."
-	python3 src/dev/dev_runner.py --debug --log sot_debug.log
+	uv run python src/dev/dev_runner.py --debug --log sot_debug.log
 	@echo "📋 Debug log saved to sot_debug.log"
 
 dev-net INTERFACE:
 	@echo "📡 Starting SOT with network interface: {{INTERFACE}}"
-	python3 src/dev/dev_runner.py --debug --net {{INTERFACE}}
+	uv run python src/dev/dev_runner.py --debug --net {{INTERFACE}}
 
 dev-full INTERFACE LOG_FILE:
 	@echo "🚀 Starting SOT with interface {{INTERFACE}} and logging to {{LOG_FILE}}"
-	python3 src/dev/dev_runner.py --debug --net {{INTERFACE}} --log {{LOG_FILE}}
+	uv run python src/dev/dev_runner.py --debug --net {{INTERFACE}} --log {{LOG_FILE}}
 
 terminal-test:
 	@echo "🔍 Testing terminal compatibility..."
-	python3 src/dev/terminal_test.py
+	uv run python src/dev/terminal_test.py
 
 network-discovery:
 	@echo "📡 Discovering available network interfaces..."
-	python3 src/dev/network_discovery.py
+	uv run python src/dev/network_discovery.py
 
 dev-console:
 	@echo "🕹️  Starting SOT with Textual console..."
 	@just install-dev-deps
 	@echo "🔍 Run 'textual console' in another terminal for debugging"
-	python3 src/dev/dev_runner.py --debug
+	uv run python src/dev/dev_runner.py --debug
 
 install-dev-deps:
-	@echo "📦 Installing SOT in development mode..."
-	python3 -m pip install -e .
-	@echo "📦 Installing additional development dependencies..."
-	python3 -m pip install watchdog textual-dev
+	@echo "📦 Installing SOT in development mode with uv..."
+	uv sync --dev
+	uv pip install -e .
+
+# uv-specific commands
+uv-sync:
+	@echo "🔄 Syncing dependencies with uv..."
+	uv sync
+
+uv-sync-dev:
+	@echo "🔄 Syncing dev dependencies with uv..."
+	uv sync --dev
+
+uv-lock:
+	@echo "🔒 Generating uv.lock file..."
+	uv lock
+
+uv-add PACKAGE:
+	@echo "➕ Adding package {{PACKAGE}} with uv..."
+	uv add {{PACKAGE}}
+
+uv-add-dev PACKAGE:
+	@echo "➕ Adding dev package {{PACKAGE}} with uv..."
+	uv add --dev {{PACKAGE}}
+
+uv-remove PACKAGE:
+	@echo "➖ Removing package {{PACKAGE}} with uv..."
+	uv remove {{PACKAGE}}
+
+uv-tree:
+	@echo "🌳 Showing dependency tree..."
+	uv tree
 
 setup-dev: install-dev-deps
 	@echo "✅ Development environment ready!"
 	@echo "💡 Run 'just dev-watch' to start coding with hot reload"
 	@echo "🔍 Version: $(python3 -c "import sys; sys.path.insert(0, 'src'); from sot.__about__ import __version__; print(__version__)")"
-	python3 -m black isort flake8 blacken-docs build twine
 
 # Publishing commands
 publish: clean format lint
 	@echo "🚀 Publishing SOT to PyPI..."
 	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then exit 1; fi
 	gh release create "v{{version}}"
-	python3 -m build --sdist --wheel .
-	twine upload dist/*
+	uv run python -m build --sdist --wheel .
+	uv run twine upload dist/*
 
 publish-test: clean
-	python3 -m build --sdist --wheel .
-	twine check dist/*
+	uv run python -m build --sdist --wheel .
+	uv run twine check dist/*
 
 # Maintenance commands
 clean:
@@ -81,14 +108,14 @@ clean:
 
 format:
 	@echo "✨ Formatting code..."
-	isort .
-	black .
-	blacken-docs README.md
+	uv run isort .
+	uv run black .
+	uv run blacken-docs README.md
 
 lint:
 	@echo "🔍 Running linting..."
-	black --check .
-	flake8 .
+	uv run black --check .
+	uv run flake8 .
 
 # Help command
 help:
@@ -108,6 +135,15 @@ help:
 	@echo "  just network-discovery      - List available network interfaces"
 	@echo "  just setup-dev              - Set up development environment"
 	@echo ""
+	@echo "UV Package Management:"
+	@echo "  just uv-sync                - Sync dependencies with uv"
+	@echo "  just uv-sync-dev            - Sync dev dependencies with uv"
+	@echo "  just uv-lock                - Generate uv.lock file"
+	@echo "  just uv-add PACKAGE         - Add package with uv"
+	@echo "  just uv-add-dev PACKAGE     - Add dev package with uv"
+	@echo "  just uv-remove PACKAGE      - Remove package with uv"
+	@echo "  just uv-tree                - Show dependency tree"
+	@echo ""
 	@echo "Code Quality:"
 	@echo "  just lint                   - Run linting (black + flake8)"
 	@echo "  just format                 - Format code with black and isort"
@@ -123,3 +159,5 @@ help:
 	@echo "Examples:"
 	@echo "  just dev-net eth0           - Use ethernet interface eth0"
 	@echo "  just dev-full wlan0 debug.log - Use wlan0 with logging"
+	@echo "  just uv-add requests        - Add requests package"
+	@echo "  just uv-add-dev pytest     - Add pytest as dev dependency"
