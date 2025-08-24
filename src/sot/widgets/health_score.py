@@ -70,7 +70,7 @@ class HealthScoreWidget(BaseWidget):
 
         # Temperature Health (10% weight) - if available
         try:
-            temps = getattr(psutil, 'sensors_temperatures', lambda: {})() or {}
+            temps = getattr(psutil, "sensors_temperatures", lambda: {})() or {}
             if temps:
                 avg_temp = sum(
                     temp.current for sensor in temps.values() for temp in sensor

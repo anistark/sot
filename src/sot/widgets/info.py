@@ -96,7 +96,7 @@ class InfoWidget(BaseWidget):
 
     def render(self):
         panel = getattr(self, "panel", None)
-        if panel and hasattr(panel, 'renderable'):
+        if panel and hasattr(panel, "renderable"):
             return panel.renderable or Table()
         return Table()
 
