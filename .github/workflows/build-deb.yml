@@ -5,21 +5,26 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
+# Security: Restrict permissions to minimum required
+permissions:
+  contents: write  # Required for release uploads
+  id-token: write  # Required for SLSA attestation
+
 jobs:
   build-deb:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5.2.0
       with:
         python-version: '3.10'
         
     - name: Install uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@f2d60f03b23ce44c12b80ca600d6d94e20dbc855 # v4.1.1
       
     - name: Install dependencies
       run: uv sync
@@ -43,17 +48,22 @@ jobs:
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       run: |
         echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --yes --import
-        echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-        gpg-connect-agent reloadagent /bye
+        # Create secure passphrase file
+        echo "$GPG_PASSPHRASE" > /tmp/gpg_passphrase
+        chmod 600 /tmp/gpg_passphrase
+        # Configure GPG for non-interactive use
+        mkdir -p ~/.gnupg
+        echo "use-agent" >> ~/.gnupg/gpg.conf
+        echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+        echo "batch" >> ~/.gnupg/gpg.conf
+        echo "yes" >> ~/.gnupg/gpg.conf
         
     - name: Sign DEB packages
-      env:
-        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       run: |
         for deb in output/*.deb; do
-          dpkg-sig --sign builder --gpg-options "--batch --yes --pinentry-mode loopback --passphrase $GPG_PASSPHRASE" "$deb"
+          dpkg-sig --sign builder --gpg-options "--batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase" "$deb"
           # Also create detached signature
-          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --armor --detach-sign "$deb"
+          gpg --batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase --armor --detach-sign "$deb"
         done
         
     - name: Generate checksums
@@ -61,10 +71,8 @@ jobs:
         cd output
         sha256sum *.deb *.deb.asc > SHA256SUMS
         # Sign the checksums file
-        gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --clearsign SHA256SUMS
+        gpg --batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase --clearsign SHA256SUMS
         mv SHA256SUMS.asc SHA256SUMS.sig
-      env:
-        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         
     - name: Get package info
       id: package_info
@@ -73,13 +81,14 @@ jobs:
         echo "package_name=$(ls output/*.deb | head -1 | xargs basename)" >> $GITHUB_OUTPUT
         
     - name: Upload to Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
       with:
         files: |
           output/*.deb
           output/*.deb.asc
           output/SHA256SUMS
           output/SHA256SUMS.sig
+          .github/public-key.asc
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
         draft: false
@@ -89,3 +98,9 @@ jobs:
         append_body: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Cleanup sensitive files
+      if: always()
+      run: |
+        rm -f /tmp/gpg_passphrase
+        gpg-connect-agent killagent /bye || true
