@@ -196,12 +196,12 @@ class SotApp(App):
                 target_process, action, process_name, process_id
             )
 
+        except psutil.ZombieProcess:
+            self._handle_zombie_process_error(process_name, process_id)
         except psutil.NoSuchProcess:
             self._handle_no_such_process_error(process_id)
         except psutil.AccessDenied:
             self._handle_access_denied_error(process_name, process_id)
-        except psutil.ZombieProcess:
-            self._handle_zombie_process_error(process_name, process_id)
         except Exception as error:
             self._handle_general_process_error(action, process_name, error)
 

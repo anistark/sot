@@ -88,7 +88,7 @@ class DiskWidget(BaseWidget):
     def refresh_io_counters(self):
         io = psutil.disk_io_counters()
 
-        if self.last_io is None:
+        if self.last_io is None or io is None:
             read_bytes_s_string = ""
             write_bytes_s_string = ""
         else:
@@ -112,8 +112,12 @@ class DiskWidget(BaseWidget):
 
         self.last_io = io
 
-        total_read_string = sizeof_fmt(io.read_bytes, sep=" ", fmt=".1f")
-        total_write_string = sizeof_fmt(io.write_bytes, sep=" ", fmt=".1f")
+        if io is not None:
+            total_read_string = sizeof_fmt(io.read_bytes, sep=" ", fmt=".1f")
+            total_write_string = sizeof_fmt(io.write_bytes, sep=" ", fmt=".1f")
+        else:
+            total_read_string = "0 B"
+            total_write_string = "0 B"
 
         self.down_box.renderable = "\n".join(
             [
@@ -143,12 +147,10 @@ class DiskWidget(BaseWidget):
                 "\n".join(self.write_stream.graph), style="yellow"
             )
         else:
-            if hasattr(self.table, "_clear"):
-                self.table._clear()
-            else:
-                self.table = Table(expand=True, show_header=False, padding=0, box=None)
-                self.table.add_column("graph", no_wrap=True, ratio=1)
-                self.table.add_column("box", no_wrap=True, width=20)
+            # Recreate table instead of using private _clear method
+            self.table = Table(expand=True, show_header=False, padding=0, box=None)
+            self.table.add_column("graph", no_wrap=True, ratio=1)
+            self.table.add_column("box", no_wrap=True, width=20)
 
             self.table.add_row(
                 Text("\n".join(self.read_stream.graph), style="aquamarine3"),

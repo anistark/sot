@@ -134,6 +134,12 @@ Before submitting changes, ensure your code passes quality checks:
 # Check code style and formatting
 just lint
 
+# Run type checking
+just type
+
+# Auto-fix type issues
+just type-fix
+
 # Auto-format code
 just format
 ```
@@ -150,6 +156,12 @@ uv run blacken-docs README.md
 # Run linting
 uv run black --check .
 uv run flake8 .
+
+# Run type checking
+uv run pyright
+
+# Auto-fix type issues
+uv run pyright --createstub
 ```
 
 **With pip:**
@@ -162,12 +174,19 @@ blacken-docs README.md
 # Run linting
 black --check .
 flake8 .
+
+# Run type checking
+pyright
+
+# Auto-fix type issues
+pyright --createstub
 ```
 
 The project uses:
 - **Black** for code formatting
 - **isort** for import sorting
 - **flake8** for linting
+- **pyright** for type checking
 - **blacken-docs** for documentation formatting
 
 ### Testing

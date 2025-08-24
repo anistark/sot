@@ -140,11 +140,12 @@ def format_interface_display(info: NetworkInterfaceInfo) -> str:
 
 def _format_bytes(bytes_val: int) -> str:
     """Format bytes in human readable format."""
+    bytes_val_float = float(bytes_val)
     for unit in ["B", "KB", "MB", "GB"]:
-        if bytes_val < 1024:
-            return f"{bytes_val:.1f}{unit}"
-        bytes_val /= 1024
-    return f"{bytes_val:.1f}TB"
+        if bytes_val_float < 1024:
+            return f"{bytes_val_float:.1f}{unit}"
+        bytes_val_float /= 1024
+    return f"{bytes_val_float:.1f}TB"
 
 
 def discover_network_interfaces() -> List[NetworkInterfaceInfo]:
