@@ -41,6 +41,48 @@ or in single line:
 python3 -m pipx install sot && python3 -m pipx ensurepath && sudo pipx ensurepath --global
 ```
 
+### Using DEB Package (Experimental - Debian/Ubuntu)
+
+**⚠️ Experimental**: DEB packages are experimental. Use `uv` or `pipx` for recommended installation.
+
+Download the latest DEB package from the [releases page](https://github.com/anistark/sot/releases) and install:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+# Download latest .deb file from releases
+wget https://github.com/anistark/sot/releases/latest/download/sot-*.deb
+
+# Install the package
+sudo dpkg -i sot-*.deb
+
+# Install any missing dependencies (if needed)
+sudo apt-get install -f
+```
+
+#### Verifying GPG Signatures (Recommended)
+
+For enhanced security, verify the GPG signature before installing:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+# Import the public signing key (one time setup)
+curl -fsSL https://github.com/anistark/sot/releases/latest/download/public-key.asc | gpg --import
+
+# Verify the package signature
+dpkg-sig --verify sot-*.deb
+
+# Or verify using detached signature
+gpg --verify sot-*.deb.asc sot-*.deb
+
+# Verify checksums
+gpg --verify SHA256SUMS.sig && sha256sum -c SHA256SUMS
+```
+
+**GPG Key Fingerprint:** `DCD1 9CA3 2C3F ACAA 1360  1C78 F4D7 EFDB 552E 84C9`
+
+
 Run with:
 
 <!--pytest-codeblocks: skip-->
