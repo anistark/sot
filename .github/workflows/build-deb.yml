@@ -1,0 +1,91 @@
+name: Build DEB Package
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      
+    - name: Install dependencies
+      run: uv sync
+      
+    - name: Build wheel
+      run: uv build --wheel
+      
+    - name: Install wheel2deb and signing tools
+      run: |
+        pip install wheel2deb
+        sudo apt-get update
+        sudo apt-get install -y dpkg-sig
+      
+    - name: Convert wheel to deb
+      run: |
+        wheel2deb --map "distro=distro" --map "py-cpuinfo=python3-cpuinfo" --map "psutil=python3-psutil" --map "rich=python3-rich" --map "textual=python3-textual" dist/*.whl
+        
+    - name: Set up GPG
+      env:
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      run: |
+        echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --yes --import
+        echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+        gpg-connect-agent reloadagent /bye
+        
+    - name: Sign DEB packages
+      env:
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      run: |
+        for deb in output/*.deb; do
+          dpkg-sig --sign builder --gpg-options "--batch --yes --pinentry-mode loopback --passphrase $GPG_PASSPHRASE" "$deb"
+          # Also create detached signature
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --armor --detach-sign "$deb"
+        done
+        
+    - name: Generate checksums
+      run: |
+        cd output
+        sha256sum *.deb *.deb.asc > SHA256SUMS
+        # Sign the checksums file
+        gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --clearsign SHA256SUMS
+        mv SHA256SUMS.asc SHA256SUMS.sig
+      env:
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        
+    - name: Get package info
+      id: package_info
+      run: |
+        echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        echo "package_name=$(ls output/*.deb | head -1 | xargs basename)" >> $GITHUB_OUTPUT
+        
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          output/*.deb
+          output/*.deb.asc
+          output/SHA256SUMS
+          output/SHA256SUMS.sig
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        fail_on_unmatched_files: true
+        append_body: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
