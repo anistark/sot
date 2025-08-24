@@ -10,20 +10,32 @@ By submitting a pull request, you are licensing your code under the project [lic
 
 ### Prerequisites
 
+- [uv](https://github.com/astral-sh/uv) - Fast Python package manager (recommended)
+- [just](https://github.com/casey/just) - Command runner (recommended)
+
+### Method 1: Using uv (Recommended)
+
+```sh
+# Sync dependencies including dev dependencies
+uv sync --dev
+
+# Install in development mode
+uv pip install -e .
+
+# Or use the justfile command
+just setup-dev
+```
+
+### Method 2: Traditional pip setup
+
 ```sh
 python3 -m venv venv
 source venv/bin/activate
-```
 
-### Install Dependencies
-
-```sh
+# Install Dependencies
 pip install -e .
-```
 
-### Set Up Development Environment
-
-```sh
+# Set Up Development Environment
 just setup-dev
 ```
 
@@ -50,6 +62,33 @@ just dev-debug
 
 # Development with Textual console for advanced debugging
 just dev-console
+```
+
+### UV Package Management Commands
+
+If you're using uv, you can also use these commands for dependency management:
+
+```sh
+# Sync dependencies
+just uv-sync
+
+# Sync dev dependencies
+just uv-sync-dev
+
+# Add a new package
+just uv-add package-name
+
+# Add a dev dependency
+just uv-add-dev package-name
+
+# Remove a package
+just uv-remove package-name
+
+# Show dependency tree
+just uv-tree
+
+# Generate lock file
+just uv-lock
 ```
 
 ### Development Tools
@@ -90,12 +129,39 @@ While in development mode, you can:
 
 Before submitting changes, ensure your code passes quality checks:
 
+#### Using Just (Recommended)
 ```sh
 # Check code style and formatting
 just lint
 
 # Auto-format code
 just format
+```
+
+#### Manual Commands
+
+**With uv:**
+```sh
+# Format code
+uv run isort .
+uv run black .
+uv run blacken-docs README.md
+
+# Run linting
+uv run black --check .
+uv run flake8 .
+```
+
+**With pip:**
+```sh
+# Format code
+isort .
+black .
+blacken-docs README.md
+
+# Run linting
+black --check .
+flake8 .
 ```
 
 The project uses:
@@ -124,6 +190,39 @@ python dev_runner.py --net eth0
 # Test with debug logging
 python dev_runner.py --debug --log test.log
 ```
+
+## 📦 Adding Dependencies
+
+### Using uv (Recommended)
+
+For runtime dependencies:
+```sh
+uv add package-name
+# Or using just
+just uv-add package-name
+```
+
+For development dependencies:
+```sh
+uv add --dev package-name
+# Or using just
+just uv-add-dev package-name
+```
+
+This will automatically update `pyproject.toml` and `uv.lock`.
+
+### Manual Method
+
+1. **Runtime dependencies**: Add them to `pyproject.toml` under `dependencies`
+2. **Development dependencies**: Add them to `pyproject.toml` under `[tool.uv] dev-dependencies`
+3. Run `uv sync --dev` to install the new dependencies
+4. Test that the dependency works correctly
+
+### Dependency Guidelines
+
+- Pin major versions for runtime dependencies (e.g., `requests>=2.25.0`)
+- Be more specific with development tool versions for consistency
+- Always test new dependencies across supported Python versions
 
 ## 🏗️ Project Structure
 
