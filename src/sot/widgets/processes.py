@@ -36,9 +36,11 @@ def get_process_list(num_procs: int):
                 connections = proc.connections(kind="inet")
                 proc_info["num_connections"] = len(connections)
                 try:
-                    io_counters = getattr(proc, 'io_counters', lambda: None)()
-                    if io_counters and hasattr(io_counters, "read_bytes") and hasattr(
-                        io_counters, "write_bytes"
+                    io_counters = getattr(proc, "io_counters", lambda: None)()
+                    if (
+                        io_counters
+                        and hasattr(io_counters, "read_bytes")
+                        and hasattr(io_counters, "write_bytes")
                     ):
                         proc_info["io_read_bytes"] = io_counters.read_bytes
                         proc_info["io_write_bytes"] = io_counters.write_bytes
@@ -354,7 +356,7 @@ class ProcessesWidget(BaseWidget):
             # Initialize network variables
             net_io_str = "-"
             connections_str = "-"
-            
+
             if self.show_network_details:
                 total_io_rate = process_info.get("total_io_rate", 0)
                 if total_io_rate > 0:

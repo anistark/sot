@@ -39,7 +39,9 @@ class SotDevelopmentApp(SotApp):
         self.theme = new_theme
         self.notify(f"Switched to {new_theme.replace('textual-', '')} mode")
 
-    def action_screenshot(self, filename: str | None = None, path: str | None = None) -> None:
+    def action_screenshot(
+        self, filename: str | None = None, path: str | None = None
+    ) -> None:
         """Take a screenshot and save to file."""
         screenshot_path = self.save_screenshot(filename=filename, path=path)
         self.notify(f"Screenshot saved to {screenshot_path}")

@@ -77,7 +77,7 @@ def get_current_temps():
 
     # Try psutil.sensors_temperatures()
     try:
-        temps = getattr(psutil, 'sensors_temperatures', lambda: None)()
+        temps = getattr(psutil, "sensors_temperatures", lambda: None)()
         if temps is None:
             return None
     except AttributeError:
@@ -160,7 +160,7 @@ class CPUWidget(BaseWidget):
 
         self.has_fan_rpm = False
         try:
-            sensors_fans = getattr(psutil, 'sensors_fans', lambda: {})()
+            sensors_fans = getattr(psutil, "sensors_fans", lambda: {})()
             if sensors_fans:
                 fan_current = list(sensors_fans.values())[0][0].current
                 self.has_fan_rpm = True
@@ -241,7 +241,7 @@ class CPUWidget(BaseWidget):
         t.add_row(cpu_total_graph, self.info_box)
 
         if self.has_fan_rpm:
-            sensors_fans = getattr(psutil, 'sensors_fans', lambda: {})()
+            sensors_fans = getattr(psutil, "sensors_fans", lambda: {})()
             if sensors_fans:
                 fan_current = list(sensors_fans.values())[0][0].current
             else:
