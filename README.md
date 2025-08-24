@@ -5,9 +5,11 @@
 
 `sot` is a Command-line System Obervation Tool in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various interesting system stats and graphs them. Works on all operating systems.
 
-[![PyPI Downloads](https://static.pepy.tech/badge/sot)](https://pepy.tech/projects/sot)
+[![PyPI Downloads](https://static.pepy.tech/badge/sot/month)](https://pypi.org/project/sot/) [![Open Source](https://img.shields.io/badge/open-source-brightgreen)](https://github.com/anistark/sot) [![Contributors](https://img.shields.io/github/contributors/anistark/sot)](https://github.com/anistark/sot/graphs/contributors) ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
+
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
 ### Using uv (Recommended)
 
@@ -138,8 +140,8 @@ All supported [colors](https://rich.readthedocs.io/en/latest/appendix/colors.htm
 
 Tested Systems:
 
-- MacOs
-- Ubuntu
+![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
 
 _If you use a system that's not listed above, feel free to add to the list. If you're facing any issues, would be happy to take a look._
 
