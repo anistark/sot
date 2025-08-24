@@ -87,11 +87,12 @@ setup-dev: install-dev-deps
 
 # Publishing commands
 publish: clean format lint type
-	@echo "🚀 Publishing SOT to PyPI..."
-	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then exit 1; fi
-	gh release create "v{{version}}"
-	uv run python -m build --sdist --wheel .
-	uv run twine upload dist/*
+	@echo "🏷️  Creating git tag for SOT version {{version}}..."
+	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then echo "❌ Must be on main branch to publish"; exit 1; fi
+	@echo "📋 Version: {{version}}"
+	git tag "v{{version}}"
+	git push origin "v{{version}}"
+	@echo "✅ Tag v{{version}} created and pushed!"
 
 publish-test: clean
 	uv run python -m build --sdist --wheel .

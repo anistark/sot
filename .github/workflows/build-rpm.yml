@@ -1,4 +1,4 @@
-name: Build DEB Package
+name: Build RPM Package
 
 on:
   repository_dispatch:
@@ -10,7 +10,7 @@ permissions:
   id-token: write  # Required for SLSA attestation
 
 jobs:
-  build-deb:
+  build-rpm:
     runs-on: ubuntu-latest
     
     steps:
@@ -31,15 +31,15 @@ jobs:
     - name: Build wheel
       run: uv build --wheel
       
-    - name: Install wheel2deb and signing tools
+    - name: Install RPM build tools
       run: |
-        pip install wheel2deb
         sudo apt-get update
-        sudo apt-get install -y dpkg-sig
-      
-    - name: Convert wheel to deb
+        sudo apt-get install -y rpm rpmbuild python3-pip
+        pip install wheel2rpm
+        
+    - name: Convert wheel to RPM
       run: |
-        wheel2deb --map "distro=distro" --map "py-cpuinfo=python3-cpuinfo" --map "psutil=python3-psutil" --map "rich=python3-rich" --map "textual=python3-textual" dist/*.whl
+        wheel2rpm --python-version 3 --rpm-dist el8 dist/*.whl
         
     - name: Set up GPG
       env:
@@ -57,21 +57,27 @@ jobs:
         echo "batch" >> ~/.gnupg/gpg.conf
         echo "yes" >> ~/.gnupg/gpg.conf
         
-    - name: Sign DEB packages
+    - name: Sign RPM packages
       run: |
-        for deb in output/*.deb; do
-          dpkg-sig --sign builder --gpg-options "--batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase" "$deb"
+        # Configure RPM signing
+        echo "%_signature gpg" >> ~/.rpmmacros
+        echo "%_gpg_name SOT Release Signing" >> ~/.rpmmacros
+        echo "%_gpgbin /usr/bin/gpg" >> ~/.rpmmacros
+        
+        for rpm in dist/*.rpm; do
+          # Sign RPM package
+          rpm --define "_gpg_name SOT Release Signing" --addsign "$rpm"
           # Also create detached signature
-          gpg --batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase --armor --detach-sign "$deb"
+          gpg --batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase --armor --detach-sign "$rpm"
         done
         
     - name: Generate checksums
       run: |
-        cd output
-        sha256sum *.deb *.deb.asc > SHA256SUMS
+        cd dist
+        sha256sum *.rpm *.rpm.asc > SHA256SUMS-RPM
         # Sign the checksums file
-        gpg --batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase --clearsign SHA256SUMS
-        mv SHA256SUMS.asc SHA256SUMS.sig
+        gpg --batch --yes --pinentry-mode loopback --passphrase-file /tmp/gpg_passphrase --clearsign SHA256SUMS-RPM
+        mv SHA256SUMS-RPM.asc SHA256SUMS-RPM.sig
         
     - name: Get package info
       id: package_info
@@ -79,33 +85,33 @@ jobs:
         VERSION="${{ github.event.client_payload.tag }}"
         VERSION="${VERSION#v}"  # Remove 'v' prefix
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "package_name=$(ls output/*.deb | head -1 | xargs basename)" >> $GITHUB_OUTPUT
+        echo "package_name=$(ls dist/*.rpm | head -1 | xargs basename)" >> $GITHUB_OUTPUT
         
     - name: Upload to Release
       uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
       with:
         files: |
-          output/*.deb
-          output/*.deb.asc
-          output/SHA256SUMS
-          output/SHA256SUMS.sig
-          .github/public-key.asc
+          dist/*.rpm
+          dist/*.rpm.asc
+          dist/SHA256SUMS-RPM
+          dist/SHA256SUMS-RPM.sig
         tag_name: ${{ github.event.client_payload.tag }}
         generate_release_notes: false
         fail_on_unmatched_files: true
         append_body: true
         body: |
           
-          ## 📦 DEB Package
+          ## 📦 RPM Package
           - **Package**: `${{ steps.package_info.outputs.package_name }}`
           - **Version**: `${{ steps.package_info.outputs.version }}`
-          - **Architecture**: AMD64
+          - **Architecture**: x86_64
+          - **Distribution**: EL8+
           - **GPG Signed**: ✅
           
           ### Installation
           ```bash
           wget https://github.com/${{ github.repository }}/releases/download/${{ github.event.client_payload.tag }}/${{ steps.package_info.outputs.package_name }}
-          sudo dpkg -i ${{ steps.package_info.outputs.package_name }}
+          sudo rpm -ivh ${{ steps.package_info.outputs.package_name }}
           ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

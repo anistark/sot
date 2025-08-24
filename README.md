@@ -60,9 +60,25 @@ sudo dpkg -i sot-*.deb
 sudo apt-get install -f
 ```
 
-#### Verifying GPG Signatures (Recommended)
+### Using RPM Package (Experimental - RHEL/CentOS/Fedora)
 
-For enhanced security, verify the GPG signature before installing:
+**⚠️ Experimental**: RPM packages are experimental. Use `uv` or `pipx` for recommended installation.
+
+Download the latest RPM package from the [releases page](https://github.com/anistark/sot/releases) and install:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+# Download latest .rpm file from releases
+wget https://github.com/anistark/sot/releases/latest/download/sot-*.rpm
+
+# Install the package
+sudo rpm -ivh sot-*.rpm
+```
+
+### Verifying Package Signatures (Recommended)
+
+For enhanced security, verify GPG signatures before installing packages:
 
 <!--pytest-codeblocks: skip-->
 
@@ -70,18 +86,22 @@ For enhanced security, verify the GPG signature before installing:
 # Import the public signing key (one time setup)
 curl -fsSL https://github.com/anistark/sot/releases/latest/download/public-key.asc | gpg --import
 
-# Verify the package signature
+# For DEB packages:
 dpkg-sig --verify sot-*.deb
-
 # Or verify using detached signature
 gpg --verify sot-*.deb.asc sot-*.deb
-
 # Verify checksums
 gpg --verify SHA256SUMS.sig && sha256sum -c SHA256SUMS
+
+# For RPM packages:
+gpg --verify sot-*.rpm.asc sot-*.rpm
+# Verify checksums
+gpg --verify SHA256SUMS-RPM.sig && sha256sum -c SHA256SUMS-RPM
 ```
 
 **GPG Key Fingerprint:** `DCD1 9CA3 2C3F ACAA 1360  1C78 F4D7 EFDB 552E 84C9`
 
+---
 
 Run with:
 
