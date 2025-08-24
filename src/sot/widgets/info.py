@@ -95,7 +95,10 @@ class InfoWidget(BaseWidget):
         self.update_panel_content(table)
 
     def render(self):
-        return getattr(self, "panel", Table()).renderable or Table()
+        panel = getattr(self, "panel", None)
+        if panel and hasattr(panel, 'renderable'):
+            return panel.renderable or Table()
+        return Table()
 
     async def on_resize(self, event):
         self.width = self.size.width

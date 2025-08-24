@@ -49,11 +49,11 @@ class SotSourceFileHandler(FileSystemEventHandler):
 
         return True
 
-    def on_modified(self, file_system_event):
-        if file_system_event.is_directory:
+    def on_modified(self, event):
+        if event.is_directory:
             return
 
-        if not self.should_trigger_restart(file_system_event.src_path):
+        if not self.should_trigger_restart(event.src_path):
             return
 
         # Debounce rapid file changes
@@ -65,7 +65,7 @@ class SotSourceFileHandler(FileSystemEventHandler):
             return
 
         self.last_restart_timestamp = current_timestamp
-        print(f"🔄 File changed: {file_system_event.src_path}")
+        print(f"🔄 File changed: {event.src_path}")
         self.restart_application_callback()
 
 

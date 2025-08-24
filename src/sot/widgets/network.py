@@ -150,7 +150,8 @@ class NetworkWidget(BaseWidget):
             ipv4 = []
             for addr in addrs:
                 if addr.family == socket.AF_INET:
-                    ipv4.append(addr.address + " / " + addr.netmask)
+                    netmask = addr.netmask or ""
+                    ipv4.append(addr.address + " / " + netmask)
             ipv6 = []
             for addr in addrs:
                 if addr.family == socket.AF_INET6:
@@ -239,12 +240,10 @@ class NetworkWidget(BaseWidget):
                 "\n".join(self.sent_stream.graph), style="yellow"
             )
         else:
-            if hasattr(self.table, "_clear"):
-                self.table._clear()
-            else:
-                self.table = Table(expand=True, show_header=False, padding=0, box=None)
-                self.table.add_column("graph", no_wrap=True, ratio=1)
-                self.table.add_column("box", no_wrap=True, width=20)
+            # Recreate table instead of using private _clear method
+            self.table = Table(expand=True, show_header=False, padding=0, box=None)
+            self.table.add_column("graph", no_wrap=True, ratio=1)
+            self.table.add_column("box", no_wrap=True, width=20)
 
             self.table.add_row(
                 Text("\n".join(self.recv_stream.graph), style="aquamarine3"),

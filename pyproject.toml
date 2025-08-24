@@ -12,6 +12,7 @@ dev-dependencies = [
   "blacken-docs>=1.16.0",
   "build>=1.0.0",
   "twine>=6.1.0",
+  "pyright>=1.1.390",
 ]
 
 [tool.isort]

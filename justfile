@@ -86,7 +86,7 @@ setup-dev: install-dev-deps
 	@echo "🔍 Version: $(python3 -c "import sys; sys.path.insert(0, 'src'); from sot.__about__ import __version__; print(__version__)")"
 
 # Publishing commands
-publish: clean format lint
+publish: clean format lint type
 	@echo "🚀 Publishing SOT to PyPI..."
 	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then exit 1; fi
 	gh release create "v{{version}}"
@@ -117,6 +117,14 @@ lint:
 	uv run black --check .
 	uv run flake8 .
 
+type:
+	@echo "🔍 Running type checking..."
+	uv run pyright
+
+type-fix:
+	@echo "🔧 Auto-fixing type issues..."
+	uv run pyright --createstub
+
 # Help command
 help:
 	@echo "🔧 SOT Development Commands:"
@@ -146,6 +154,8 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  just lint                   - Run linting (black + flake8)"
+	@echo "  just type                   - Run type checking with pyright"
+	@echo "  just type-fix               - Auto-fix type issues with pyright"
 	@echo "  just format                 - Format code with black and isort"
 	@echo ""
 	@echo "Publishing:"

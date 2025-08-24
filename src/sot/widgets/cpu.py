@@ -46,7 +46,7 @@ def get_cpu_model():
         with open("/proc/cpuinfo") as f:
             content = f.read()
         m = re.search(r"model name\t: (.*)", content)
-        model_name = m.group(1)
+        model_name = m.group(1) if m else "Unknown CPU"
     except Exception:
         import cpuinfo
 
@@ -77,7 +77,9 @@ def get_current_temps():
 
     # Try psutil.sensors_temperatures()
     try:
-        temps = psutil.sensors_temperatures()
+        temps = getattr(psutil, 'sensors_temperatures', lambda: None)()
+        if temps is None:
+            return None
     except AttributeError:
         return None
     else:
@@ -121,8 +123,8 @@ class CPUWidget(BaseWidget):
         self.width = 0
         self.height = 0
 
-        self.num_cores = psutil.cpu_count(logical=False)
-        num_threads = psutil.cpu_count(logical=True)
+        self.num_cores = psutil.cpu_count(logical=False) or 1
+        num_threads = psutil.cpu_count(logical=True) or 1
 
         assert num_threads % self.num_cores == 0
         self.core_threads = transpose(list(chunks(range(num_threads), self.num_cores)))
@@ -158,16 +160,17 @@ class CPUWidget(BaseWidget):
 
         self.has_fan_rpm = False
         try:
-            fan_current = list(psutil.sensors_fans().values())[0][0].current
+            sensors_fans = getattr(psutil, 'sensors_fans', lambda: {})()
+            if sensors_fans:
+                fan_current = list(sensors_fans.values())[0][0].current
+                self.has_fan_rpm = True
+                fan_low = 0
+                if fan_current == 65535:
+                    fan_current = 1
+                fan_high = max(fan_current, 1)
+                self.fan_stream = BrailleStream(50, 1, fan_low, fan_high)
         except (AttributeError, IndexError):
             pass
-        else:
-            self.has_fan_rpm = True
-            fan_low = 0
-            if fan_current == 65535:
-                fan_current = 1
-            fan_high = max(fan_current, 1)
-            self.fan_stream = BrailleStream(50, 1, fan_low, fan_high)
 
         box_title = ", ".join(
             [
@@ -238,7 +241,11 @@ class CPUWidget(BaseWidget):
         t.add_row(cpu_total_graph, self.info_box)
 
         if self.has_fan_rpm:
-            fan_current = list(psutil.sensors_fans().values())[0][0].current
+            sensors_fans = getattr(psutil, 'sensors_fans', lambda: {})()
+            if sensors_fans:
+                fan_current = list(sensors_fans.values())[0][0].current
+            else:
+                fan_current = 0
 
             if fan_current == 65535:
                 fan_current = self.fan_stream.maxval

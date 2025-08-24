@@ -27,7 +27,7 @@ class SotWidget(BaseWidget):
         self.animation_frame += 1
         self.update_sine_wave()
 
-    def get_sine_wave_line(self, width, y_offset, phase_shift=0):
+    def get_sine_wave_line(self, width, y_offset, phase_shift=0.0):
         """Generate a single line of sine wave using Braille characters."""
         if width < 10:
             return "~" * width
