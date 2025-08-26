@@ -61,7 +61,9 @@ class InfoWidget(BaseWidget):
 
         right = [f"💚 {uptime.days}d, {h}:{m:02d}h"]
 
-        bat = psutil.sensors_battery()
+        bat = None
+        if hasattr(psutil, "sensors_battery"):
+            bat = psutil.sensors_battery()
         if bat is not None:
             bat_string = f"{bat.percent:.1f}%"
             if bat.power_plugged:

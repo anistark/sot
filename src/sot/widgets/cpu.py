@@ -106,7 +106,10 @@ def get_current_freq():
             return int(content) / 1000
 
     try:
-        cpu_freq = psutil.cpu_freq().current
+        if hasattr(psutil, "cpu_freq"):
+            cpu_freq = psutil.cpu_freq().current
+        else:
+            return None
     except Exception:
         return None
 
