@@ -223,11 +223,11 @@ lint:
 
 type:
 	@echo "🔍 Running type checking..."
-	uv run pyright
+	uv run ty check
 
 type-fix:
 	@echo "🔧 Auto-fixing type issues..."
-	uv run pyright --createstub
+	uv run ty --createstub
 
 # Help command
 help:
@@ -258,8 +258,8 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  just lint                   - Run linting (black + flake8)"
-	@echo "  just type                   - Run type checking with pyright"
-	@echo "  just type-fix               - Auto-fix type issues with pyright"
+	@echo "  just type                   - Run type checking with ty"
+	@echo "  just type-fix               - Auto-fix type issues with ty"
 	@echo "  just format                 - Format code with black and isort"
 	@echo ""
 	@echo "Publishing:"

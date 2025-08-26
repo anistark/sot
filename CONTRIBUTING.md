@@ -158,10 +158,10 @@ uv run black --check .
 uv run flake8 .
 
 # Run type checking
-uv run pyright
+uv run ty check
 
 # Auto-fix type issues
-uv run pyright --createstub
+uv run ty --createstub
 ```
 
 **With pip:**
@@ -176,17 +176,17 @@ black --check .
 flake8 .
 
 # Run type checking
-pyright
+ty check
 
 # Auto-fix type issues
-pyright --createstub
+ty --createstub
 ```
 
 The project uses:
 - **Black** for code formatting
 - **isort** for import sorting
 - **flake8** for linting
-- **pyright** for type checking
+- **ty** for type checking
 - **blacken-docs** for documentation formatting
 
 ### Testing
