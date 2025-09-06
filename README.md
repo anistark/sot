@@ -11,7 +11,8 @@
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
-### Using uv (Recommended)
+<details>
+<summary>Using uv (Recommended)</summary>
 
 Install and run with [`uv`](https://github.com/astral-sh/uv):
 
@@ -21,7 +22,10 @@ Install and run with [`uv`](https://github.com/astral-sh/uv):
 uv tool install sot
 ```
 
-### Using pipx
+</details>
+
+<details>
+<summary>Using pipx</summary>
 
 Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before proceeding.
 
@@ -40,7 +44,10 @@ or in single line:
 ```sh
 python3 -m pipx install sot && python3 -m pipx ensurepath && sudo pipx ensurepath --global
 ```
+</details>
 
+<details>
+<summary>Using DEB Package (Experimental - Debian/Ubuntu)</summary>
 ### Using DEB Package (Experimental - Debian/Ubuntu)
 
 **⚠️ Experimental**: DEB packages are experimental. Use `uv` or `pipx` for recommended installation.
@@ -59,8 +66,10 @@ sudo dpkg -i sot-*.deb
 # Install any missing dependencies (if needed)
 sudo apt-get install -f
 ```
+</details>
 
-### Using RPM Package (Experimental - RHEL/CentOS/Fedora)
+<details>
+<summary>Using RPM Package (Experimental - RHEL/CentOS/Fedora)</summary>
 
 **⚠️ Experimental**: RPM packages are experimental. Use `uv` or `pipx` for recommended installation.
 
@@ -100,6 +109,7 @@ gpg --verify SHA256SUMS-RPM.sig && sha256sum -c SHA256SUMS-RPM
 ```
 
 **GPG Key Fingerprint:** `DCD1 9CA3 2C3F ACAA 1360  1C78 F4D7 EFDB 552E 84C9`
+</details>
 
 ---
 
