@@ -129,8 +129,22 @@ class CPUWidget(BaseWidget):
         self.num_cores = psutil.cpu_count(logical=False) or 1
         num_threads = psutil.cpu_count(logical=True) or 1
 
-        assert num_threads % self.num_cores == 0
-        self.core_threads = transpose(list(chunks(range(num_threads), self.num_cores)))
+        # Handle asymmetric core/thread distributions
+        # Distribute threads as evenly as possible across cores
+        threads_per_core = num_threads // self.num_cores
+        remainder = num_threads % self.num_cores
+
+        core_thread_list = []
+        thread_id = 0
+        for core_id in range(self.num_cores):
+            # Distribute remainder threads across first cores
+            threads_for_this_core = threads_per_core + (1 if core_id < remainder else 0)
+            core_thread_list.append(
+                list(range(thread_id, thread_id + threads_for_this_core))
+            )
+            thread_id += threads_for_this_core
+
+        self.core_threads = core_thread_list
 
         self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
 
