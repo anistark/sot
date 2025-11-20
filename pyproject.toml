@@ -52,6 +52,9 @@ dependencies = [
 [tool.hatch.version]
 path = "src/sot/__about__.py"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/sot"]
+
 [tool.hatch.build.targets.sdist]
 exclude = [
   "images",
