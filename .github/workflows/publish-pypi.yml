@@ -3,7 +3,8 @@ name: Publish to PyPI
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # Disabled: PyPI publishing moved to local. Uncomment to re-enable automated publishing.
+      # - 'v[0-9]+.[0-9]+.[0-9]+'
 
 # Security: Restrict permissions to minimum required
 permissions:
