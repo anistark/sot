@@ -97,7 +97,7 @@ publish: clean format lint type
 	git tag "v{{version}}"
 	git push origin "v{{version}}"
 	@echo "🚀 Creating GitHub release..."
-	gh release create "v{{version}}" --generate-notes --files "dist/*"
+	gh release create "v{{version}}"
 	@echo "✅ Published v{{version}} to PyPI and GitHub!"
 
 publish-test: clean
