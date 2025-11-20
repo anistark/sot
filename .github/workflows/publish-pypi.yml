@@ -42,17 +42,10 @@ jobs:
       with:
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
-        draft: true
+        draft: false
         prerelease: false
         generate_release_notes: true
         files: |
           dist/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Trigger distribution builds
-      uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        event-type: build-distributions
-        client-payload: '{"tag": "${{ github.ref_name }}"}'
