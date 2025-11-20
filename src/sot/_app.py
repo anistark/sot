@@ -405,8 +405,9 @@ def run(argv=None):
     if args.log:
         os.environ["TEXTUAL_LOG"] = args.log
         # Reload textual.constants to pick up the new TEXTUAL_LOG value
-        import textual.constants
         import importlib
+
+        import textual.constants
 
         importlib.reload(textual.constants)
         print(f"🐛 Debug logging enabled: {args.log}")

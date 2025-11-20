@@ -1,6 +1,6 @@
 # Justfile for SOT (System Obversation Tool) project
 
-version := `python3 -c "import sys; sys.path.insert(0, 'src'); from sot.__about__ import __version__; print(__version__)" 2>/dev/null || echo "dev"`
+version := `grep '__version__' src/sot/__about__.py | sed 's/.*"\([^"]*\)".*/\1/'`
 
 default:
 	just help
