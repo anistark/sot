@@ -401,11 +401,19 @@ def run(argv=None):
             print(f"📡 Available interfaces: {', '.join(available_interfaces)}")
             return 1
 
+    # Set up logging before using SotApp (Textual reads TEXTUAL_LOG at module import time)
+    if args.log:
+        os.environ["TEXTUAL_LOG"] = args.log
+        # Reload textual.constants to pick up the new TEXTUAL_LOG value
+        import textual.constants
+        import importlib
+
+        importlib.reload(textual.constants)
+        print(f"🐛 Debug logging enabled: {args.log}")
+
     # Create and run the application with the specified options
     app = SotApp(net_interface=args.net, log_file=args.log)
 
-    if args.log:
-        print(f"🐛 Debug logging enabled: {args.log}")
     if args.net:
         print(f"📡 Using network interface: {args.net}")
 
