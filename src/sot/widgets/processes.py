@@ -94,6 +94,13 @@ class ProcessesWidget(BaseWidget):
             self.process_info = process_info
             super().__init__()
 
+    class KillRequest(Message):
+        """Message sent when kill is requested on a process (requires confirmation)."""
+
+        def __init__(self, process_info: dict) -> None:
+            self.process_info = process_info
+            super().__init__()
+
     def __init__(self, **kwargs):
         super().__init__(title="Processes", **kwargs)
         self.max_num_procs = 1000
@@ -242,7 +249,7 @@ class ProcessesWidget(BaseWidget):
         elif key_pressed == "k":
             if 0 <= self.selected_process_index < len(self.process_list_data):
                 selected_process = self.process_list_data[self.selected_process_index]
-                self.post_message(self.ProcessAction("kill", selected_process))
+                self.post_message(self.KillRequest(selected_process))
             return True
         elif key_pressed == "t":
             if 0 <= self.selected_process_index < len(self.process_list_data):
@@ -265,6 +272,11 @@ class ProcessesWidget(BaseWidget):
 
     def on_key(self, event: events.Key) -> None:
         """Handle keyboard navigation and actions with scrolling support."""
+        # Check if the app is waiting for kill confirmation
+        # If so, let it bubble up to the app's on_key handler
+        if hasattr(self.app, '_waiting_for_kill_confirmation') and self.app._waiting_for_kill_confirmation:
+            return
+
         if not self.is_interactive_mode or not self.process_list_data:
             return
 

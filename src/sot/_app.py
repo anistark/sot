@@ -24,6 +24,7 @@ from .widgets import (
     ProcessesWidget,
     SotWidget,
 )
+from .widgets.confirmation_modal import ConfirmationModal
 
 
 # Main SOT Application
@@ -51,6 +52,8 @@ class SotApp(App):
         super().__init__()
         self.net_interface = net_interface
         self.log_file = log_file
+        self.pending_kill = None
+        self._waiting_for_kill_confirmation = False
 
         # Set up logging if specified
         if log_file:
@@ -115,6 +118,20 @@ class SotApp(App):
     async def on_load(self, _):
         self.bind("q", "quit")
 
+    def on_key(self, event) -> None:
+        """Handle key events for kill confirmation."""
+        from textual import events
+
+        if self._waiting_for_kill_confirmation:
+            if event.key == "y":
+                self._waiting_for_kill_confirmation = False
+                self._kill_process(self.pending_kill["process_info"])
+            else:
+                # Any other key cancels
+                self._waiting_for_kill_confirmation = False
+                self.notify("❌ Kill cancelled", timeout=2)
+            event.prevent_default()
+
     def on_processes_widget_process_selected(
         self, message: ProcessesWidget.ProcessSelected
     ) -> None:
@@ -168,6 +185,77 @@ class SotApp(App):
             detailed_message,
             timeout=5,
         )
+
+    def on_processes_widget_kill_request(
+        self, message: ProcessesWidget.KillRequest
+    ) -> None:
+        """Handle kill request by showing a pending confirmation."""
+        process_info = message.process_info
+        process_name = process_info.get("name", "Unknown")
+        process_id = process_info.get("pid", "N/A")
+
+        # Store pending kill for confirmation
+        self.pending_kill = {
+            "process_info": process_info,
+            "process_name": process_name,
+            "process_id": process_id,
+            "timestamp": 0,
+        }
+
+        # Show confirmation prompt with danger emoji and error severity (red)
+        self.notify(
+            f"⚠️  KILL {process_name}? Press 'y' to confirm, any key to cancel",
+            severity="error",
+            timeout=10,
+        )
+
+        # Listen for confirmation key in the next on_key event
+        self._waiting_for_kill_confirmation = True
+
+        # Auto-cancel after 10 seconds (matching notification timeout)
+        def reset_confirmation():
+            if self._waiting_for_kill_confirmation:
+                self._waiting_for_kill_confirmation = False
+                self.notify("❌ Kill action expired", severity="error", timeout=2)
+
+        self.set_timer(reset_confirmation, 10.0)
+
+    def _kill_process(self, process_info: dict) -> None:
+        """Execute the kill process action."""
+        import psutil
+
+        process_id = process_info.get("pid")
+        process_name = process_info.get("name", "Unknown")
+
+        if not process_id:
+            self.notify("❌ Invalid process ID", severity="error", timeout=3)
+            return
+
+        # Log the action attempt if logging is enabled
+        if self.log_file:
+            self.log(f"Attempting to kill process: {process_name} (PID: {process_id})")
+
+        try:
+            target_process = psutil.Process(process_id)
+            target_process.kill()
+            if self.log_file:
+                self.log(
+                    f"Successfully killed process: {process_name} (PID: {process_id})"
+                )
+            self.notify(
+                f"💥 Killed {process_name} (PID: {process_id})",
+                severity="warning",
+                timeout=4,
+            )
+
+        except psutil.ZombieProcess:
+            self._handle_zombie_process_error(process_name, process_id)
+        except psutil.NoSuchProcess:
+            self._handle_no_such_process_error(process_id)
+        except psutil.AccessDenied:
+            self._handle_access_denied_error(process_name, process_id)
+        except Exception as error:
+            self._handle_general_process_error("kill", process_name, error)
 
     def on_processes_widget_process_action(
         self, message: ProcessesWidget.ProcessAction
