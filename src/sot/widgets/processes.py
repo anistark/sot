@@ -12,10 +12,14 @@ from textual.message import Message
 
 from .._helpers import sizeof_fmt
 from .base_widget import BaseWidget
+from .process_sorter import SortManager
 
 
-def get_process_list(num_procs: int):
-    """Get list of running processes sorted by CPU usage with network I/O information."""
+def get_process_list(num_procs: int, sort_manager: SortManager = None):
+    """Get list of running processes with network I/O information.
+
+    Applies sorting from sort_manager if provided, otherwise returns unsorted.
+    """
     processes = []
 
     for proc in psutil.process_iter(
@@ -64,11 +68,8 @@ def get_process_list(num_procs: int):
     if processes and processes[0].get("pid") == 0:
         processes = processes[1:]
 
-    processes = sorted(
-        processes,
-        key=lambda p: (p.get("cpu_percent") or 0.0),
-        reverse=True,
-    )
+    if sort_manager:
+        processes = sort_manager.apply_sort(processes)
 
     return processes[:num_procs]
 
@@ -103,6 +104,7 @@ class ProcessesWidget(BaseWidget):
         self.previous_process_data = {}
         self.is_interactive_mode = True
         self.show_network_details = True
+        self.sort_manager = SortManager()
 
     def on_mount(self):
         self.collect_data()
@@ -205,9 +207,34 @@ class ProcessesWidget(BaseWidget):
 
         return False
 
+    def handle_sort_mode_keys(self, key_pressed: str) -> bool:
+        """Handle keys while in sort mode. Returns True if handled."""
+        if key_pressed == "left":
+            self.sort_manager.navigate_columns(-1)
+            self.refresh_display()
+            return True
+        elif key_pressed == "right":
+            self.sort_manager.navigate_columns(1)
+            self.refresh_display()
+            return True
+        elif key_pressed == "enter":
+            self.sort_manager.toggle_column(self.sort_manager.active_column_index)
+            self.collect_data()
+            return True
+        elif key_pressed == "escape" or key_pressed == "o":
+            self.sort_manager.exit_sort_mode()
+            self.refresh_display()
+            return True
+
+        return False
+
     def handle_action_keys(self, key_pressed: str) -> bool:
         """Handle action keys (enter, kill, terminate, refresh, toggle). Returns True if handled."""
-        if key_pressed == "enter":
+        if key_pressed == "o":
+            self.sort_manager.enter_sort_mode()
+            self.refresh_display()
+            return True
+        elif key_pressed == "enter":
             if 0 <= self.selected_process_index < len(self.process_list_data):
                 selected_process = self.process_list_data[self.selected_process_index]
                 self.post_message(self.ProcessSelected(selected_process))
@@ -243,16 +270,21 @@ class ProcessesWidget(BaseWidget):
 
         key_pressed = event.key
 
-        if self.handle_navigation_keys(key_pressed):
-            event.prevent_default()
-            return
+        if self.sort_manager.sort_mode_active:
+            if self.handle_sort_mode_keys(key_pressed):
+                event.prevent_default()
+                return
+        else:
+            if self.handle_navigation_keys(key_pressed):
+                event.prevent_default()
+                return
 
-        if self.handle_action_keys(key_pressed):
-            event.prevent_default()
-            return
+            if self.handle_action_keys(key_pressed):
+                event.prevent_default()
+                return
 
     def collect_data(self):
-        new_process_data = get_process_list(self.max_num_procs)
+        new_process_data = get_process_list(self.max_num_procs, self.sort_manager)
         self.calculate_io_rates(new_process_data)
         self.process_list_data = new_process_data
 
@@ -415,24 +447,38 @@ class ProcessesWidget(BaseWidget):
         if self.show_network_details:
             title_parts.append(f"{total_connections} 🌐")
 
+        sort_indicator = self.sort_manager.get_sort_indicator_str()
+        title_parts.append(f"[cyan]Sort: {sort_indicator}[/]")
+
         focus_indicator = "🔍" if self.has_focus else "○"
-        if self.is_interactive_mode:
-            help_text = "↑↓ | ⏎ info | K kill | T terminate | R refresh"
-            if self.show_network_details:
-                help_text += " | N hide net"
-            else:
-                help_text += " | N show net"
-            title_parts.append(f"[dim]{focus_indicator} {help_text}[/]")
+        if self.sort_manager.sort_mode_active:
+            current_col = self.sort_manager.current_column().display_name
+            direction = self.sort_manager.sort_direction.icon()
+            columns_display = " | ".join(col.display_name for col in self.sort_manager.COLUMNS)
+
+            panel_title = f"[bold yellow on black] ORDER BY [/] - [bold cyan]{current_col}[/] [bold magenta]{direction}[/] - {columns_display}"
+            self.panel.title = panel_title
+
+            border_style = "yellow" if self.has_focus else "bright_yellow"
+            self.panel.border_style = border_style
         else:
-            title_parts.append(
-                f"[dim]{focus_indicator} Press I for interactive mode[/]"
-            )
+            if self.is_interactive_mode:
+                help_text = "O order | ↑↓ | ⏎ info | K kill | T terminate | R refresh"
+                if self.show_network_details:
+                    help_text += " | N hide net"
+                else:
+                    help_text += " | N show net"
+                title_parts.append(f"[dim]{focus_indicator} {help_text}[/]")
+            else:
+                title_parts.append(
+                    f"[dim]{focus_indicator} Press I for interactive mode[/]"
+                )
 
-        panel_title = " - ".join(title_parts)
-        self.panel.title = panel_title
+            panel_title = " - ".join(title_parts)
+            self.panel.title = panel_title
 
-        border_style = "bright_white" if self.has_focus else "bright_black"
-        self.panel.border_style = border_style
+            border_style = "bright_white" if self.has_focus else "bright_black"
+            self.panel.border_style = border_style
 
         self.update_panel_content(process_table)
 
