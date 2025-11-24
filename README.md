@@ -132,6 +132,7 @@ sot
 - CPU Usage
   - Per Core and Thread level
 - Processes with ID, threads, memory and cpu usage
+  - **Interactive Order By**: Press `O` to enter order by mode, navigate columns with arrow keys, toggle sort direction with Enter (DESC ↓ → ASC ↑ → OFF → cycle)
 
 ### Disk
 

@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Interactive Order By feature for Processes widget
+  - Press `O` to enter order by mode with visual highlighting
+  - Navigate between 7 sortable columns: PID, Process, Threads, Memory, Net I/O, Connections, CPU % using arrow keys.
+  - Toggle sort direction with Enter: DESC (↓) → ASC (↑) → OFF → cycle
+  - Press `O` or `Esc` to exit order by mode
+  - Robust sorting with proper handling of all data types and edge cases
+
+### Changed
+- Improved processes widget UI with color-coded sort indicators
+
+## [4.4.1](https://github.com/anistark/sot/releases/tag/v4.4.1) - 2024-11-20
+
+### Added
 - Debug and fix DEB/RPM package generation workflows with proper error handling
 - GitHub Actions improvements for reliable package distribution
 - Comprehensive CHANGELOG following best practices
@@ -26,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Graceful error handling when distribution artifacts are missing
 - Release automation to publish PyPI immediately without waiting for DEB/RPM builds
 
-## [4.4.0] - 2024-08-28
+## [4.4.0](https://github.com/anistark/sot/releases/tag/vdev) - 2024-08-28
 
 ### Added
 - Type checking using `pyright` with comprehensive type annotations
@@ -53,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Typing and formatting issues resolved
 - Various compatibility fixes
 
-## [4.3.2] - 2024-07-19
+## [4.3.2](https://github.com/anistark/sot/releases/tag/v4.3.2) - 2024-07-19
 
 ### Added
 - GPG fingerprint documentation for package verification
@@ -68,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Network discovery edge cases
 - Typing and formatting issues resolved
 
-## [4.3.1] - 2024-06-18
+## [4.3.1](https://github.com/anistark/sot/releases/tag/v4.3.1) - 2024-06-18
 
 ### Added
 - Network information in process widget
@@ -80,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Various network detection issues
 
-## [4.1.0] - 2024-06-18
+## [4.1.0](https://github.com/anistark/sot/releases/tag/v4.1.0) - 2024-06-18
 
 ### Added
 - Health monitoring features
@@ -92,7 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete widget restructuring for better UX
 - Improved information density in display
 
-## [3.2.1] - 2024-06-15
+## [3.2.1](https://github.com/anistark/sot/releases/tag/v3.2.1) - 2024-06-15
 
 ### Added
 - Development/watch modes for easier development
@@ -102,37 +115,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded to Textual v3 framework
 - Improved terminal compatibility
 
-## [3.0.0] - 2024-06-15
+## [3.0.0](https://github.com/anistark/sot/releases/tag/v3.0.0) - 2024-06-15
 
 ### Added
 - Pre-release upgrade to Textual v3.4.0
 
-## [2.1.1] - 2024-01-19
+## [2.1.1](https://github.com/anistark/sot/releases/tag/v2.1.1) - 2024-01-19
 
 ### Added
 - Upgrade to Textual v1.0.0
 
-## [2.1.0] - 2024-01-19
+## [2.1.0](https://github.com/anistark/sot/releases/tag/v2.1.0) - 2024-01-19
 
 ### Added
 - Textual v1.0.0 support
 
-## [2.0.3] - 2024-01-11
+## [2.0.3](https://github.com/anistark/sot/releases/tag/v2.0.3) - 2024-01-11
 
 ### Added
 - Battery value warnings
 
-## [2.0.2] - 2023-12-13
+## [2.0.2](https://github.com/anistark/sot/releases/tag/v2.0.2) - 2023-12-13
 
 ### Added
 - First public-ready release with working components
 
-## [2.0.1] - 2023-11-28
+## [2.0.1](https://github.com/anistark/sot/releases/tag/v2.0.1) - 2023-11-28
 
 ### Added
 - Initial formatting fixes for public release
 
-## [2.0.0] - 2023-01-11
+## [2.0.0](https://github.com/anistark/sot/releases/tag/v2.0.0) - 2023-01-11
 
 ### Added
 - Foundation release with core system monitoring features
