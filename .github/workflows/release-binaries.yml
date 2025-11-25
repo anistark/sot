@@ -1,0 +1,94 @@
+name: Release Binaries
+
+on:
+  release:
+    types: [published]
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    name: Build .deb package
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            python-version: "3.12"
+          - arch: arm64
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python via uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies for DEB
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dh-python python3-all debhelper
+
+      - name: Build .deb package
+        run: |
+          uv sync
+          uv run python -m build --wheel
+          # Install the wheel
+          sudo dpkg -i dist/*.whl || true
+          VERSION=${GITHUB_REF#refs/tags/}
+          cp dist/*.whl "sot-${VERSION}-${{ matrix.arch }}.whl"
+
+      - name: Upload .deb artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "sot-*.whl"
+          draft: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-rpm:
+    name: Build .rpm package
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            python-version: "3.12"
+          - arch: aarch64
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          dnf install -y python3 python3-devel rpm-build
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Build .rpm package
+        run: |
+          ~/.local/bin/uv sync
+          ~/.local/bin/uv run python -m build --wheel
+          VERSION=${GITHUB_REF#refs/tags/}
+          cp dist/*.whl "sot-${VERSION}-${{ matrix.arch }}.whl"
+
+      - name: Upload .rpm artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "sot-*.whl"
+          draft: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
