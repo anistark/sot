@@ -54,7 +54,7 @@ class DiskWidget(BaseWidget):
                 width=20,
                 box=box.SQUARE,
             )
-            
+
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
             self.table.add_column("graph", no_wrap=True, ratio=1)
             self.table.add_column("box", no_wrap=True, width=20)
