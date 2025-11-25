@@ -4,6 +4,8 @@ Processes Widget
 Displays interactive process list with keyboard navigation, process management, and network usage.
 """
 
+from typing import Optional
+
 import psutil
 from rich.table import Table
 from rich.text import Text
@@ -15,7 +17,7 @@ from .base_widget import BaseWidget
 from .process_sorter import SortManager
 
 
-def get_process_list(num_procs: int, sort_manager: SortManager = None):
+def get_process_list(num_procs: int, sort_manager: Optional[SortManager] = None):
     """Get list of running processes with network I/O information.
 
     Applies sorting from sort_manager if provided, otherwise returns unsorted.

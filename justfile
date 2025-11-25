@@ -227,7 +227,7 @@ lint:
 	uv run black --check .
 	uv run flake8 .
 
-type:
+type: lint
 	@echo "🔍 Running type checking..."
 	uv run ty check
 

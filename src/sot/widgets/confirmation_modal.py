@@ -4,6 +4,8 @@ Confirmation Modal Widget
 Simple confirmation dialog using Textual best practices.
 """
 
+from typing import Optional
+
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.message import Message
@@ -55,7 +57,9 @@ class ConfirmationModal(ModalScreen[bool]):
     }
     """
 
-    def __init__(self, title: str, message: str, action_data: dict = None) -> None:
+    def __init__(
+        self, title: str, message: str, action_data: Optional[dict] = None
+    ) -> None:
         super().__init__()
         self.title_text = title
         self.message_text = message
