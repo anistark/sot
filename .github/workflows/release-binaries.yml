@@ -34,21 +34,26 @@ jobs:
       - name: Install build dependencies for DEB
         run: |
           sudo apt-get update
-          sudo apt-get install -y dh-python python3-all debhelper
+          sudo apt-get install -y build-essential fpm
 
-      - name: Build .deb package
+      - name: Build and package .deb
         run: |
           uv sync
           uv run python -m build --wheel
-          # Install the wheel
-          sudo dpkg -i dist/*.whl || true
           VERSION=${GITHUB_REF#refs/tags/}
-          cp dist/*.whl "sot-${VERSION}-${{ matrix.arch }}.whl"
+          WHEEL=$(ls dist/sot-*.whl | head -1)
+          fpm -s python -t deb -v "${VERSION}" \
+            -a ${{ matrix.arch }} \
+            -n sot \
+            --python-pip pip \
+            --python-package-name-default "sot" \
+            "${WHEEL}"
+          mv *.deb "sot-${VERSION}-${{ matrix.arch }}.deb" 2>/dev/null || true
 
       - name: Upload .deb artifacts
         uses: softprops/action-gh-release@v1
         with:
-          files: "sot-*.whl"
+          files: "*.deb"
           draft: ${{ contains(github.ref_name, '-') }}
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
@@ -57,7 +62,6 @@ jobs:
   build-rpm:
     name: Build .rpm package
     runs-on: ubuntu-latest
-    container: fedora:latest
     strategy:
       fail-fast: false
       matrix:
@@ -69,25 +73,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          dnf install -y python3 python3-devel rpm-build
+      - name: Install Python via uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install uv
+      - name: Install build dependencies for RPM
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          sudo apt-get update
+          sudo apt-get install -y build-essential fpm rpm
 
-      - name: Build .rpm package
+      - name: Build and package .rpm
         run: |
-          ~/.local/bin/uv sync
-          ~/.local/bin/uv run python -m build --wheel
+          uv sync
+          uv run python -m build --wheel
           VERSION=${GITHUB_REF#refs/tags/}
-          cp dist/*.whl "sot-${VERSION}-${{ matrix.arch }}.whl"
+          WHEEL=$(ls dist/sot-*.whl | head -1)
+          fpm -s python -t rpm -v "${VERSION}" \
+            -a ${{ matrix.arch }} \
+            -n sot \
+            --python-pip pip \
+            --python-package-name-default "sot" \
+            "${WHEEL}"
+          mv *.rpm "sot-${VERSION}-${{ matrix.arch }}.rpm" 2>/dev/null || true
 
       - name: Upload .rpm artifacts
         uses: softprops/action-gh-release@v1
         with:
-          files: "sot-*.whl"
+          files: "*.rpm"
           draft: ${{ contains(github.ref_name, '-') }}
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
