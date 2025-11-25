@@ -54,6 +54,7 @@ class DiskWidget(BaseWidget):
                 width=20,
                 box=box.SQUARE,
             )
+            
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
             self.table.add_column("graph", no_wrap=True, ratio=1)
             self.table.add_column("box", no_wrap=True, width=20)
@@ -67,6 +68,10 @@ class DiskWidget(BaseWidget):
             self.max_read_bytes_s_str = ""
             self.max_write_bytes_s = 0
             self.max_write_bytes_s_str = ""
+
+            # disk latency
+            self.read_latency_ms = 0.0
+            self.write_latency_ms = 0.0
 
             self.read_stream = BrailleStream(20, 5, 0.0, 1.0e6)
             self.write_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
@@ -110,6 +115,22 @@ class DiskWidget(BaseWidget):
             self.read_stream.add_value(read_bytes_s)
             self.write_stream.add_value(write_bytes_s)
 
+            # disk latency calculation
+            delta_reads = io.read_count - self.last_io.read_count
+            delta_writes = io.write_count - self.last_io.write_count
+            delta_read_time = io.read_time - self.last_io.read_time
+            delta_write_time = io.write_time - self.last_io.write_time
+
+            if delta_reads > 0:
+                self.read_latency_ms = delta_read_time / delta_reads
+            else:
+                self.read_latency_ms = 0.0
+
+            if delta_writes > 0:
+                self.write_latency_ms = delta_write_time / delta_writes
+            else:
+                self.write_latency_ms = 0.0
+
         self.last_io = io
 
         if io is not None:
@@ -122,6 +143,7 @@ class DiskWidget(BaseWidget):
         self.down_box.renderable = "\n".join(
             [
                 f"{read_bytes_s_string}",
+                f"lat   {self.read_latency_ms:.1f} ms",
                 f"max   {self.max_read_bytes_s_str}",
                 f"total {total_read_string}",
             ]
@@ -129,6 +151,7 @@ class DiskWidget(BaseWidget):
         self.up_box.renderable = "\n".join(
             [
                 f"{write_bytes_s_string}",
+                f"lat   {self.write_latency_ms:.1f} ms",
                 f"max   {self.max_write_bytes_s_str}",
                 f"total {total_write_string}",
             ]
