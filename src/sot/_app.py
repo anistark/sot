@@ -24,7 +24,6 @@ from .widgets import (
     ProcessesWidget,
     SotWidget,
 )
-from .widgets.confirmation_modal import ConfirmationModal
 
 
 # Main SOT Application
@@ -120,8 +119,6 @@ class SotApp(App):
 
     def on_key(self, event) -> None:
         """Handle key events for kill confirmation."""
-        from textual import events
-
         if self._waiting_for_kill_confirmation:
             if event.key == "y":
                 self._waiting_for_kill_confirmation = False

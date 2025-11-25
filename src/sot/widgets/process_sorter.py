@@ -3,12 +3,13 @@ Process sorting module for interactive column-based sorting.
 Handles sort state, column definitions, and sorting logic.
 """
 
-from typing import Callable, Optional
 from enum import Enum
+from typing import Callable, Optional
 
 
 class SortDirection(Enum):
     """Sort direction states: off -> desc -> asc -> off (cycle)."""
+
     OFF = "off"
     DESC = "desc"
     ASC = "asc"
@@ -87,6 +88,7 @@ class SortManager:
         reverse = self.sort_direction == SortDirection.DESC
 
         try:
+
             def safe_sort_key(p):
                 try:
                     val = column.get_sort_value(p)

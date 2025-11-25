@@ -274,7 +274,10 @@ class ProcessesWidget(BaseWidget):
         """Handle keyboard navigation and actions with scrolling support."""
         # Check if the app is waiting for kill confirmation
         # If so, let it bubble up to the app's on_key handler
-        if hasattr(self.app, '_waiting_for_kill_confirmation') and self.app._waiting_for_kill_confirmation:
+        if (
+            hasattr(self.app, "_waiting_for_kill_confirmation")
+            and self.app._waiting_for_kill_confirmation
+        ):
             return
 
         if not self.is_interactive_mode or not self.process_list_data:
@@ -466,7 +469,9 @@ class ProcessesWidget(BaseWidget):
         if self.sort_manager.sort_mode_active:
             current_col = self.sort_manager.current_column().display_name
             direction = self.sort_manager.sort_direction.icon()
-            columns_display = " | ".join(col.display_name for col in self.sort_manager.COLUMNS)
+            columns_display = " | ".join(
+                col.display_name for col in self.sort_manager.COLUMNS
+            )
 
             panel_title = f"[bold yellow on black] ORDER BY [/] - [bold cyan]{current_col}[/] [bold magenta]{direction}[/] - {columns_display}"
             self.panel.title = panel_title
