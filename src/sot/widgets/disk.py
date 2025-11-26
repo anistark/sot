@@ -4,6 +4,8 @@ Disk Widget
 Displays disk usage and I/O statistics.
 """
 
+import platform
+
 import psutil
 from rich import box
 from rich.console import Group
@@ -23,11 +25,19 @@ class DiskWidget(BaseWidget):
         super().__init__(title="Disk", **kwargs)
 
     def on_mount(self):
-        self.mountpoints = [
-            item.mountpoint
-            for item in psutil.disk_partitions()
-            if not item.device.startswith("/dev/loop")
+        partitions = [
+            p for p in psutil.disk_partitions() if not p.device.startswith("/dev/loop")
         ]
+        mountpoints = [p.mountpoint for p in partitions]
+
+        if platform.system() == "Darwin":
+            root_mounts = [mp for mp in mountpoints if mp == "/"]
+            if root_mounts:
+                mountpoints = root_mounts
+            elif mountpoints:
+                mountpoints = [mountpoints[0]]
+
+        self.mountpoints = mountpoints
 
         self.has_io_counters = False
         try:
@@ -69,7 +79,6 @@ class DiskWidget(BaseWidget):
             self.max_write_bytes_s = 0
             self.max_write_bytes_s_str = ""
 
-            # disk latency
             self.read_latency_ms = 0.0
             self.write_latency_ms = 0.0
 
@@ -115,7 +124,6 @@ class DiskWidget(BaseWidget):
             self.read_stream.add_value(read_bytes_s)
             self.write_stream.add_value(write_bytes_s)
 
-            # disk latency calculation
             delta_reads = io.read_count - self.last_io.read_count
             delta_writes = io.write_count - self.last_io.write_count
             delta_read_time = io.read_time - self.last_io.read_time
@@ -170,7 +178,6 @@ class DiskWidget(BaseWidget):
                 "\n".join(self.write_stream.graph), style="yellow"
             )
         else:
-            # Recreate table instead of using private _clear method
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
             self.table.add_column("graph", no_wrap=True, ratio=1)
             self.table.add_column("box", no_wrap=True, width=20)
