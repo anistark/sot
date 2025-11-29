@@ -53,39 +53,23 @@ sot *ARGS:
 	@echo "🚀 Running SOT..."
 	uv run sot {{ARGS}}
 
+# Build SOT locally
+build:
+	@echo "🔨 Building SOT locally..."
+	uv pip install .
+	@echo "✅ SOT built successfully!"
+
+# Install SOT system-wide
+install:
+	@echo "🌍 Installing SOT system-wide..."
+	uv pip install --system --break-system-packages .
+	@echo "✅ SOT installed system-wide!"
+	@echo "🚀 You can now run 'sot' from anywhere"
+
 install-dev-deps:
 	@echo "📦 Installing SOT in development mode with uv..."
 	uv sync --dev
 	uv pip install -e .
-
-# uv-specific commands
-uv-sync:
-	@echo "🔄 Syncing dependencies with uv..."
-	uv sync
-
-uv-sync-dev:
-	@echo "🔄 Syncing dev dependencies with uv..."
-	uv sync --dev
-
-uv-lock:
-	@echo "🔒 Generating uv.lock file..."
-	uv lock
-
-uv-add PACKAGE:
-	@echo "➕ Adding package {{PACKAGE}} with uv..."
-	uv add {{PACKAGE}}
-
-uv-add-dev PACKAGE:
-	@echo "➕ Adding dev package {{PACKAGE}} with uv..."
-	uv add --dev {{PACKAGE}}
-
-uv-remove PACKAGE:
-	@echo "➖ Removing package {{PACKAGE}} with uv..."
-	uv remove {{PACKAGE}}
-
-uv-tree:
-	@echo "🌳 Showing dependency tree..."
-	uv tree
 
 setup-dev: install-dev-deps
 	@echo "✅ Development environment ready!"
@@ -252,6 +236,10 @@ help:
 	@echo "  just sot bench              - Run disk benchmarking"
 	@echo "  just sot bench --help       - Show benchmark help"
 	@echo ""
+	@echo "Installation:"
+	@echo "  just build                  - Build SOT locally"
+	@echo "  just install                - Install SOT system-wide"
+	@echo ""
 	@echo "Info:"
 	@echo "  just version                - Show detailed version information"
 	@echo ""
@@ -265,15 +253,6 @@ help:
 	@echo "  just terminal-test          - Test terminal compatibility and performance"
 	@echo "  just network-discovery      - List available network interfaces"
 	@echo "  just setup-dev              - Set up development environment"
-	@echo ""
-	@echo "UV Package Management:"
-	@echo "  just uv-sync                - Sync dependencies with uv"
-	@echo "  just uv-sync-dev            - Sync dev dependencies with uv"
-	@echo "  just uv-lock                - Generate uv.lock file"
-	@echo "  just uv-add PACKAGE         - Add package with uv"
-	@echo "  just uv-add-dev PACKAGE     - Add dev package with uv"
-	@echo "  just uv-remove PACKAGE      - Remove package with uv"
-	@echo "  just uv-tree                - Show dependency tree"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  just lint                   - Run linting (black + flake8)"
@@ -297,5 +276,3 @@ help:
 	@echo "Examples:"
 	@echo "  just dev-net eth0           - Use ethernet interface eth0"
 	@echo "  just dev-full wlan0 debug.log - Use wlan0 with logging"
-	@echo "  just uv-add requests        - Add requests package"
-	@echo "  just uv-add-dev pytest     - Add pytest as dev dependency"

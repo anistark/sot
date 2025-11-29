@@ -29,8 +29,8 @@ just setup-dev
 ### Method 2: Traditional pip setup
 
 ```sh
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 
 # Install Dependencies
 pip install -e .
@@ -91,31 +91,31 @@ just dev-debug
 just dev-console
 ```
 
-### UV Package Management Commands
+### Useful UV Commands
 
-If you're using uv, you can also use these commands for dependency management:
+If you're using uv for package management, here are some helpful commands:
 
 ```sh
 # Sync dependencies
-just uv-sync
+uv sync
 
 # Sync dev dependencies
-just uv-sync-dev
+uv sync --dev
 
 # Add a new package
-just uv-add package-name
+uv add package-name
 
 # Add a dev dependency
-just uv-add-dev package-name
+uv add --dev package-name
 
 # Remove a package
-just uv-remove package-name
+uv remove package-name
 
 # Show dependency tree
-just uv-tree
+uv tree
 
 # Generate lock file
-just uv-lock
+uv lock
 ```
 
 ### Development Tools

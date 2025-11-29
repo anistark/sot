@@ -114,7 +114,7 @@ gpg --verify SHA256SUMS-RPM.sig && sha256sum -c SHA256SUMS-RPM
 <details>
 <summary>Install from source</summary>
 
-For development or testing the latest version from source, you can install directly from the repository.
+For testing or installing the latest version from source directly on your system.
 
 **Using uv (Recommended):**
 
@@ -125,14 +125,14 @@ For development or testing the latest version from source, you can install direc
 git clone https://github.com/anistark/sot.git
 cd sot
 
-# Install from source
-uv pip install .
+# Install from source (system-wide)
+uv pip install --system .
 
-# Run with uv
-uv run sot
+# Run from anywhere
+sot
 ```
 
-**Using pip:**
+**Using pip with virtual environment:**
 
 <!--pytest-codeblocks: skip-->
 
@@ -142,13 +142,13 @@ git clone https://github.com/anistark/sot.git
 cd sot
 
 # Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install from source
 pip install .
 
-# Run
+# Run from anywhere (while virtual environment is activated)
 sot
 ```
 
