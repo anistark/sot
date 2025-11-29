@@ -111,6 +111,49 @@ gpg --verify SHA256SUMS-RPM.sig && sha256sum -c SHA256SUMS-RPM
 **GPG Key Fingerprint:** `DCD1 9CA3 2C3F ACAA 1360  1C78 F4D7 EFDB 552E 84C9`
 </details>
 
+<details>
+<summary>Install from source</summary>
+
+For development or testing the latest version from source, you can install directly from the repository.
+
+**Using uv (Recommended):**
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+# Clone the repository
+git clone https://github.com/anistark/sot.git
+cd sot
+
+# Install from source
+uv pip install .
+
+# Run with uv
+uv run sot
+```
+
+**Using pip:**
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+# Clone the repository
+git clone https://github.com/anistark/sot.git
+cd sot
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install from source
+pip install .
+
+# Run
+sot
+```
+
+</details>
+
 ---
 
 Run with:
@@ -162,6 +205,59 @@ sot
 
 ---
 
+## Disk Benchmarking
+
+The `sot bench` command allows you to measure disk performance with comprehensive benchmarks including sequential throughput, random IOPS, and latency distribution.
+
+### Interactive Mode (Default)
+
+```sh
+sot bench
+```
+
+This will display available disks and let you select one to benchmark interactively.
+
+### Benchmark Options
+
+```sh
+# Benchmark with default 10 second duration per test
+sot bench
+
+# Specify custom duration (in seconds)
+sot bench --duration 5     # Quick 5-second benchmark
+sot bench -d 30            # Longer 30-second benchmark for more stable results
+
+# Specify custom output file
+sot bench --output results.json
+
+# Combine options
+sot bench --duration 20 --output bench_results.json
+```
+
+### Benchmark Tests
+
+The benchmarking tool runs four comprehensive tests:
+
+1. **Sequential Read** - Measures sustained read throughput (MB/s)
+2. **Sequential Write** - Measures sustained write throughput (MB/s)
+3. **Random Read IOPS** - Measures random read operations per second
+4. **Random Write IOPS** - Measures random write operations per second
+
+Each test runs for the specified duration (default: 10 seconds) and provides detailed metrics:
+- Throughput/IOPS measurements
+- Min/Avg/Max latencies
+- p50, p95, p99 percentile latencies
+- Total test duration
+
+### Duration Parameter
+
+The `--duration` flag controls how long each test runs:
+- **Default: 10 seconds** - Quick, reliable measurements for most use cases
+- **Shorter durations (5s)** - Very quick benchmarks for rapid testing
+- **Longer durations (30s+)** - More stable results, accounts for system variance better
+
+---
+
 For all options, see
 
 <!--pytest-codeblocks:skipif(sys.version_info < (3, 10))-->
@@ -173,15 +269,38 @@ sot -H
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot [--help] [--version] [--log LOG] [--net NET]
+usage: sot [--help] [--version] [--log LOG] [--net NET] {bench} ...
 
 Command-line System Obervation Tool ≈
 
+positional arguments:
+  {bench}               Available subcommands
+    bench               Disk benchmarking tool
+
 options:
-  --help, -H     Show this help message and exit.
-  --version, -V  Display version information
-  --log, -L LOG  Debug log file
-  --net, -N NET  Network interface to display (default: auto)
+  --help, -H            Show this help message and exit.
+  --version, -V         Display version information with styling
+  --log, -L LOG         Debug log file path (enables debug logging)
+  --net, -N NET         Network interface to display (default: auto-detect best interface)
+```
+
+For benchmark-specific options:
+
+```sh
+sot bench -h
+```
+
+<!--pytest-codeblocks: expected-output-->
+
+```
+usage: sot bench [-h] [--output OUTPUT] [--duration DURATION]
+
+options:
+  -h, --help            show this help message and exit
+  --output OUTPUT, -o OUTPUT
+                        Output file for benchmark results (JSON format)
+  --duration DURATION, -d DURATION
+                        Duration for each benchmark test in seconds (default: 10s)
 ```
 
 Main Theme:
