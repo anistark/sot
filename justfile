@@ -46,6 +46,13 @@ dev-console:
 	@echo "🔍 Run 'textual console' in another terminal for debugging"
 	uv run python src/dev/dev_runner.py --debug
 
+# Run SOT with arguments
+sot *ARGS:
+	@echo "📦 Installing SOT..."
+	uv pip install .
+	@echo "🚀 Running SOT..."
+	uv run sot {{ARGS}}
+
 install-dev-deps:
 	@echo "📦 Installing SOT in development mode with uv..."
 	uv sync --dev
@@ -238,6 +245,12 @@ type-fix:
 # Help command
 help:
 	@echo "🔧 SOT Development Commands:"
+	@echo ""
+	@echo "Quick Start:"
+	@echo "  just sot                    - Install and run SOT"
+	@echo "  just sot --help             - Show SOT help"
+	@echo "  just sot bench              - Run disk benchmarking"
+	@echo "  just sot bench --help       - Show benchmark help"
 	@echo ""
 	@echo "Info:"
 	@echo "  just version                - Show detailed version information"

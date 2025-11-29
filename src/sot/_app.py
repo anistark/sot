@@ -469,7 +469,30 @@ def run(argv=None):
         help="Network interface to display (default: auto-detect best interface)",
     )
 
+    # Create subparsers for subcommands
+    subparsers = parser.add_subparsers(dest="command")
+
+    # Add bench subcommand
+    bench_parser = subparsers.add_parser(
+        "bench",
+        help="Disk benchmarking",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    bench_parser.add_argument(
+        "--output",
+        "-o",
+        type=str,
+        default=None,
+        help="Output file for benchmark results (JSON format)",
+    )
+
     args = parser.parse_args(argv)
+
+    # Handle bench subcommand
+    if args.command == "bench":
+        from .bench.cli import benchmark_command
+
+        return benchmark_command(args)
 
     # Handle version display
     if args.version:

@@ -43,6 +43,33 @@ This will install additional development dependencies like `watchdog` and `textu
 
 ## 🔧 Development Workflow
 
+### Running SOT
+
+To install and run SOT directly:
+
+```sh
+just sot
+```
+
+This command will:
+1. Install SOT in editable mode using `uv pip install .`
+2. Run the SOT application with any provided arguments
+
+Examples:
+```sh
+# Run SOT normally
+just sot
+
+# Show SOT help
+just sot --help
+
+# Run disk benchmarking
+just sot bench
+
+# Show benchmark help
+just sot bench --help
+```
+
 ### Hot Reload Development (Recommended)
 
 For the best development experience with automatic restarts on file changes:
