@@ -75,7 +75,7 @@ def get_physical_disks() -> List[Dict]:
 			"disk_id": disk_id,
 			"partitions": partitions_list,
 			"largest_partition": largest_partition,
-			"total_bytes": sum(p["total_bytes"] for p in partitions_list),
+			"total_bytes": largest_partition["total_bytes"],
 			"free_bytes": largest_partition["free_bytes"],
 		}
 		physical_disks.append(disk_info)
@@ -426,11 +426,38 @@ def benchmark_command(args) -> int:
 
 	# Run benchmarks with progress
 	console.print(f"[bold yellow]Running benchmarks on {disk_id}...[/]\n")
+	console.print(f"[dim]Per-benchmark duration: {args.duration}s[/]\n")
 
-	benchmark = DiskBenchmark(disk_id, mountpoint)
+	benchmark = DiskBenchmark(disk_id, mountpoint, duration_seconds=args.duration)
 	results = []
 
-	with Progress() as progress:
+	import time
+	from rich.progress import Progress, BarColumn, TimeRemainingColumn, TextColumn
+
+	benchmark_start_time = time.time()
+
+	class ElapsedTimeColumn(TextColumn):
+		"""Custom column to show elapsed time in HH:MM:SS.CS format."""
+
+		def __init__(self, start_time):
+			self.start_time = start_time
+			super().__init__("")
+
+		def render(self, task):
+			elapsed = time.time() - self.start_time
+			hours = int(elapsed // 3600)
+			remaining = elapsed % 3600
+			minutes = int(remaining // 60)
+			seconds = remaining % 60
+			centiseconds = int((seconds % 1) * 100)
+			return f"{hours:02d}:{minutes:02d}:{int(seconds):02d}.{centiseconds:02d}"
+
+	with Progress(
+		TextColumn("[progress.description]{task.description}"),
+		BarColumn(),
+		TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+		ElapsedTimeColumn(benchmark_start_time),
+	) as progress:
 		tests = [
 			("Sequential Read", benchmark.sequential_read_test),
 			("Sequential Write", benchmark.sequential_write_test),
@@ -439,7 +466,7 @@ def benchmark_command(args) -> int:
 		]
 
 		task = progress.add_task(
-			"[cyan]Benchmarking...", total=len(tests), visible=True
+			"[cyan]Benchmarking...[/]", total=len(tests), visible=True
 		)
 
 		for test_name, test_func in tests:

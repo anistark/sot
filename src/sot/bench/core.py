@@ -49,26 +49,27 @@ class BenchmarkResult:
 class DiskBenchmark:
     """Disk benchmarking utility for sequential and random I/O tests."""
 
-    def __init__(self, disk_id: str, mountpoint: str):
+    def __init__(self, disk_id: str, mountpoint: str, duration_seconds: float = 30.0):
         """
         Initialize disk benchmark for a given disk.
 
         Args:
             disk_id: Physical disk identifier (e.g., /dev/disk3)
             mountpoint: Path to the disk/mountpoint (for reference only)
+            duration_seconds: Duration for each benchmark test in seconds (default: 30s)
         """
         self.disk_id = disk_id
         self.mountpoint = mountpoint
         self.cache_dir = get_bench_cache_dir()
+        self.duration_seconds = duration_seconds
         self.block_size = 4096
         self.large_block_size = 1024 * 1024  # 1 MB for sequential tests
 
-    def sequential_read_test(self, size_mb: int = 256) -> BenchmarkResult:
+    def sequential_read_test(self) -> BenchmarkResult:
         """
         Measure sequential read throughput.
 
-        Args:
-            size_mb: Size of test file in MB
+        Runs for the duration specified in self.duration_seconds.
 
         Returns:
             BenchmarkResult with throughput and latency metrics
@@ -83,33 +84,37 @@ class DiskBenchmark:
                 tmp_path = tmp.name
 
             try:
-                # Write test data
+                # Write test data (larger file for duration-based testing)
+                test_file_size_mb = 512
                 test_data = os.urandom(self.large_block_size)
                 with open(tmp_path, "wb") as f:
-                    for _ in range(size_mb):
+                    for _ in range(test_file_size_mb):
                         f.write(test_data)
 
-                # Perform sequential read benchmark
+                # Perform sequential read benchmark for specified duration
                 latencies = []
+                bytes_read = 0
                 start_time = time.time()
+                end_time = start_time + self.duration_seconds
 
                 with open(tmp_path, "rb") as f:
-                    while True:
+                    while time.time() < end_time:
                         chunk = f.read(self.large_block_size)
                         if not chunk:
-                            break
+                            f.seek(0)  # Restart from beginning
+                            continue
 
                         # Record individual operation latency
                         op_start = time.time()
                         _ = chunk  # Force evaluation
                         op_latency = (time.time() - op_start) * 1000
                         latencies.append(op_latency)
+                        bytes_read += len(chunk)
 
                 duration = time.time() - start_time
                 result.duration_ms = duration * 1000
 
                 # Calculate metrics
-                bytes_read = size_mb * 1024 * 1024
                 result.throughput_mbps = (bytes_read / duration) / (1024 * 1024)
 
                 if latencies:
@@ -125,12 +130,11 @@ class DiskBenchmark:
 
         return result
 
-    def sequential_write_test(self, size_mb: int = 256) -> BenchmarkResult:
+    def sequential_write_test(self) -> BenchmarkResult:
         """
         Measure sequential write throughput.
 
-        Args:
-            size_mb: Size of test file in MB
+        Runs for the duration specified in self.duration_seconds.
 
         Returns:
             BenchmarkResult with throughput and latency metrics
@@ -147,22 +151,24 @@ class DiskBenchmark:
                 # Create test data
                 test_data = os.urandom(self.large_block_size)
                 latencies = []
+                bytes_written = 0
 
-                # Perform sequential write benchmark
+                # Perform sequential write benchmark for specified duration
                 start_time = time.time()
+                end_time = start_time + self.duration_seconds
 
                 with open(tmp_path, "wb") as f:
-                    for _ in range(size_mb):
+                    while time.time() < end_time:
                         op_start = time.time()
                         f.write(test_data)
                         op_latency = (time.time() - op_start) * 1000
                         latencies.append(op_latency)
+                        bytes_written += self.large_block_size
 
                 duration = time.time() - start_time
                 result.duration_ms = duration * 1000
 
                 # Calculate metrics
-                bytes_written = size_mb * 1024 * 1024
                 result.throughput_mbps = (bytes_written / duration) / (1024 * 1024)
 
                 if latencies:
@@ -178,12 +184,11 @@ class DiskBenchmark:
 
         return result
 
-    def random_read_test(self, num_ops: int = 1000) -> BenchmarkResult:
+    def random_read_test(self) -> BenchmarkResult:
         """
         Measure random read IOPS.
 
-        Args:
-            num_ops: Number of random read operations
+        Runs for the duration specified in self.duration_seconds.
 
         Returns:
             BenchmarkResult with IOPS and latency metrics
@@ -191,7 +196,7 @@ class DiskBenchmark:
         result = BenchmarkResult(test_name="Random Read IOPS")
 
         try:
-            # Create temporary test file (256 MB for random access)
+            # Create temporary test file (512 MB for random access)
             with tempfile.NamedTemporaryFile(
                 dir=str(self.cache_dir), delete=False, prefix="sot_bench_"
             ) as tmp:
@@ -199,7 +204,7 @@ class DiskBenchmark:
 
             try:
                 # Write test file
-                file_size_mb = 256
+                file_size_mb = 512
                 test_data = os.urandom(self.large_block_size)
                 with open(tmp_path, "wb") as f:
                     for _ in range(file_size_mb):
@@ -208,12 +213,14 @@ class DiskBenchmark:
                 # Get file size
                 file_size = os.path.getsize(tmp_path)
 
-                # Perform random read benchmark
+                # Perform random read benchmark for specified duration
                 latencies = []
+                num_ops = 0
                 start_time = time.time()
+                end_time = start_time + self.duration_seconds
 
                 with open(tmp_path, "rb") as f:
-                    for _ in range(num_ops):
+                    while time.time() < end_time:
                         # Random position
                         max_offset = max(0, file_size - self.block_size)
                         offset = random.randint(0, max_offset)
@@ -224,6 +231,7 @@ class DiskBenchmark:
                         _ = f.read(self.block_size)
                         op_latency = (time.time() - op_start) * 1000
                         latencies.append(op_latency)
+                        num_ops += 1
 
                 duration = time.time() - start_time
                 result.duration_ms = duration * 1000
@@ -244,12 +252,11 @@ class DiskBenchmark:
 
         return result
 
-    def random_write_test(self, num_ops: int = 1000) -> BenchmarkResult:
+    def random_write_test(self) -> BenchmarkResult:
         """
         Measure random write IOPS.
 
-        Args:
-            num_ops: Number of random write operations
+        Runs for the duration specified in self.duration_seconds.
 
         Returns:
             BenchmarkResult with IOPS and latency metrics
@@ -264,7 +271,7 @@ class DiskBenchmark:
 
             try:
                 # Create test file
-                file_size_mb = 256
+                file_size_mb = 512
                 test_data = os.urandom(self.large_block_size)
                 with open(tmp_path, "wb") as f:
                     for _ in range(file_size_mb):
@@ -273,13 +280,15 @@ class DiskBenchmark:
                 # Get file size
                 file_size = os.path.getsize(tmp_path)
 
-                # Perform random write benchmark
+                # Perform random write benchmark for specified duration
                 latencies = []
                 write_data = os.urandom(self.block_size)
+                num_ops = 0
                 start_time = time.time()
+                end_time = start_time + self.duration_seconds
 
                 with open(tmp_path, "r+b") as f:
-                    for _ in range(num_ops):
+                    while time.time() < end_time:
                         # Random position
                         max_offset = max(0, file_size - self.block_size)
                         offset = random.randint(0, max_offset)
@@ -290,6 +299,7 @@ class DiskBenchmark:
                         f.write(write_data)
                         op_latency = (time.time() - op_start) * 1000
                         latencies.append(op_latency)
+                        num_ops += 1
 
                 duration = time.time() - start_time
                 result.duration_ms = duration * 1000

@@ -217,14 +217,21 @@ sot bench
 
 This will display available disks and let you select one to benchmark interactively.
 
-### Direct Disk Specification
+### Benchmark Options
 
 ```sh
-# Benchmark a specific disk/mountpoint
+# Benchmark with default 30 second duration per test
 sot bench
+
+# Specify custom duration (in seconds)
+sot bench --duration 10    # Quick 10-second benchmark
+sot bench -d 60            # Longer 60-second benchmark for more stable results
 
 # Specify custom output file
 sot bench --output results.json
+
+# Combine options
+sot bench --duration 20 --output bench_results.json
 ```
 
 ### Benchmark Tests
@@ -236,10 +243,18 @@ The benchmarking tool runs four comprehensive tests:
 3. **Random Read IOPS** - Measures random read operations per second
 4. **Random Write IOPS** - Measures random write operations per second
 
-Each test provides detailed latency metrics including:
+Each test runs for the specified duration (default: 30 seconds) and provides detailed metrics:
+- Throughput/IOPS measurements
 - Min/Avg/Max latencies
 - p50, p95, p99 percentile latencies
 - Total test duration
+
+### Duration Parameter
+
+The `--duration` flag controls how long each test runs:
+- **Default: 30 seconds** - Provides reliable, stable measurements with good statistical accuracy
+- **Shorter durations (5-10s)** - Quick benchmarks for rapid testing
+- **Longer durations (60s+)** - More stable results, accounts for system variance better
 
 ---
 
@@ -278,15 +293,14 @@ sot bench -h
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot bench [-h] [--disk DISK] [--output OUTPUT] [--duration DURATION]
+usage: sot bench [-h] [--output OUTPUT] [--duration DURATION]
 
 options:
   -h, --help            show this help message and exit
-  --disk DISK           Disk/mountpoint to benchmark (interactive if not specified)
   --output OUTPUT, -o OUTPUT
                         Output file for benchmark results (JSON format)
   --duration DURATION, -d DURATION
-                        Benchmark duration in seconds (default: 30)
+                        Duration for each benchmark test in seconds (default: 30s)
 ```
 
 Main Theme:

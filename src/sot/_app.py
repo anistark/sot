@@ -485,6 +485,13 @@ def run(argv=None):
         default=None,
         help="Output file for benchmark results (JSON format)",
     )
+    bench_parser.add_argument(
+        "--duration",
+        "-d",
+        type=float,
+        default=30.0,
+        help="Duration for each benchmark test in seconds (default: 30s)",
+    )
 
     args = parser.parse_args(argv)
 
