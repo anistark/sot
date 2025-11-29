@@ -66,6 +66,17 @@ install:
 	@echo "✅ SOT installed system-wide!"
 	@echo "🚀 You can now run 'sot' from anywhere"
 
+# Uninstall SOT from system and local
+uninstall:
+	@echo "🗑️  Uninstalling SOT..."
+	@echo "📋 Removing system-wide installation..."
+	-uv pip uninstall --system sot -y
+	@echo "📋 Removing local installation..."
+	-pip uninstall sot -y
+	@echo "🧹 Cleaning up development files..."
+	@just clean
+	@echo "✅ SOT uninstalled successfully!"
+
 install-dev-deps:
 	@echo "📦 Installing SOT in development mode with uv..."
 	uv sync --dev
@@ -239,6 +250,7 @@ help:
 	@echo "Installation:"
 	@echo "  just build                  - Build SOT locally"
 	@echo "  just install                - Install SOT system-wide"
+	@echo "  just uninstall              - Uninstall SOT from system and local"
 	@echo ""
 	@echo "Info:"
 	@echo "  just version                - Show detailed version information"

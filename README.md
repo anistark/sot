@@ -132,7 +132,7 @@ uv pip install --system .
 sot
 ```
 
-**Using pip with virtual environment:**
+**Using pipx:**
 
 <!--pytest-codeblocks: skip-->
 
@@ -141,17 +141,12 @@ sot
 git clone https://github.com/anistark/sot.git
 cd sot
 
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Install from source using pipx
+pipx install .
 
-# Install from source
-pip install .
-
-# Run from anywhere (while virtual environment is activated)
+# Run from anywhere
 sot
 ```
-
 </details>
 
 ---

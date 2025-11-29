@@ -43,6 +43,28 @@ This will install additional development dependencies like `watchdog` and `textu
 
 ## 🔧 Development Workflow
 
+### Installation Commands
+
+Before running SOT, you may want to install it. Here are the available installation commands:
+
+#### Build SOT Locally
+```sh
+just build
+```
+Builds SOT in the current virtual environment. Useful for testing the package locally without system-wide installation.
+
+#### Install SOT System-wide
+```sh
+just install
+```
+Installs SOT system-wide using `uv pip install --system --break-system-packages .`. This makes the `sot` command available globally from any terminal.
+
+#### Uninstall SOT
+```sh
+just uninstall
+```
+Uninstalls SOT from both system-wide and local installations, then cleans up all development files. Use this to completely remove SOT from your system.
+
 ### Running SOT
 
 To install and run SOT directly:
