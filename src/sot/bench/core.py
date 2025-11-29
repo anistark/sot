@@ -3,6 +3,8 @@
 import os
 import random
 import statistics
+import subprocess
+import sys
 import tempfile
 import time
 from dataclasses import dataclass
@@ -23,6 +25,34 @@ def get_bench_cache_dir() -> Path:
 	except Exception as e:
 		raise RuntimeError(f"Failed to create cache directory {cache_dir}: {e}")
 	return cache_dir
+
+
+def drop_caches() -> None:
+	"""
+	Drop OS disk caches to ensure fair benchmarking.
+
+	Requires elevated privileges (sudo) to work effectively.
+	On failure, silently continues - benchmarks will still run but may be cache-affected.
+	"""
+	try:
+		if sys.platform == "darwin":
+			# macOS: drop caches using purge command
+			subprocess.run(["purge"], capture_output=True, timeout=5)
+		elif sys.platform.startswith("linux"):
+			# Linux: write to /proc/sys/vm/drop_caches (requires root)
+			subprocess.run(
+				["sync"],  # Ensure all pending data is written
+				capture_output=True,
+				timeout=5,
+			)
+			subprocess.run(
+				["bash", "-c", "echo 3 > /proc/sys/vm/drop_caches"],
+				capture_output=True,
+				timeout=5,
+			)
+	except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
+		# Cache drop failed or not available - continue anyway
+		pass
 
 
 @dataclass
@@ -49,14 +79,14 @@ class BenchmarkResult:
 class DiskBenchmark:
     """Disk benchmarking utility for sequential and random I/O tests."""
 
-    def __init__(self, disk_id: str, mountpoint: str, duration_seconds: float = 30.0):
+    def __init__(self, disk_id: str, mountpoint: str, duration_seconds: float = 10.0):
         """
         Initialize disk benchmark for a given disk.
 
         Args:
             disk_id: Physical disk identifier (e.g., /dev/disk3)
             mountpoint: Path to the disk/mountpoint (for reference only)
-            duration_seconds: Duration for each benchmark test in seconds (default: 30s)
+            duration_seconds: Duration for each benchmark test in seconds (default: 10s)
         """
         self.disk_id = disk_id
         self.mountpoint = mountpoint
@@ -84,12 +114,25 @@ class DiskBenchmark:
                 tmp_path = tmp.name
 
             try:
-                # Write test data (larger file for duration-based testing)
-                test_file_size_mb = 512
+                # Write test data (4GB to avoid cache loop-back)
+                test_file_size_mb = 4096
                 test_data = os.urandom(self.large_block_size)
                 with open(tmp_path, "wb") as f:
                     for _ in range(test_file_size_mb):
                         f.write(test_data)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                # Drop caches before benchmark
+                drop_caches()
+                time.sleep(0.5)  # Brief delay after cache drop
+
+                # Warmup phase: read some data to warm up the disk
+                with open(tmp_path, "rb") as f:
+                    warmup_end = time.time() + 2.0  # 2 second warmup
+                    while time.time() < warmup_end:
+                        _ = f.read(self.large_block_size)
+                    f.seek(0)
 
                 # Perform sequential read benchmark for specified duration
                 latencies = []
@@ -99,15 +142,15 @@ class DiskBenchmark:
 
                 with open(tmp_path, "rb") as f:
                     while time.time() < end_time:
-                        chunk = f.read(self.large_block_size)
-                        if not chunk:
-                            f.seek(0)  # Restart from beginning
-                            continue
-
-                        # Record individual operation latency
+                        # Time the actual read operation
                         op_start = time.time()
-                        _ = chunk  # Force evaluation
+                        chunk = f.read(self.large_block_size)
                         op_latency = (time.time() - op_start) * 1000
+
+                        if not chunk:
+                            # End of file - don't loop back
+                            break
+
                         latencies.append(op_latency)
                         bytes_read += len(chunk)
 
@@ -153,14 +196,29 @@ class DiskBenchmark:
                 latencies = []
                 bytes_written = 0
 
+                # Drop caches before benchmark
+                drop_caches()
+                time.sleep(0.5)  # Brief delay after cache drop
+
+                # Warmup phase: write some data to warm up the disk
+                with open(tmp_path, "wb") as f:
+                    warmup_end = time.time() + 2.0  # 2 second warmup
+                    while time.time() < warmup_end:
+                        f.write(test_data)
+                        f.flush()
+                        os.fsync(f.fileno())
+
                 # Perform sequential write benchmark for specified duration
                 start_time = time.time()
                 end_time = start_time + self.duration_seconds
 
                 with open(tmp_path, "wb") as f:
                     while time.time() < end_time:
+                        # Time the actual write and sync operation
                         op_start = time.time()
                         f.write(test_data)
+                        f.flush()
+                        os.fsync(f.fileno())
                         op_latency = (time.time() - op_start) * 1000
                         latencies.append(op_latency)
                         bytes_written += self.large_block_size
@@ -203,15 +261,30 @@ class DiskBenchmark:
                 tmp_path = tmp.name
 
             try:
-                # Write test file
-                file_size_mb = 512
+                # Write test file (4GB for good random distribution)
+                file_size_mb = 4096
                 test_data = os.urandom(self.large_block_size)
                 with open(tmp_path, "wb") as f:
                     for _ in range(file_size_mb):
                         f.write(test_data)
+                    f.flush()
+                    os.fsync(f.fileno())
 
                 # Get file size
                 file_size = os.path.getsize(tmp_path)
+
+                # Drop caches before benchmark
+                drop_caches()
+                time.sleep(0.5)  # Brief delay after cache drop
+
+                # Warmup phase: perform random reads to warm up the disk
+                with open(tmp_path, "rb") as f:
+                    warmup_end = time.time() + 2.0  # 2 second warmup
+                    while time.time() < warmup_end:
+                        max_offset = max(0, file_size - self.block_size)
+                        offset = random.randint(0, max_offset)
+                        f.seek(offset)
+                        _ = f.read(self.block_size)
 
                 # Perform random read benchmark for specified duration
                 latencies = []
@@ -226,12 +299,13 @@ class DiskBenchmark:
                         offset = random.randint(0, max_offset)
                         f.seek(offset)
 
-                        # Timed read
+                        # Time the actual read operation
                         op_start = time.time()
-                        _ = f.read(self.block_size)
+                        chunk = f.read(self.block_size)
                         op_latency = (time.time() - op_start) * 1000
-                        latencies.append(op_latency)
-                        num_ops += 1
+                        if chunk:  # Only count successful reads
+                            latencies.append(op_latency)
+                            num_ops += 1
 
                 duration = time.time() - start_time
                 result.duration_ms = duration * 1000
@@ -270,15 +344,33 @@ class DiskBenchmark:
                 tmp_path = tmp.name
 
             try:
-                # Create test file
-                file_size_mb = 512
+                # Create test file (4GB for good random distribution)
+                file_size_mb = 4096
                 test_data = os.urandom(self.large_block_size)
                 with open(tmp_path, "wb") as f:
                     for _ in range(file_size_mb):
                         f.write(test_data)
+                    f.flush()
+                    os.fsync(f.fileno())
 
                 # Get file size
                 file_size = os.path.getsize(tmp_path)
+
+                # Drop caches before benchmark
+                drop_caches()
+                time.sleep(0.5)  # Brief delay after cache drop
+
+                # Warmup phase: perform random writes to warm up the disk
+                write_data = os.urandom(self.block_size)
+                with open(tmp_path, "r+b") as f:
+                    warmup_end = time.time() + 2.0  # 2 second warmup
+                    while time.time() < warmup_end:
+                        max_offset = max(0, file_size - self.block_size)
+                        offset = random.randint(0, max_offset)
+                        f.seek(offset)
+                        f.write(write_data)
+                        f.flush()
+                        os.fsync(f.fileno())
 
                 # Perform random write benchmark for specified duration
                 latencies = []
@@ -294,9 +386,11 @@ class DiskBenchmark:
                         offset = random.randint(0, max_offset)
                         f.seek(offset)
 
-                        # Timed write
+                        # Time the actual write and sync operation
                         op_start = time.time()
                         f.write(write_data)
+                        f.flush()
+                        os.fsync(f.fileno())
                         op_latency = (time.time() - op_start) * 1000
                         latencies.append(op_latency)
                         num_ops += 1
@@ -354,20 +448,14 @@ class DiskBenchmark:
         result.max_latency_ms = sorted_latencies[-1]
         result.avg_latency_ms = statistics.mean(latencies)
 
-        # Calculate percentiles
+        # Calculate percentiles using linear interpolation (nearest rank method)
+        n = len(sorted_latencies)
         result.p50_latency_ms = statistics.median(sorted_latencies)
 
-        # p95 and p99
-        p95_index = int(len(sorted_latencies) * 0.95)
-        p99_index = int(len(sorted_latencies) * 0.99)
+        # p95 and p99 using proper percentile calculation
+        # Use (N * percentile) to get the index (rounding up to nearest element)
+        p95_index = min(int(n * 0.95), n - 1)
+        p99_index = min(int(n * 0.99), n - 1)
 
-        result.p95_latency_ms = (
-            sorted_latencies[p95_index]
-            if p95_index < len(sorted_latencies)
-            else sorted_latencies[-1]
-        )
-        result.p99_latency_ms = (
-            sorted_latencies[p99_index]
-            if p99_index < len(sorted_latencies)
-            else sorted_latencies[-1]
-        )
+        result.p95_latency_ms = sorted_latencies[p95_index]
+        result.p99_latency_ms = sorted_latencies[p99_index]

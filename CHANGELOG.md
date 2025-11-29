@@ -15,8 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interactive disk selection with arrow keys
   - JSON export of benchmark results
   - Support for throughput auto-scaling (MB/s → GB/s → TB/s)
-  - Configurable test duration with `--duration` flag (default: 30 seconds)
-    - Run quick benchmarks with `--duration 10` or longer tests with `--duration 60`
+  - Configurable test duration with `--duration` flag (default: 10 seconds)
+    - Run quick benchmarks with `--duration 5` or longer tests with `--duration 30`
+  - Accurate disk latency measurements using fsync for real disk I/O
+  - 1GB test files for proper disk performance characterization
 
 ### Improved
 - **Smart Unit Formatting** - Automatic scaling for performance metrics:

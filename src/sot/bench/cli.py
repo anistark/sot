@@ -3,6 +3,7 @@
 import json
 import sys
 import tempfile
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import psutil
@@ -13,7 +14,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .core import BenchmarkResult, DiskBenchmark
-from .._helpers import sizeof_fmt, throughput_fmt, latency_fmt
+from .._helpers import sizeof_fmt, throughput_fmt, latency_fmt, iops_fmt
 
 console = Console()
 
@@ -161,8 +162,16 @@ def _select_with_arrows(physical_disks: List[Dict]) -> int:
 				for i, disk in enumerate(physical_disks):
 					total_str = sizeof_fmt(disk['total_bytes'], fmt=".1f")
 					free_str = sizeof_fmt(disk['free_bytes'], fmt=".1f")
+
+					# Extract volume name from mountpoint
+					largest_partition = disk["largest_partition"]
+					mountpoint = largest_partition["mountpoint"]
+					volume_name = Path(mountpoint).name or mountpoint
+					if not volume_name or volume_name == "/":
+						volume_name = "System"
+
 					disk_info = (
-						f"{disk['disk_id']} - "
+						f"{volume_name} - "
 						f"{total_str} total, "
 						f"{free_str} free"
 					)
@@ -240,6 +249,13 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
 	"""
 	from .core import get_bench_cache_dir
 
+	# Extract volume name from mountpoint
+	largest_partition = disk_info["largest_partition"]
+	mountpoint = largest_partition["mountpoint"]
+	volume_name = Path(mountpoint).name or mountpoint
+	if not volume_name or volume_name == "/":
+		volume_name = "System"
+
 	# Build disk info panel
 	partitions_text = "\n".join(
 		f"  • {p['device']} → {p['mountpoint']}"
@@ -257,7 +273,7 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
 
 	disk_panel = Panel(
 		info_text,
-		title="[bold]Disk Information[/]",
+		title=f"[bold]{volume_name}[/]",
 		style="cyan",
 	)
 
@@ -288,7 +304,7 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
 		if result.throughput_mbps is not None:
 			metric = throughput_fmt(result.throughput_mbps)
 		elif result.iops is not None:
-			metric = f"{result.iops:.0f} IOPS"
+			metric = iops_fmt(result.iops)
 		else:
 			metric = "-"
 
@@ -408,6 +424,11 @@ def benchmark_command(args) -> int:
 	disk_id = selected_disk["disk_id"]
 	mountpoint = largest_partition["mountpoint"]
 
+	# Extract volume name from mountpoint
+	volume_name = Path(mountpoint).name or mountpoint
+	if not volume_name or volume_name == "/":
+		volume_name = "System"
+
 	# Verify write permissions and available space on cache directory
 	try:
 		from .core import get_bench_cache_dir
@@ -425,7 +446,7 @@ def benchmark_command(args) -> int:
 		return 1
 
 	# Run benchmarks with progress
-	console.print(f"[bold yellow]Running benchmarks on {disk_id}...[/]\n")
+	console.print(f"[bold yellow]Running benchmarks on {volume_name}...[/]\n")
 	console.print(f"[dim]Per-benchmark duration: {args.duration}s[/]\n")
 
 	benchmark = DiskBenchmark(disk_id, mountpoint, duration_seconds=args.duration)
@@ -454,7 +475,7 @@ def benchmark_command(args) -> int:
 
 	with Progress(
 		TextColumn("[progress.description]{task.description}"),
-		BarColumn(),
+		BarColumn(complete_style="green", finished_style="green"),
 		TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
 		ElapsedTimeColumn(benchmark_start_time),
 	) as progress:

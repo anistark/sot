@@ -489,8 +489,8 @@ def run(argv=None):
         "--duration",
         "-d",
         type=float,
-        default=30.0,
-        help="Duration for each benchmark test in seconds (default: 30s)",
+        default=10.0,
+        help="Duration for each benchmark test in seconds (default: 10s)",
     )
 
     args = parser.parse_args(argv)

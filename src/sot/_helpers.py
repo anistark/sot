@@ -44,3 +44,15 @@ def latency_fmt(ms, fmt=".2f"):
         ns = ms * 1000000
         string = f"{{:{fmt}}}".format(ns)
         return f"{string} ns"
+
+
+def iops_fmt(iops, fmt=".2f"):
+    """Format IOPS with appropriate unit scaling (IO/s, KIO/s, MIO/s, GIO/s)."""
+    assert iops >= 0
+    for unit in ["IO/s", "KIO/s", "MIO/s", "GIO/s"]:
+        if iops < 1000:
+            string = f"{{:{fmt}}}".format(iops)
+            return f"{string} {unit}"
+        iops /= 1000
+    string = f"{{:{fmt}}}".format(iops)
+    return f"{string} TIO/s"

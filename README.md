@@ -220,12 +220,12 @@ This will display available disks and let you select one to benchmark interactiv
 ### Benchmark Options
 
 ```sh
-# Benchmark with default 30 second duration per test
+# Benchmark with default 10 second duration per test
 sot bench
 
 # Specify custom duration (in seconds)
-sot bench --duration 10    # Quick 10-second benchmark
-sot bench -d 60            # Longer 60-second benchmark for more stable results
+sot bench --duration 5     # Quick 5-second benchmark
+sot bench -d 30            # Longer 30-second benchmark for more stable results
 
 # Specify custom output file
 sot bench --output results.json
@@ -243,7 +243,7 @@ The benchmarking tool runs four comprehensive tests:
 3. **Random Read IOPS** - Measures random read operations per second
 4. **Random Write IOPS** - Measures random write operations per second
 
-Each test runs for the specified duration (default: 30 seconds) and provides detailed metrics:
+Each test runs for the specified duration (default: 10 seconds) and provides detailed metrics:
 - Throughput/IOPS measurements
 - Min/Avg/Max latencies
 - p50, p95, p99 percentile latencies
@@ -252,9 +252,9 @@ Each test runs for the specified duration (default: 30 seconds) and provides det
 ### Duration Parameter
 
 The `--duration` flag controls how long each test runs:
-- **Default: 30 seconds** - Provides reliable, stable measurements with good statistical accuracy
-- **Shorter durations (5-10s)** - Quick benchmarks for rapid testing
-- **Longer durations (60s+)** - More stable results, accounts for system variance better
+- **Default: 10 seconds** - Quick, reliable measurements for most use cases
+- **Shorter durations (5s)** - Very quick benchmarks for rapid testing
+- **Longer durations (30s+)** - More stable results, accounts for system variance better
 
 ---
 
@@ -300,7 +300,7 @@ options:
   --output OUTPUT, -o OUTPUT
                         Output file for benchmark results (JSON format)
   --duration DURATION, -d DURATION
-                        Duration for each benchmark test in seconds (default: 30s)
+                        Duration for each benchmark test in seconds (default: 10s)
 ```
 
 Main Theme:
