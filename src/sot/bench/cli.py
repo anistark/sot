@@ -104,6 +104,7 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
 	table = Table(title="Available Disks", show_header=True, header_style="bold")
 	table.add_column("#", style="yellow")
 	table.add_column("Disk", style="cyan")
+	table.add_column("Volume", style="cyan")
 	table.add_column("Total", style="magenta")
 	table.add_column("Free", style="green")
 	table.add_column("Partitions", style="dim")
@@ -112,7 +113,15 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
 		total_str = sizeof_fmt(disk["total_bytes"], fmt=".1f")
 		free_str = sizeof_fmt(disk["free_bytes"], fmt=".1f")
 		partition_count = len(disk["partitions"])
-		table.add_row(str(i), disk["disk_id"], total_str, free_str, str(partition_count))
+
+		# Extract volume name from mountpoint
+		largest_partition = disk["largest_partition"]
+		mountpoint = largest_partition["mountpoint"]
+		volume_name = Path(mountpoint).name or mountpoint
+		if not volume_name or volume_name == "/":
+			volume_name = "System"
+
+		table.add_row(str(i), disk["disk_id"], volume_name, total_str, free_str, str(partition_count))
 
 	console.print(table)
 
@@ -122,8 +131,13 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
 	if selected_index >= 0:
 		selected_disk = physical_disks[selected_index]
 		largest_partition = selected_disk["largest_partition"]
+		# Extract volume name
+		mountpoint = largest_partition["mountpoint"]
+		volume_name = Path(mountpoint).name or mountpoint
+		if not volume_name or volume_name == "/":
+			volume_name = "System"
 		console.print(
-			f"\n[green]✓ Selected: {selected_disk['disk_id']}[/]\n"
+			f"\n[green]✓ Selected: {volume_name}[/]\n"
 			f"  Using partition: {largest_partition['device']} ({largest_partition['mountpoint']})\n"
 		)
 
@@ -155,10 +169,10 @@ def _select_with_arrows(physical_disks: List[Dict]) -> int:
 
 			# Display options inline as we navigate
 			def show_menu():
-				# Clear screen using ANSI escape code and move cursor to home
+				# Clear screen and move cursor to home
 				sys.stdout.write("\033[2J\033[H")
+				sys.stdout.write("\033[1;33mUse arrow keys (↑↓) to navigate, Enter to select, or 'q' to quit:\033[0m\r\n\r\n")
 				sys.stdout.flush()
-				print("\033[1;33mUse arrow keys (↑↓) to navigate, Enter to select, or 'q' to quit:\033[0m\n")
 				for i, disk in enumerate(physical_disks):
 					total_str = sizeof_fmt(disk['total_bytes'], fmt=".1f")
 					free_str = sizeof_fmt(disk['free_bytes'], fmt=".1f")
@@ -177,9 +191,10 @@ def _select_with_arrows(physical_disks: List[Dict]) -> int:
 					)
 
 					if i == current_index:
-						print(f"  \033[1;36m❯ {i}: {disk_info}\033[0m")
+						sys.stdout.write(f"  \033[1;36m❯ {i}: {disk_info}\033[0m\r\n")
 					else:
-						print(f"    {i}: {disk_info}")
+						sys.stdout.write(f"    {i}: {disk_info}\r\n")
+				sys.stdout.flush()
 
 			show_menu()
 			while True:
@@ -264,7 +279,7 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
 	cache_dir = get_bench_cache_dir()
 
 	info_text = (
-		f"Disk ID: {disk_info['disk_id']}\n"
+		f"Disk ID: {disk_info['disk_id']} ({volume_name})\n"
 		f"Total Capacity: {sizeof_fmt(disk_info['total_bytes'], fmt='.1f')}\n"
 		f"Free Space: {sizeof_fmt(disk_info['free_bytes'], fmt='.1f')}\n"
 		f"Cache Directory: {cache_dir}\n\n"
@@ -398,7 +413,7 @@ def benchmark_command(args) -> int:
 	"""
 	console.print(
 		"\n[bold cyan]╔════════════════════════════════════╗[/]"
-		"\n[bold cyan]║   SOT Disk Benchmark Tool         ║[/]"
+		"\n[bold cyan]║      SOT Disk Benchmark Tool       ║[/]"
 		"\n[bold cyan]╚════════════════════════════════════╝[/]\n"
 	)
 
