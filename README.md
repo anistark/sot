@@ -200,6 +200,98 @@ sot
 
 ---
 
+## System Information
+
+The `sot info` command displays comprehensive system information with a beautiful OS-specific ASCII logo.
+
+### Usage
+
+```sh
+sot info
+```
+
+### Example Output
+
+```
+                  ,MMMM.            Host        -  john@macbook.local
+                .MMMMMM             Model       -  MacBook Pro
+                MMMMM,              SKU         -  MK1E3LL/A
+      .;MMMMM:' MMMMMMMMMM;.        Identifier  -  MacBookPro18,1
+    MMMMMMMMMMMMNWMMMMMMMMMMM:      Serial      -  C02YX2QZMD6R
+  .MMMMMMMMMMMMMMMMMMMMMMMMWM.
+  MMMMMMMMMMMMMMMMMMMMMMMMM.        OS          -  macOS 14.5.0 Sonoma
+ ;MMMMMMMMMMMMMMMMMMMMMMMM:         Kernel      -  23.5.0
+ :MMMMMMMMMMMMMMMMMMMMMMMM:         Firmware    -  10151.121.3
+ .MMMMMMMMMMMMMMMMMMMMMMMMM.        DE          -  Aqua
+  MMMMMMMMMMMMMMMMMMMMMMMMMMM.      WM          -  Quartz Compositor
+   .MMMMMMMMMMMMMMMMMMMMMMMMMM.     Shell       -  zsh
+     MMMMMMMMMMMMMMMMMMMMMMMM       Terminal    -  iTerm.app (3.5.2)
+      ;MMMMMMMMMMMMMMMMMMMM.
+        .MMMM,.    .MMMM,.          Chip        -  Apple M1 Pro (8P + 2E cores)
+                                    GPU         -  Apple M1 Pro (16 cores)
+                                    Memory      -  8 GiB / 32 GiB
+
+                                    Displays    -  2560 x 1600 Retina (Color LCD)
+                                                   3840 x 2160@60.00Hz (Dell U2720Q)
+
+                                    Uptime      -  12d 4h 23m
+                                    Battery     -  87% & Discharging
+```
+
+### Features
+
+The info command displays detailed system information organized into logical sections:
+
+**System Information**
+- Host (user@hostname)
+- Model name (e.g., MacBook Pro)
+- SKU/Model number
+- Model identifier
+- Serial number
+
+**Software**
+- Operating system with version name (e.g., macOS 15.6.1 Sequoia)
+- Kernel version
+- Firmware version
+- Desktop Environment (DE)
+- Window Manager (WM)
+- Shell
+- Terminal emulator
+
+**Hardware**
+- Chip details with performance/efficiency core breakdown (e.g., Apple M1 Pro with 6P + 2E cores)
+- GPU model with core count
+- Memory (used / total)
+
+**Displays**
+- All connected displays with resolutions, refresh rates, and display names
+- Screen brightness (when available)
+
+**Status**
+- System uptime
+- Battery status (percentage and charging state)
+
+### OS-Specific Logos
+
+The command automatically detects your operating system and distribution, displaying the appropriate ASCII logo:
+
+**macOS**: Apple logo
+
+**Linux Distributions**:
+- Ubuntu
+- Debian
+- Fedora
+- Red Hat / RHEL
+- Arch Linux
+- Manjaro
+- Pop!_OS
+- CentOS
+- Generic Linux/Tux (fallback)
+
+**Windows**: Windows logo
+
+---
+
 ## Disk Benchmarking
 
 The `sot bench` command allows you to measure disk performance with comprehensive benchmarks including sequential throughput, random IOPS, and latency distribution.
@@ -264,19 +356,19 @@ sot -H
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot [--help] [--version] [--log LOG] [--net NET] {bench} ...
+usage: sot [--help] [--version] [--log LOG] [--net NET] {info,bench} ...
 
 Command-line System Obervation Tool ≈
 
-positional arguments:
-  {bench}               Available subcommands
-    bench               Disk benchmarking tool
+commands: {info,bench}
+    info             Display system information
+    bench            Disk benchmarking
 
 options:
-  --help, -H            Show this help message and exit.
-  --version, -V         Display version information with styling
-  --log, -L LOG         Debug log file path (enables debug logging)
-  --net, -N NET         Network interface to display (default: auto-detect best interface)
+  --help, -H         Show this help message and exit.
+  --version, -V      Display version information with styling
+  --log LOG, -L LOG  Debug log file path (enables debug logging)
+  --net NET, -N NET  Network interface to display (default: auto-detect best interface)
 ```
 
 For benchmark-specific options:

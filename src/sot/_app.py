@@ -26,6 +26,48 @@ from .widgets import (
 )
 
 
+class CustomHelpFormatter(argparse.RawTextHelpFormatter):
+    """Custom formatter to display subcommands."""
+
+    def _format_action(self, action):
+        # Get the default formatted action
+        result = super()._format_action(action)
+
+        # If this is a subparser action, reformat it
+        if isinstance(action, argparse._SubParsersAction):
+            # Get the metavar (e.g., "{info,bench}")
+            metavar = self._metavar_formatter(action, action.dest)(1)[0]
+
+            # Split the result into lines
+            lines = result.split('\n')
+
+            # Build new output with metavar on same line as title
+            new_lines = []
+            for line in lines:
+                # Skip the standalone metavar line
+                if line.strip() and line.strip().startswith('{') and line.strip().endswith('}'):
+                    continue
+                # Skip empty lines at the start
+                if not line.strip() and not new_lines:
+                    continue
+                new_lines.append(line)
+
+            # Manually construct the section with metavar on same line
+            parts = [f"commands: {metavar}"]
+            parts.extend(new_lines)
+            result = '\n'.join(parts)
+
+        return result
+
+    def start_section(self, heading):
+        # Override to prevent "positional arguments:" heading for subparsers
+        if heading == 'positional arguments':
+            # Start section with no heading (empty string)
+            super().start_section(None)
+        else:
+            super().start_section(heading)
+
+
 # Main SOT Application
 class SotApp(App):
     """SOT - System Observation Tool with interactive process management."""
@@ -434,7 +476,7 @@ def _show_styled_version():
 def run(argv=None):
     parser = argparse.ArgumentParser(
         description="Command-line System Obervation Tool ≈",
-        formatter_class=argparse.RawTextHelpFormatter,
+        formatter_class=CustomHelpFormatter,
         add_help=False,
     )
 
@@ -470,7 +512,10 @@ def run(argv=None):
     )
 
     # Create subparsers for subcommands
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(
+        dest="command",
+        metavar="{info,bench}",
+    )
 
     # Add info subcommand
     info_parser = subparsers.add_parser(

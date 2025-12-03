@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **System Information Display** - New `sot info` command for comprehensive system information:
+  - Beautiful OS-specific ASCII logos (macOS, Linux distros, Windows)
+  - Automatic distribution detection for Linux (Ubuntu, Debian, Fedora, Red Hat, Arch, Manjaro, Pop!_OS, CentOS)
+  - Organized information sections:
+    - **System**: Host, Model name, SKU, Identifier, Serial number
+    - **Software**: OS with version name, Kernel, Firmware, DE, WM, Shell, Terminal
+    - **Hardware**: Chip details with P+E core breakdown, GPU with core count, Memory
+    - **Displays**: All connected displays with resolutions, refresh rates, and names
+    - **Status**: Uptime, Battery status
+  - Support for multiple display detection with detailed info (resolution, refresh rate, display name)
+  - Chip information with performance/efficiency core breakdown (e.g., 6P + 2E cores)
+  - macOS-specific features: Model name/number, Serial number, Firmware version
+  - Cross-platform compatibility (macOS, Linux, Windows)
+
 - **Disk Benchmarking Tool** - New `sot bench` command for measuring disk performance:
   - Sequential read/write throughput testing
   - Random read/write IOPS measurement
@@ -19,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Run quick benchmarks with `--duration 5` or longer tests with `--duration 30`
   - Accurate disk latency measurements using fsync for real disk I/O
   - 1GB test files for proper disk performance characterization
+
+### Changed
+- **Help Output Formatting** - Improved command-line help display:
+  - Subcommands now display inline: `commands: {info,bench}` instead of separate lines
+  - Cleaner, more compact help text
 
 ### Improved
 - **Smart Unit Formatting** - Automatic scaling for performance metrics:
