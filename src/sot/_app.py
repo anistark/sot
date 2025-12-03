@@ -472,6 +472,13 @@ def run(argv=None):
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(dest="command")
 
+    # Add info subcommand
+    info_parser = subparsers.add_parser(
+        "info",
+        help="Display system information",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
     # Add bench subcommand
     bench_parser = subparsers.add_parser(
         "bench",
@@ -494,6 +501,12 @@ def run(argv=None):
     )
 
     args = parser.parse_args(argv)
+
+    # Handle info subcommand
+    if args.command == "info":
+        from .info.cli import info_command
+
+        return info_command(args)
 
     # Handle bench subcommand
     if args.command == "bench":
