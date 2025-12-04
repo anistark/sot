@@ -11,8 +11,31 @@
 
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 
+### Quick Install (Recommended)
+
+**One-line installer for macOS and Linux** - Automatically detects your environment and installs all dependencies:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/anistark/sot/main/install.sh | bash
+```
+
+This script will:
+- ✅ Detect your operating system
+- ✅ Check for Python 3.10+ (installs if missing)
+- ✅ Install pipx (if not present)
+- ✅ Install sot and configure PATH
+- ✅ Verify the installation
+
+**Note:** This installation script does not work on Windows. Windows users should use one of the [alternative installation methods](#alternative-installation-methods) below.
+
+---
+
+### Alternative Installation Methods
+
 <details>
-<summary>Using uv (Recommended)</summary>
+<summary>Using uv</summary>
 
 Install and run with [`uv`](https://github.com/astral-sh/uv):
 
