@@ -514,7 +514,7 @@ def run(argv=None):
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
         dest="command",
-        metavar="{info,bench}",
+        metavar="{info,bench,disk}",
     )
 
     # Add info subcommand
@@ -545,6 +545,13 @@ def run(argv=None):
         help="Duration for each benchmark test in seconds (default: 10s)",
     )
 
+    # Add disk subcommand
+    disk_parser = subparsers.add_parser(
+        "disk",
+        help="Interactive disk information viewer",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
     args = parser.parse_args(argv)
 
     # Handle info subcommand
@@ -558,6 +565,12 @@ def run(argv=None):
         from .bench.cli import benchmark_command
 
         return benchmark_command(args)
+
+    # Handle disk subcommand
+    if args.command == "disk":
+        from .disk.cli import disk_command
+
+        return disk_command(args)
 
     # Handle version display
     if args.version:

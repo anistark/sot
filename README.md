@@ -197,6 +197,10 @@ sot
 
 ### Disk
 
+- **Interactive Disk TUI** - View all physical disks with partitions
+  - Real-time disk usage monitoring with accurate APFS container calculations
+  - Visual usage bars and percentage indicators
+  - I/O statistics (read/write counts and bytes)
 - Disk Usage
   - Per Read/Write
 - Capacity
