@@ -35,6 +35,34 @@ This script will:
 ### Alternative Installation Methods
 
 <details>
+<summary>Using brew</summary>
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+brew tap anistark/tools
+brew install sot
+```
+
+Or single line:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+brew install anistark/tools/sot
+```
+
+Update using:
+
+<!--pytest-codeblocks: skip-->
+
+```sh
+brew update && brew upgrade sot
+```
+
+</details>
+
+<details>
 <summary>Using uv</summary>
 
 Install and run with [`uv`](https://github.com/astral-sh/uv):
