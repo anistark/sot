@@ -19,14 +19,45 @@ jobs:
         id: pypi
         run: |
           VERSION="${{ steps.release.outputs.version }}"
-          JSON=$(curl -sL "https://pypi.org/pypi/sot/$VERSION/json")
 
-          # Extract source distribution URL and SHA256
-          URL=$(echo "$JSON" | python3 -c "import sys, json; data=json.load(sys.stdin); urls=[u for u in data['urls'] if u['packagetype']=='sdist']; print(urls[0]['url'])")
-          SHA256=$(echo "$JSON" | python3 -c "import sys, json; data=json.load(sys.stdin); urls=[u for u in data['urls'] if u['packagetype']=='sdist']; print(urls[0]['digests']['sha256'])")
+          # Retry up to 5 times with exponential backoff
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          RETRY_DELAY=10
 
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES: Fetching PyPI info for sot $VERSION"
+
+            HTTP_CODE=$(curl -sL -w "%{http_code}" -o /tmp/pypi.json "https://pypi.org/pypi/sot/$VERSION/json")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Successfully fetched PyPI metadata"
+
+              # Extract source distribution URL and SHA256
+              URL=$(python3 -c "import sys, json; data=json.load(open('/tmp/pypi.json')); urls=[u for u in data['urls'] if u['packagetype']=='sdist']; print(urls[0]['url'])" 2>/dev/null)
+              SHA256=$(python3 -c "import sys, json; data=json.load(open('/tmp/pypi.json')); urls=[u for u in data['urls'] if u['packagetype']=='sdist']; print(urls[0]['digests']['sha256'])" 2>/dev/null)
+
+              if [ -n "$URL" ] && [ -n "$SHA256" ]; then
+                echo "url=$URL" >> $GITHUB_OUTPUT
+                echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+                exit 0
+              else
+                echo "⚠️ Failed to extract URL or SHA256 from PyPI response"
+              fi
+            else
+              echo "⚠️ PyPI request failed with HTTP $HTTP_CODE"
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "Waiting ${RETRY_DELAY}s before retry..."
+              sleep $RETRY_DELAY
+              RETRY_DELAY=$((RETRY_DELAY * 2))  # Exponential backoff
+            fi
+          done
+
+          echo "❌ Failed to fetch PyPI info after $MAX_RETRIES attempts"
+          exit 1
 
       - name: Trigger homebrew-tools update
         run: |
