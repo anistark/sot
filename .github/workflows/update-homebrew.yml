@@ -37,6 +37,7 @@ jobs:
             -d '{
               "event_type": "update-formula",
               "client_payload": {
+                "formula": "sot",
                 "version": "${{ steps.release.outputs.version }}",
                 "url": "${{ steps.pypi.outputs.url }}",
                 "sha256": "${{ steps.pypi.outputs.sha256 }}"
