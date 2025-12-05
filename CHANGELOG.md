@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Interactive Disk TUI** - New `sot disk` command for viewing all physical disks:
+  - Displays all physical disks with accurate space calculations for APFS containers
+  - Visual partition boxes with usage bars and statistics
+  - Real-time I/O statistics per disk
+  - Proper disk grouping (disk1, disk3, disk5, etc.)
+
 - **System Information Display** - New `sot info` command for comprehensive system information:
   - Beautiful OS-specific ASCII logos (macOS, Linux distros, Windows)
   - Automatic distribution detection for Linux (Ubuntu, Debian, Fedora, Red Hat, Arch, Manjaro, Pop!_OS, CentOS)
