@@ -13,46 +13,46 @@ from typing import List, Optional
 
 
 def get_bench_cache_dir() -> Path:
-	"""
-	Get the benchmark cache directory, creating it if necessary.
+    """
+    Get the benchmark cache directory, creating it if necessary.
 
-	Returns:
-		Path object pointing to ~/.sot/bench/
-	"""
-	cache_dir = Path.home() / ".sot" / "bench"
-	try:
-		cache_dir.mkdir(parents=True, exist_ok=True)
-	except Exception as e:
-		raise RuntimeError(f"Failed to create cache directory {cache_dir}: {e}")
-	return cache_dir
+    Returns:
+            Path object pointing to ~/.sot/bench/
+    """
+    cache_dir = Path.home() / ".sot" / "bench"
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        raise RuntimeError(f"Failed to create cache directory {cache_dir}: {e}")
+    return cache_dir
 
 
 def drop_caches() -> None:
-	"""
-	Drop OS disk caches to ensure fair benchmarking.
+    """
+    Drop OS disk caches to ensure fair benchmarking.
 
-	Requires elevated privileges (sudo) to work effectively.
-	On failure, silently continues - benchmarks will still run but may be cache-affected.
-	"""
-	try:
-		if sys.platform == "darwin":
-			# macOS: drop caches using purge command
-			subprocess.run(["purge"], capture_output=True, timeout=5)
-		elif sys.platform.startswith("linux"):
-			# Linux: write to /proc/sys/vm/drop_caches (requires root)
-			subprocess.run(
-				["sync"],  # Ensure all pending data is written
-				capture_output=True,
-				timeout=5,
-			)
-			subprocess.run(
-				["bash", "-c", "echo 3 > /proc/sys/vm/drop_caches"],
-				capture_output=True,
-				timeout=5,
-			)
-	except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
-		# Cache drop failed or not available - continue anyway
-		pass
+    Requires elevated privileges (sudo) to work effectively.
+    On failure, silently continues - benchmarks will still run but may be cache-affected.
+    """
+    try:
+        if sys.platform == "darwin":
+            # macOS: drop caches using purge command
+            subprocess.run(["purge"], capture_output=True, timeout=5)
+        elif sys.platform.startswith("linux"):
+            # Linux: write to /proc/sys/vm/drop_caches (requires root)
+            subprocess.run(
+                ["sync"],  # Ensure all pending data is written
+                capture_output=True,
+                timeout=5,
+            )
+            subprocess.run(
+                ["bash", "-c", "echo 3 > /proc/sys/vm/drop_caches"],
+                capture_output=True,
+                timeout=5,
+            )
+    except (FileNotFoundError, subprocess.TimeoutExpired, PermissionError):
+        # Cache drop failed or not available - continue anyway
+        pass
 
 
 @dataclass

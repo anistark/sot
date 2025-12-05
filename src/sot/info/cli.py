@@ -5,12 +5,11 @@ import platform
 import subprocess
 import time
 from datetime import timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import distro
 import psutil
 from rich.console import Console
-from rich.text import Text
 
 from .._helpers import sizeof_fmt
 from .logos import get_logo_for_os
@@ -45,14 +44,14 @@ def get_os_info() -> str:
     if system == "Darwin":
         version = platform.mac_ver()[0]
         # Map version to release name
-        major_version = int(version.split('.')[0])
+        major_version = int(version.split(".")[0])
         version_names = {
             15: "Sequoia",
             14: "Sonoma",
             13: "Ventura",
             12: "Monterey",
             11: "Big Sur",
-            10: "Catalina"
+            10: "Catalina",
         }
         name = version_names.get(major_version, "")
         if name:
@@ -81,10 +80,7 @@ def get_machine_model() -> Optional[str]:
     if system == "Darwin":
         try:
             result = subprocess.run(
-                ["sysctl", "-n", "hw.model"],
-                capture_output=True,
-                text=True,
-                timeout=2
+                ["sysctl", "-n", "hw.model"], capture_output=True, text=True, timeout=2
             )
             if result.returncode == 0:
                 return result.stdout.strip()
@@ -104,7 +100,7 @@ def get_model_name() -> Optional[str]:
                 ["system_profiler", "SPHardwareDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 for line in result.stdout.split("\n"):
@@ -126,7 +122,7 @@ def get_model_number() -> Optional[str]:
                 ["system_profiler", "SPHardwareDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 for line in result.stdout.split("\n"):
@@ -148,7 +144,7 @@ def get_serial_number() -> Optional[str]:
                 ["system_profiler", "SPHardwareDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 for line in result.stdout.split("\n"):
@@ -170,7 +166,7 @@ def get_chip_details() -> Optional[str]:
                 ["system_profiler", "SPHardwareDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 chip_name = None
@@ -186,7 +182,11 @@ def get_chip_details() -> Optional[str]:
                         core_info = line.split("Total Number of Cores:")[1].strip()
                         # Parse the core breakdown
                         import re
-                        match = re.search(r'(\d+)\s*\((\d+)\s+performance\s+and\s+(\d+)\s+efficiency\)', core_info)
+
+                        match = re.search(
+                            r"(\d+)\s*\((\d+)\s+performance\s+and\s+(\d+)\s+efficiency\)",
+                            core_info,
+                        )
                         if match:
                             total_cores = match.group(1)
                             perf_cores = match.group(2)
@@ -217,7 +217,7 @@ def get_firmware_version() -> Optional[str]:
                 ["system_profiler", "SPHardwareDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 for line in result.stdout.split("\n"):
@@ -238,6 +238,7 @@ def get_de_wm_info() -> Tuple[Optional[str], Optional[str]]:
     elif system == "Linux":
         # Try to detect DE and WM from environment variables
         import os
+
         de = os.environ.get("XDG_CURRENT_DESKTOP") or os.environ.get("DESKTOP_SESSION")
         wm = os.environ.get("XDG_SESSION_TYPE")
         return de, wm
@@ -248,6 +249,7 @@ def get_de_wm_info() -> Tuple[Optional[str], Optional[str]]:
 def get_shell_info() -> str:
     """Get shell information."""
     import os
+
     shell_path = os.environ.get("SHELL", "")
     if shell_path:
         return shell_path.split("/")[-1]
@@ -285,7 +287,7 @@ def get_cpu_info() -> Tuple[str, int]:
                 ["sysctl", "-n", "machdep.cpu.brand_string"],
                 capture_output=True,
                 text=True,
-                timeout=2
+                timeout=2,
             )
             if result.returncode == 0:
                 cpu_name = result.stdout.strip()
@@ -325,7 +327,7 @@ def get_gpu_info() -> Tuple[Optional[str], Optional[int], Optional[str]]:
                 ["system_profiler", "SPDisplaysDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 lines = result.stdout.split("\n")
@@ -377,10 +379,7 @@ def get_brightness() -> Optional[int]:
         try:
             # Try to get brightness using brightness utility if installed
             result = subprocess.run(
-                ["brightness", "-l"],
-                capture_output=True,
-                text=True,
-                timeout=2
+                ["brightness", "-l"], capture_output=True, text=True, timeout=2
             )
             if result.returncode == 0:
                 lines = result.stdout.strip().split("\n")
@@ -413,7 +412,7 @@ def get_resolution() -> List[str]:
                 ["system_profiler", "SPDisplaysDataType"],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             if result.returncode == 0:
                 lines = result.stdout.split("\n")
@@ -450,7 +449,11 @@ def get_resolution() -> List[str]:
                         for j in range(i + 1, min(i + 10, len(lines))):
                             next_line = lines[j]
                             if "Refresh Rate:" in next_line:
-                                refresh = next_line.split("Refresh Rate:")[1].strip().split()[0]
+                                refresh = (
+                                    next_line.split("Refresh Rate:")[1]
+                                    .strip()
+                                    .split()[0]
+                                )
                                 current_res += f"@{refresh}Hz"
                                 break
                             elif "UI Looks like:" in next_line:
@@ -460,7 +463,7 @@ def get_resolution() -> List[str]:
                                         refresh_part = next_line.split("@")[1].strip()
                                         refresh = refresh_part.split()[0]
                                         current_res += f"@{refresh}"
-                                    except:
+                                    except (IndexError, AttributeError):
                                         pass
                                 break
                             elif "Resolution:" in next_line or stripped.endswith(":"):
@@ -470,7 +473,9 @@ def get_resolution() -> List[str]:
                         # Add the resolution with display name if available
                         if current_res:
                             if current_display_name:
-                                resolutions.append(f"{current_res} ({current_display_name})")
+                                resolutions.append(
+                                    f"{current_res} ({current_display_name})"
+                                )
                             else:
                                 resolutions.append(current_res)
                             current_res = None
@@ -491,10 +496,7 @@ def get_package_counts() -> List[str]:
         # Check Homebrew
         try:
             result = subprocess.run(
-                ["brew", "list", "--formula"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                ["brew", "list", "--formula"], capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0:
                 count = len(result.stdout.strip().split("\n"))
@@ -505,9 +507,16 @@ def get_package_counts() -> List[str]:
         # Check Cargo
         try:
             import os
+
             cargo_bin = os.path.expanduser("~/.cargo/bin")
             if os.path.exists(cargo_bin):
-                count = len([f for f in os.listdir(cargo_bin) if os.path.isfile(os.path.join(cargo_bin, f))])
+                count = len(
+                    [
+                        f
+                        for f in os.listdir(cargo_bin)
+                        if os.path.isfile(os.path.join(cargo_bin, f))
+                    ]
+                )
                 packages.append(f"{count} (cargo)")
         except Exception:
             pass
@@ -522,12 +531,7 @@ def get_package_counts() -> List[str]:
 
         for cmd, name in package_managers:
             try:
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
                 if result.returncode == 0:
                     count = len(result.stdout.strip().split("\n"))
                     packages.append(f"{count} ({name})")
@@ -612,7 +616,9 @@ def format_system_info() -> str:
         if vram:
             gpu_info += f", {vram}"
         info_lines.append(f"GPU         -  {gpu_info}")
-    info_lines.append(f"Memory      -  {sizeof_fmt(mem_used)} / {sizeof_fmt(mem_total)}")
+    info_lines.append(
+        f"Memory      -  {sizeof_fmt(mem_used)} / {sizeof_fmt(mem_total)}"
+    )
 
     info_lines.append("")  # Empty line separator
 

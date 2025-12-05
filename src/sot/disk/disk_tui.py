@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import platform
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 import psutil
 from rich.console import Group
@@ -11,11 +11,11 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from textual.app import App, ComposeResult
-from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, ListItem, ListView, Static
 
-from .._helpers import sizeof_fmt
 from ..__about__ import __version__
+from .._helpers import sizeof_fmt
 
 
 class VolumeListItem(ListItem):
@@ -61,7 +61,9 @@ class PartitionBox(Static):
         part_lines.append(Text(f"Device: {part['device']}", style="dim"))
         part_lines.append(Text(f"Mount: {part['mountpoint']}", style="white"))
         part_lines.append(Text(f"FS: {part['fstype']}", style="dim"))
-        part_lines.append(Text(f"Size: {sizeof_fmt(part_usage.total, fmt='.1f')}", style="white"))
+        part_lines.append(
+            Text(f"Size: {sizeof_fmt(part_usage.total, fmt='.1f')}", style="white")
+        )
         part_lines.append(Text(""))
 
         # Visual usage bar with numbers on sides
@@ -76,7 +78,9 @@ class PartitionBox(Static):
         usage_line.append(f" {part_free_str}", style="bold white")
         part_lines.append(usage_line)
 
-        percent_line = Text(f"{percent_str}", style=f"bold {bar_style}", justify="center")
+        percent_line = Text(
+            f"{percent_str}", style=f"bold {bar_style}", justify="center"
+        )
         part_lines.append(percent_line)
 
         # Create partition panel
@@ -148,7 +152,9 @@ class VolumeInfoPanel(Static):
         main_usage_bar.append("░" * free_blocks, style="dim")
         main_usage_bar.append(f" {free_str}", style="bold white")
 
-        main_percent = Text(f"{usage.percent:.3f}%", style=f"bold {main_bar_style}", justify="center")
+        main_percent = Text(
+            f"{usage.percent:.3f}%", style=f"bold {main_bar_style}", justify="center"
+        )
 
         # Get primary mountpoint for subtitle
         partitions = self.current_volume.get("partitions", [])
@@ -173,13 +179,21 @@ class VolumeInfoPanel(Static):
             io_table = Table(box=None, show_header=False, padding=(0, 1))
             io_table.add_column("Label", style="dim", width=12)
             io_table.add_column("Value", style="white")
-            io_table.add_row("Read", f"{io_stats['read_count']:,} ({sizeof_fmt(io_stats['read_bytes'], fmt='.1f')})")
-            io_table.add_row("Write", f"{io_stats['write_count']:,} ({sizeof_fmt(io_stats['write_bytes'], fmt='.1f')})")
+            io_table.add_row(
+                "Read",
+                f"{io_stats['read_count']:,} ({sizeof_fmt(io_stats['read_bytes'], fmt='.1f')})",
+            )
+            io_table.add_row(
+                "Write",
+                f"{io_stats['write_count']:,} ({sizeof_fmt(io_stats['write_bytes'], fmt='.1f')})",
+            )
             content_parts.append(io_table)
 
         # Partitions as compact visual boxes
         if partitions:
-            content_parts.append(Text(f"\n{len(partitions)} Partition(s):", style="bold yellow"))
+            content_parts.append(
+                Text(f"\n{len(partitions)} Partition(s):", style="bold yellow")
+            )
 
             # Create rows of 2 partitions each for compact layout
             for i in range(0, len(partitions), 2):
@@ -206,7 +220,6 @@ class VolumeInfoPanel(Static):
                     part_free_blocks = part_bar_width - part_used_blocks
 
                     part_used_str = sizeof_fmt(part_usage.used, fmt=".1f")
-                    part_free_str = sizeof_fmt(part_usage.free, fmt=".1f")
 
                     usage_bar = Text()
                     usage_bar.append("█" * part_used_blocks, style=bar_style)
@@ -217,9 +230,13 @@ class VolumeInfoPanel(Static):
                     part_display.add_column(style="bold cyan", justify="left")
                     part_display.add_row(f"[bold]{part['partition_id']}[/bold]")
                     part_display.add_row(f"[dim]{part['mountpoint']}[/dim]")
-                    part_display.add_row(f"{part_used_str} / {sizeof_fmt(part_usage.total, fmt='.1f')}")
+                    part_display.add_row(
+                        f"{part_used_str} / {sizeof_fmt(part_usage.total, fmt='.1f')}"
+                    )
                     part_display.add_row(usage_bar)
-                    part_display.add_row(f"[{bar_style}]{part_usage.percent:.3f}%[/{bar_style}]")
+                    part_display.add_row(
+                        f"[{bar_style}]{part_usage.percent:.3f}%[/{bar_style}]"
+                    )
 
                     row_parts.append(part_display)
 
@@ -230,11 +247,13 @@ class VolumeInfoPanel(Static):
                     row_table.add_column(ratio=1)
                     row_table.add_row(
                         Panel(row_parts[0], border_style="cyan", padding=(0, 1)),
-                        Panel(row_parts[1], border_style="cyan", padding=(0, 1))
+                        Panel(row_parts[1], border_style="cyan", padding=(0, 1)),
                     )
                     content_parts.append(row_table)
                 elif len(row_parts) == 1:
-                    content_parts.append(Panel(row_parts[0], border_style="cyan", padding=(0, 1)))
+                    content_parts.append(
+                        Panel(row_parts[0], border_style="cyan", padding=(0, 1))
+                    )
 
         content = Group(*content_parts)
         self.update(Panel(content, title="Volume Information", border_style="cyan"))
@@ -319,8 +338,6 @@ class DiskTUIApp(App):
 
     def get_volume_info(self) -> List[Dict]:
         """Get information about all volumes, grouping by physical disk."""
-        import re
-
         # First, collect all partitions by physical disk
         disks_dict = {}
         partitions_list = [
@@ -380,7 +397,9 @@ class DiskTUIApp(App):
                 if primary_partition["mountpoint"] == "/":
                     volume_name = "System"
                 else:
-                    volume_name = primary_partition["mountpoint"].split("/")[-1] or disk_id
+                    volume_name = (
+                        primary_partition["mountpoint"].split("/")[-1] or disk_id
+                    )
 
                 # Calculate aggregate usage percentage
                 total_size = disk_data["total_size"]

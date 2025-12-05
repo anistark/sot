@@ -39,13 +39,17 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
             metavar = self._metavar_formatter(action, action.dest)(1)[0]
 
             # Split the result into lines
-            lines = result.split('\n')
+            lines = result.split("\n")
 
             # Build new output with metavar on same line as title
             new_lines = []
             for line in lines:
                 # Skip the standalone metavar line
-                if line.strip() and line.strip().startswith('{') and line.strip().endswith('}'):
+                if (
+                    line.strip()
+                    and line.strip().startswith("{")
+                    and line.strip().endswith("}")
+                ):
                     continue
                 # Skip empty lines at the start
                 if not line.strip() and not new_lines:
@@ -55,13 +59,13 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
             # Manually construct the section with metavar on same line
             parts = [f"commands: {metavar}"]
             parts.extend(new_lines)
-            result = '\n'.join(parts)
+            result = "\n".join(parts)
 
         return result
 
     def start_section(self, heading):
         # Override to prevent "positional arguments:" heading for subparsers
-        if heading == 'positional arguments':
+        if heading == "positional arguments":
             # Start section with no heading (empty string)
             super().start_section(None)
         else:
@@ -518,7 +522,7 @@ def run(argv=None):
     )
 
     # Add info subcommand
-    info_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "info",
         help="Display system information",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -546,7 +550,7 @@ def run(argv=None):
     )
 
     # Add disk subcommand
-    disk_parser = subparsers.add_parser(
+    subparsers.add_parser(
         "disk",
         help="Interactive disk information viewer",
         formatter_class=argparse.RawTextHelpFormatter,

@@ -18,8 +18,12 @@ exclude =
     .venv,
     venv,
     node_modules
-per-file-ignores = 
+per-file-ignores =
     # Allow complexity in development tools
     src/dev/*:C901
     # Allow imports at top of __init__.py files
     */__init__.py:F401
+    # Allow complexity in specific CLI and TUI functions
+    src/sot/bench/cli.py:C901
+    src/sot/disk/disk_tui.py:C901
+    src/sot/info/cli.py:C901

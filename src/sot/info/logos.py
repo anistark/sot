@@ -71,15 +71,15 @@ def get_debian_logo() -> List[str]:
     return [
         "       _,met$$$$$gg.          ",
         "    ,g$$$$$$$$$$$$$$$P.       ",
-        "  ,g$$P\"     \"\"\"Y$$.\"`.       ",
+        '  ,g$$P"     """Y$$."`.       ',
         " ,$$P'              `$$$.     ",
         "',$$P       ,ggs.     `$$b:   ",
         "`d$$'     ,$P\"'   .    $$$    ",
         " $$P      d$'     ,    $$P    ",
         " $$:      $$.   -    ,d$$'    ",
         " $$;      Y$b._   _,d$P'      ",
-        " Y$$.    `.`\"Y$$$$P\"'         ",
-        " `$$b      \"-.__              ",
+        ' Y$$.    `.`"Y$$$$P"\'         ',
+        ' `$$b      "-.__              ',
         "  `Y$$                        ",
         "   `Y$$.                      ",
         "     `$$b.                    ",
@@ -259,7 +259,11 @@ def get_logo_for_os(os_name: str, distro_name: str = "") -> List[str]:
             return get_debian_logo()
         elif "fedora" in distro_lower:
             return get_fedora_logo()
-        elif "red hat" in distro_lower or "redhat" in distro_lower or "rhel" in distro_lower:
+        elif (
+            "red hat" in distro_lower
+            or "redhat" in distro_lower
+            or "rhel" in distro_lower
+        ):
             return get_redhat_logo()
         elif "arch" in distro_lower:
             return get_arch_logo()
