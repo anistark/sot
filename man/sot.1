@@ -1,0 +1,150 @@
+.TH SOT "1" "2024\-2025" "sot" "Generated Python Manual"
+.SH NAME
+sot \- sot is a Command\-line System Observation Tool in the spirit of top. It displays various interesting system stats and graphs them. Works on all operating systems.
+.SH SYNOPSIS
+.B sot
+[--help] [--version] [--log LOG] [--net NET] {info,bench,disk} ...
+.SH DESCRIPTION
+Command\-line System Observation Tool ≈
+
+.SH
+POSITIONAL ARGUMENTS
+.TP
+\fBsot\fR \fI\,info\/\fR
+Display system information
+.TP
+\fBsot\fR \fI\,bench\/\fR
+Disk benchmarking
+.TP
+\fBsot\fR \fI\,disk\/\fR
+Interactive disk information viewer
+
+.SH COMMAND \fI\,'sot info'\/\fR
+usage: sot info [\-h]
+
+.SH COMMAND \fI\,'sot bench'\/\fR
+usage: sot bench [\-h] [\-\-output OUTPUT] [\-\-duration DURATION]
+
+.SH OPTIONS \fI\,'sot bench'\/\fR
+.TP
+\fB\-\-output\fR \fI\,OUTPUT\/\fR, \fB\-o\fR \fI\,OUTPUT\/\fR
+Output file for benchmark results (JSON format)
+
+.TP
+\fB\-\-duration\fR \fI\,DURATION\/\fR, \fB\-d\fR \fI\,DURATION\/\fR
+Duration for each benchmark test in seconds (default: 10s)
+
+.SH COMMAND \fI\,'sot disk'\/\fR
+usage: sot disk [\-h]
+
+.SH OPTIONS
+.TP
+\fB\-\-version\fR, \fB\-V\fR
+Display version information with styling
+
+.TP
+\fB\-\-log\fR \fI\,LOG\/\fR, \fB\-L\fR \fI\,LOG\/\fR
+Debug log file path (enables debug logging)
+
+.TP
+\fB\-\-net\fR \fI\,NET\/\fR, \fB\-N\fR \fI\,NET\/\fR
+Network interface to display (default: auto\-detect best interface)
+.SH EXAMPLES
+.TP
+.B sot
+Launch the interactive system monitoring TUI
+.TP
+.B sot --net eth0
+Monitor system with specific network interface
+.TP
+.B sot info
+Display comprehensive system information
+.TP
+.B sot bench
+Run interactive disk benchmark
+.TP
+.B sot bench --duration 30 --output results.json
+Run 30-second benchmarks and save results to JSON
+.TP
+.B sot disk
+View interactive disk information
+
+.SH FEATURES
+.SS System Monitoring
+.IP \(bu 2
+CPU usage per core and thread
+.IP \(bu 2
+Process management with interactive sorting
+.IP \(bu 2
+Memory usage and capacity monitoring
+.IP \(bu 2
+Network upload/download speed and bandwidth
+.IP \(bu 2
+Disk I/O statistics and usage
+
+.SS System Information (sot info)
+.IP \(bu 2
+Hardware details (chip, GPU, memory)
+.IP \(bu 2
+Software information (OS, kernel, shell)
+.IP \(bu 2
+Display configuration and brightness
+.IP \(bu 2
+Battery status and system uptime
+.IP \(bu 2
+OS-specific ASCII logos
+
+.SS Disk Benchmarking (sot bench)
+.IP \(bu 2
+Sequential read/write throughput
+.IP \(bu 2
+Random read/write IOPS
+.IP \(bu 2
+Latency percentiles (p50, p95, p99)
+.IP \(bu 2
+JSON export for results
+
+.SH INTERACTIVE CONTROLS
+When running the main sot interface:
+.TP
+.B q
+Quit the application
+.TP
+.B O
+Enter order-by mode for process sorting
+.TP
+.B Arrow keys
+Navigate columns in order-by mode
+.TP
+.B Enter
+Toggle sort direction (DESC ↓ → ASC ↑ → OFF)
+
+.SH CONFIGURATION
+sot does not require configuration files. All options are provided via command-line arguments.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error (insufficient permissions, invalid arguments, etc.)
+
+.SH SEE ALSO
+.BR top (1),
+.BR htop (1),
+.BR btop (1),
+.BR iostat (1),
+.BR vmstat (8)
+
+.SH BUGS
+Report bugs at: https://github.com/anistark/sot/issues
+
+.SH COPYRIGHT
+MIT License © 2024-2025 Kumar Anirudha
+
+.SH AUTHOR
+Written by Kumar Anirudha.
+
+.SH AVAILABILITY
+The latest version is available at: https://github.com/anistark/sot

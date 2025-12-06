@@ -39,6 +39,8 @@ jobs:
       - name: Build and package .deb
         run: |
           uv sync
+          # Generate man page before building
+          uv run python scripts/build_manpage.py
           uv run python -m build --wheel
           VERSION=${GITHUB_REF#refs/tags/}
           WHEEL=$(ls dist/sot-*.whl | head -1)
@@ -86,6 +88,8 @@ jobs:
       - name: Build and package .rpm
         run: |
           uv sync
+          # Generate man page before building
+          uv run python scripts/build_manpage.py
           uv run python -m build --wheel
           VERSION=${GITHUB_REF#refs/tags/}
           WHEEL=$(ls dist/sot-*.whl | head -1)
