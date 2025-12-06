@@ -13,6 +13,7 @@ dev-dependencies = [
   "build>=1.3.0",
   "twine>=6.1.0",
   "ty>=0.0.1a19",
+  "argparse-manpage>=4.7",
 ]
 
 [tool.isort]
@@ -55,9 +56,16 @@ path = "src/sot/__about__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/sot"]
 
+[tool.hatch.build.targets.wheel.shared-data]
+"man" = "share/man/man1"
+
 [tool.hatch.build.targets.sdist]
 exclude = [
   "images",
+]
+include = [
+  "man/sot.1",
+  "scripts/build_manpage.py",
 ]
 
 [project.urls]

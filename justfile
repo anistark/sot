@@ -53,8 +53,14 @@ sot *ARGS:
 	@echo "🚀 Running SOT..."
 	uv run sot {{ARGS}}
 
+# Build man page
+build-man:
+	@echo "📖 Building man page..."
+	uv run python scripts/build_manpage.py
+	@echo "✅ Man page built successfully!"
+
 # Build SOT locally
-build:
+build: build-man
 	@echo "🔨 Building SOT locally..."
 	uv pip install .
 	@echo "✅ SOT built successfully!"
@@ -88,7 +94,7 @@ setup-dev: install-dev-deps
 	@echo "🔍 Version: $(python3 -c "import sys; sys.path.insert(0, 'src'); from sot.__about__ import __version__; print(__version__)")"
 
 # Publishing commands
-publish: clean format lint type
+publish: clean format lint type build-man
 	@if [ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]; then echo "❌ Must be on main branch to publish"; exit 1; fi
 	@echo "📋 Version: {{version}}"
 	@echo "🔨 Building package..."
@@ -102,7 +108,7 @@ publish: clean format lint type
 	gh release create "v{{version}}"
 	@echo "✅ Published v{{version}} to PyPI and GitHub!"
 
-publish-test: clean
+publish-test: clean build-man
 	uv run python -m build --sdist --wheel .
 	uv run twine check dist/*
 
@@ -248,7 +254,8 @@ help:
 	@echo "  just sot bench --help       - Show benchmark help"
 	@echo ""
 	@echo "Installation:"
-	@echo "  just build                  - Build SOT locally"
+	@echo "  just build-man              - Build man page"
+	@echo "  just build                  - Build SOT locally (includes man page)"
 	@echo "  just install                - Install SOT system-wide"
 	@echo "  just uninstall              - Uninstall SOT from system and local"
 	@echo ""
