@@ -292,6 +292,58 @@ This will automatically update `pyproject.toml` and `uv.lock`.
 - Be more specific with development tool versions for consistency
 - Always test new dependencies across supported Python versions
 
+## 📖 Man Page
+
+SOT includes a man page that is automatically generated from the argparse configuration using `argparse-manpage`.
+
+### Building the Man Page
+
+The man page is built automatically as part of the build and publish process:
+
+```sh
+# Build just the man page
+just build-man
+
+# Or directly
+uv run python scripts/build_manpage.py
+```
+
+The generated man page will be at `man/sot.1`.
+
+### Testing the Man Page Locally
+
+```sh
+# Build and view the man page
+just build-man
+man ./man/sot.1
+```
+
+### Man Page Updates
+
+The man page is automatically generated from:
+- Command-line argument definitions in `src/sot/_app.py`
+- Additional sections defined in `scripts/build_manpage.py`
+
+**When to regenerate:**
+- After adding/modifying CLI arguments
+- After adding/removing subcommands
+- Before publishing a new release (handled automatically)
+
+**What's included:**
+- Command synopsis and all options
+- Subcommand documentation (info, bench, disk)
+- Usage examples
+- Feature descriptions
+- Interactive controls
+- See also references to similar tools
+
+The man page is packaged in:
+- **Source distribution (sdist)**: `man/sot.1`
+- **Wheel**: `share/man/man1/sot.1` (auto-installed)
+- **Homebrew**: Installed to `/usr/local/share/man/man1/sot.1` or `/opt/homebrew/share/man/man1/sot.1`
+
+See `HOMEBREW_MANPAGE.md` for Homebrew-specific installation details.
+
 ## 🏗️ Project Structure
 
 ```sh
@@ -316,11 +368,16 @@ sot/                           # Root project directory
 │       ├── dev_runner.py      # 🆕 Development runner with descriptive names
 │       ├── watch_dev.py       # 🆕 File watcher with signal handling
 │       └── terminal_test.py   # 🆕 Terminal diagnostics
+├── scripts/
+│   └── build_manpage.py       # Man page generation script
+├── man/
+│   └── sot.1                  # Generated man page
 ├── .vscode/                   # VS Code configuration
 │   ├──settings.json
 │   └── launch.json            # Debug configurations
 ├── justfile
 ├── CONTRIBUTING.md
+├── HOMEBREW_MANPAGE.md        # Homebrew man page documentation
 ├── pyproject.toml
 ├── .gitignore
 ├── README.md
