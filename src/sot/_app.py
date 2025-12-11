@@ -93,14 +93,14 @@ class SotApp(App):
     }
     """
 
-    def __init__(self, net_interface=None, log_file=None):
+    def __init__(self, net_interface=None, disk_mountpoint=None, log_file=None):
         super().__init__()
         self.net_interface = net_interface
+        self.disk_mountpoint = disk_mountpoint
         self.log_file = log_file
         self.pending_kill = None
         self._waiting_for_kill_confirmation = False
 
-        # Set up logging if specified
         if log_file:
             os.environ["TEXTUAL_LOG"] = log_file
 
@@ -135,7 +135,7 @@ class SotApp(App):
         yield sot_widget
 
         # Row 4: Disk, Network Connections, Network Widget
-        disk_widget = DiskWidget()
+        disk_widget = DiskWidget(self.disk_mountpoint)
         disk_widget.id = "disk-widget"
         yield disk_widget
 
@@ -151,9 +151,14 @@ class SotApp(App):
     def on_mount(self) -> None:
         self.title = "SOT"
 
-        # Update subtitle to show active interface if specified
+        subtitle_parts = []
         if self.net_interface:
-            self.sub_title = f"System Observation Tool - Net: {self.net_interface}"
+            subtitle_parts.append(f"Net: {self.net_interface}")
+        if self.disk_mountpoint:
+            subtitle_parts.append(f"Disk: {self.disk_mountpoint}")
+
+        if subtitle_parts:
+            self.sub_title = f"System Observation Tool - {', '.join(subtitle_parts)}"
         else:
             self.sub_title = "System Observation Tool"
 
@@ -477,7 +482,89 @@ def _show_styled_version():
     console.print(Panel(footer_text, border_style="dim", padding=(0, 2)))
 
 
-def run(argv=None):
+def _get_volume_display_name(mp: str) -> str:
+    """Get display name for a volume mountpoint."""
+    import psutil
+
+    from ._helpers import sizeof_fmt
+
+    name = "Macintosh HD" if mp == "/" else mp.split("/")[-1]
+    try:
+        usage_path = "/System/Volumes/Data" if mp == "/" else mp
+        usage = psutil.disk_usage(usage_path)
+        total = sizeof_fmt(usage.total, fmt=".1f")
+        return f"{name} ({total}, {usage.percent:.1f}% used)"
+    except (PermissionError, OSError):
+        return name
+
+
+def _read_arrow_key(stdin) -> str | None:
+    """Read arrow key escape sequence, return 'up', 'down', or None."""
+    ch2 = stdin.read(1)
+    if ch2 != "[":
+        return None
+    ch3 = stdin.read(1)
+    return {"A": "up", "B": "down"}.get(ch3)
+
+
+def _interactive_disk_select(volumes: list[str]) -> str | None:  # noqa: C901
+    """Interactive volume selector using arrow keys."""
+    import sys
+
+    if not sys.stdin.isatty():
+        print("💾 Available volumes:\n")
+        for i, mp in enumerate(volumes, 1):
+            print(f"  [{i}] {_get_volume_display_name(mp)}")
+        print("\n❌ Interactive selection requires a terminal.")
+        return None
+
+    import termios
+    import tty
+
+    def render(selected_idx: int):
+        sys.stdout.write("\033[?25l\033[H\033[2J\033[H")
+        sys.stdout.write(
+            "💾 Select a volume (↑/↓ to move, Enter to select, q to cancel):\r\n\r\n"
+        )
+        for i, mp in enumerate(volumes):
+            info = _get_volume_display_name(mp)
+            prefix = "  \033[1;36m❯" if i == selected_idx else "   "
+            suffix = "\033[0m" if i == selected_idx else ""
+            sys.stdout.write(f"{prefix} {info}{suffix}\r\n")
+        sys.stdout.flush()
+
+    selected_idx = 0
+    render(selected_idx)
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        while True:
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":
+                arrow = _read_arrow_key(sys.stdin)
+                if arrow == "up":
+                    selected_idx = (selected_idx - 1) % len(volumes)
+                elif arrow == "down":
+                    selected_idx = (selected_idx + 1) % len(volumes)
+                render(selected_idx)
+            elif ch in ("\r", "\n"):
+                break
+            elif ch in ("q", "Q", "\x03"):
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                sys.stdout.write("\033[?25h")
+                print("\n❌ Selection cancelled.")
+                return None
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        sys.stdout.write("\033[?25h")
+
+    print()
+    return volumes[selected_idx]
+
+
+def run(argv=None):  # noqa: C901
     parser = argparse.ArgumentParser(
         description="Command-line System Obervation Tool ≈",
         formatter_class=CustomHelpFormatter,
@@ -513,6 +600,16 @@ def run(argv=None):
         type=str,
         default=None,
         help="Network interface to display (default: auto-detect best interface)",
+    )
+
+    parser.add_argument(
+        "--disk",
+        "-D",
+        type=str,
+        nargs="?",
+        const="__select__",
+        default=None,
+        help="Disk mountpoint to display (use without value for interactive selection)",
     )
 
     # Create subparsers for subcommands
@@ -591,6 +688,31 @@ def run(argv=None):
             print(f"📡 Available interfaces: {', '.join(available_interfaces)}")
             return 1
 
+    # Validate disk mountpoint if specified
+    if args.disk:
+        import psutil
+
+        partitions = psutil.disk_partitions()
+        all_mountpoints = [p.mountpoint for p in partitions]
+
+        # Filter to show only user-relevant volumes (root + /Volumes/*)
+        volumes = [
+            mp for mp in all_mountpoints if mp == "/" or mp.startswith("/Volumes/")
+        ]
+
+        if args.disk == "__select__" or args.disk not in all_mountpoints:
+            if args.disk != "__select__":
+                print(f"❌ Disk mountpoint '{args.disk}' not found.\n")
+
+            if not volumes:
+                print("❌ No volumes found.")
+                return 1
+
+            selected = _interactive_disk_select(volumes)
+            if selected is None:
+                return 1
+            args.disk = selected
+
     # Set up logging before using SotApp (Textual reads TEXTUAL_LOG at module import time)
     if args.log:
         os.environ["TEXTUAL_LOG"] = args.log
@@ -603,10 +725,12 @@ def run(argv=None):
         print(f"🐛 Debug logging enabled: {args.log}")
 
     # Create and run the application with the specified options
-    app = SotApp(net_interface=args.net, log_file=args.log)
+    app = SotApp(net_interface=args.net, disk_mountpoint=args.disk, log_file=args.log)
 
     if args.net:
         print(f"📡 Using network interface: {args.net}")
+    if args.disk:
+        print(f"💾 Using disk mountpoint: {args.disk}")
 
     try:
         app.run()

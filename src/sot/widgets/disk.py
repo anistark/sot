@@ -18,26 +18,52 @@ from ..braille_stream import BrailleStream
 from .base_widget import BaseWidget
 
 
+def _validate_mountpoint(mountpoint):
+    try:
+        partitions = psutil.disk_partitions()
+        available = [p.mountpoint for p in partitions]
+        return mountpoint in available
+    except Exception:
+        return False
+
+
+def _autoselect_mountpoint():
+    partitions = [
+        p for p in psutil.disk_partitions() if not p.device.startswith("/dev/loop")
+    ]
+    mountpoints = [p.mountpoint for p in partitions]
+
+    if platform.system() == "Darwin":
+        root_mounts = [mp for mp in mountpoints if mp == "/"]
+        if root_mounts:
+            return root_mounts
+        elif mountpoints:
+            return [mountpoints[0]]
+
+    return mountpoints
+
+
 class DiskWidget(BaseWidget):
     """Disk widget displaying usage and I/O statistics."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, mountpoint: str | None = None, **kwargs):
+        self.specified_mountpoint = mountpoint
         super().__init__(title="Disk", **kwargs)
 
     def on_mount(self):
-        partitions = [
-            p for p in psutil.disk_partitions() if not p.device.startswith("/dev/loop")
-        ]
-        mountpoints = [p.mountpoint for p in partitions]
-
-        if platform.system() == "Darwin":
-            root_mounts = [mp for mp in mountpoints if mp == "/"]
-            if root_mounts:
-                mountpoints = root_mounts
-            elif mountpoints:
-                mountpoints = [mountpoints[0]]
-
-        self.mountpoints = mountpoints
+        if self.specified_mountpoint and _validate_mountpoint(
+            self.specified_mountpoint
+        ):
+            self.mountpoints = [self.specified_mountpoint]
+            self.panel.title = f"[b]Disk - {self.specified_mountpoint}[/]"
+        else:
+            self.mountpoints = _autoselect_mountpoint()
+            if self.specified_mountpoint:
+                self.app.notify(
+                    f"Mountpoint '{self.specified_mountpoint}' not found, using default",
+                    severity="warning",
+                    timeout=5,
+                )
 
         self.has_io_counters = False
         try:

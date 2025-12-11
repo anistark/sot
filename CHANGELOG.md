@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Disk Selection Option** - New `--disk` / `-D` flag for selecting which disk to monitor:
+  - Interactive volume picker with arrow key navigation when used without a value
+  - Direct mountpoint specification (e.g., `sot --disk /Volumes/External`)
+  - Shows only user-relevant volumes (Macintosh HD and mounted drives)
+  - Displays accurate disk usage for macOS (uses Data volume for correct percentages)
+
+### Added
 - **Interactive Disk TUI** - New `sot disk` command for viewing all physical disks:
   - Displays all physical disks with accurate space calculations for APFS containers
   - Visual partition boxes with usage bars and statistics
