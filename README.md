@@ -252,6 +252,13 @@ sot
 - Upload/Download Speed
 - Bandwidth
 - Network Usage
+- **Select Interface**: Use `--net` / `-N` to monitor a specific network interface
+
+### Options
+
+- **Disk Selection**: Use `--disk` / `-D` to monitor a specific volume
+  - `sot --disk` - Interactive picker with arrow keys
+  - `sot --disk /Volumes/External` - Monitor specific volume
 
 ---
 
@@ -411,19 +418,21 @@ sot -H
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot [--help] [--version] [--log LOG] [--net NET] {info,bench} ...
+usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] {info,bench,disk} ...
 
 Command-line System Obervation Tool ≈
 
-commands: {info,bench}
+commands: {info,bench,disk}
     info             Display system information
     bench            Disk benchmarking
+    disk             Interactive disk information viewer
 
 options:
-  --help, -H         Show this help message and exit.
-  --version, -V      Display version information with styling
-  --log LOG, -L LOG  Debug log file path (enables debug logging)
-  --net NET, -N NET  Network interface to display (default: auto-detect best interface)
+  --help, -H                Show this help message and exit.
+  --version, -V             Display version information with styling
+  --log LOG, -L LOG         Debug log file path (enables debug logging)
+  --net NET, -N NET         Network interface to display (default: auto-detect best interface)
+  --disk [DISK], -D [DISK]  Disk mountpoint to display (use without value for interactive selection)
 ```
 
 For benchmark-specific options:
