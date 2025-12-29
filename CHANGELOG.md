@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **System Deep Cleaning** - New `sot clean` command for removing system caches, logs, and temporary files:
+  - Interactive mode with confirmation prompt before deletion
+  - Dry run mode with `--dry-run` flag to preview what will be deleted without actually removing files
+  - Cross-platform support (macOS, Linux)
+  - Cleans multiple target types:
+    - User and system caches
+    - Application and system logs
+    - Temporary files
+    - Package manager caches (Homebrew, pip, npm, yarn, cargo, etc.)
+    - Browser caches
+    - Docker build cache and unused volumes
+    - Trash/Recycle Bin
+  - Visual preview showing size of items to be cleaned
+  - Privileged cleaning with sudo for system-level items (requires elevated permissions)
+  - Safe deletion with proper error handling and permission checks
+
 - **Disk Selection Option** - New `--disk` / `-D` flag for selecting which disk to monitor:
   - Interactive volume picker with arrow key navigation when used without a value
   - Direct mountpoint specification (e.g., `sot --disk /Volumes/External`)
