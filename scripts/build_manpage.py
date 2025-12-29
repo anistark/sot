@@ -103,7 +103,7 @@ def build_manpage():
         "sot is a Command-line System Observation Tool in the spirit of top. "
         "It displays various interesting system stats and graphs them. Works on all operating systems."
     )
-    manpage.long_description = (
+    manpage.long_description = (  # type: ignore[attr-defined]
         "sot provides real-time monitoring of system resources including CPU usage, "
         "memory, disk I/O, and network statistics. It features an interactive TUI "
         "(Terminal User Interface) for monitoring processes and system performance.\n\n"
@@ -113,11 +113,11 @@ def build_manpage():
         "  bench  - Run comprehensive disk benchmarking tests\n"
         "  disk   - Launch interactive disk information viewer"
     )
-    manpage.project = "sot"
-    manpage.version = __version__
-    manpage.manual_section = 1
-    manpage.manual_title = "User Commands"
-    manpage.author = "Kumar Anirudha <sot@anirudha.dev>"
+    manpage.project = "sot"  # type: ignore[attr-defined]
+    manpage.version = __version__  # type: ignore[attr-defined]
+    manpage.manual_section = 1  # type: ignore[attr-defined]
+    manpage.manual_title = "User Commands"  # type: ignore[attr-defined]
+    manpage.author = "Kumar Anirudha <sot@anirudha.dev>"  # type: ignore[attr-defined]
     manpage.date = f"2024-{__current_year__}"
 
     # Generate the man page content

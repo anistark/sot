@@ -5,9 +5,8 @@ from __future__ import annotations
 import os
 import platform
 import shutil
-import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 from rich.console import Console
 from rich.panel import Panel
@@ -45,7 +44,7 @@ def _get_size(path: Path) -> int:
     return 0
 
 
-def _sizeof_fmt(num: int, suffix: str = "B") -> str:
+def _sizeof_fmt(num: int | float, suffix: str = "B") -> str:
     """Format bytes to human readable format."""
     for unit in ["", "K", "M", "G", "T"]:
         if abs(num) < 1024.0:
@@ -256,7 +255,14 @@ def _get_windows_targets() -> list[CleanTarget]:
     browser_paths = [
         (
             "Chrome Cache",
-            home / "AppData" / "Local" / "Google" / "Chrome" / "User Data" / "Default" / "Cache",
+            home
+            / "AppData"
+            / "Local"
+            / "Google"
+            / "Chrome"
+            / "User Data"
+            / "Default"
+            / "Cache",
             "Google Chrome cache",
         ),
         (
@@ -310,9 +316,11 @@ def _scan_targets(targets: list[CleanTarget], console: Console) -> dict:
                         exists = True
                         size += _get_size(path)
             else:
-                if target.path.exists():
+                # Type narrowing: target.path is Path here
+                path = cast(Path, target.path)
+                if path.exists():
                     exists = True
-                    size = _get_size(target.path)
+                    size = _get_size(path)
 
             results[target.name] = {
                 "target": target,
