@@ -5,7 +5,7 @@
 
 `sot` is a Command-line System Obervation Tool in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various interesting system stats and graphs them. Works on all operating systems.
 
-[![PyPI Downloads](https://static.pepy.tech/badge/sot/month)](https://pypi.org/project/sot/) [![Open Source](https://img.shields.io/badge/open-source-brightgreen)](https://github.com/anistark/sot) [![Contributors](https://img.shields.io/github/contributors/anistark/sot)](https://github.com/anistark/sot/graphs/contributors) ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![PyPI - Version](https://img.shields.io/pypi/v/sot)](https://pypi.org/project/sot/) [![PyPI Downloads](https://static.pepy.tech/badge/sot/month)](https://pypi.org/project/sot/) ![PyPI - Status](https://img.shields.io/pypi/status/sot) [![Open Source](https://img.shields.io/badge/open-source-brightgreen)](https://github.com/anistark/sot) [![Contributors](https://img.shields.io/github/contributors/anistark/sot)](https://github.com/anistark/sot/graphs/contributors) ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
 
@@ -354,6 +354,72 @@ The command automatically detects your operating system and distribution, displa
 
 ---
 
+## System Cleanup
+
+The `sot clean` command performs a deep clean of your system by removing caches, logs, and temporary files.
+
+### Usage
+
+```sh
+# Interactive mode - shows what can be cleaned and asks for confirmation
+sot clean
+
+# Dry run - preview what would be cleaned without deleting
+sot clean --dry-run
+```
+
+### What Gets Cleaned
+
+The clean command intelligently detects your operating system and cleans platform-specific locations:
+
+**macOS:**
+- Application caches (`~/Library/Caches`)
+- Application logs (`~/Library/Logs`)
+- Homebrew package cache
+- System temporary files (`/tmp`)
+- Browser caches (Chrome, Safari, Firefox)
+- Python pip cache
+- npm cache
+- Trash bin
+
+**Linux:**
+- User cache (`~/.cache`)
+- Thumbnails cache
+- System temporary files (`/tmp`, `/var/tmp`)
+- Package manager caches (APT, DNF, Yum)
+- Browser caches
+- Python pip cache
+- npm cache
+
+**Windows:**
+- User temporary files (`%TEMP%`)
+- Windows temporary files
+- Prefetch files
+- Browser caches
+- Python pip cache
+- npm cache
+
+### Permissions
+
+Some cleaning targets require elevated privileges (sudo/administrator). The clean command will:
+- Show which items require elevated privileges in the summary
+- Skip these items during cleaning if not running with sudo
+- Provide clear notifications about what was skipped
+
+To clean items requiring sudo:
+```sh
+sudo sot clean
+```
+
+### Safety Features
+
+- **Dry run mode**: Preview what will be cleaned without making changes
+- **Interactive confirmation**: Always asks before deleting files
+- **Clear reporting**: Shows exactly what will be cleaned and how much space will be freed
+- **Graceful error handling**: Skips files that can't be accessed rather than failing
+
+---
+
 ## Disk Benchmarking
 
 The `sot bench` command allows you to measure disk performance with comprehensive benchmarks including sequential throughput, random IOPS, and latency distribution.
@@ -418,14 +484,16 @@ sot -H
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] {info,bench,disk} ...
+usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]]
+           {info,bench,disk,clean} ...
 
 Command-line System Obervation Tool ≈
 
-commands: {info,bench,disk}
-    info             Display system information
-    bench            Disk benchmarking
-    disk             Interactive disk information viewer
+commands: {info,bench,disk,clean}
+    info                Display system information
+    bench               Disk benchmarking
+    disk                Interactive disk information viewer
+    clean               Deep clean system caches, logs, and temp files
 
 options:
   --help, -H                Show this help message and exit.
@@ -452,6 +520,22 @@ options:
                         Output file for benchmark results (JSON format)
   --duration DURATION, -d DURATION
                         Duration for each benchmark test in seconds (default: 10s)
+```
+
+For clean-specific options:
+
+```sh
+sot clean -h
+```
+
+<!--pytest-codeblocks: expected-output-->
+
+```
+usage: sot clean [-h] [--dry-run]
+
+options:
+  -h, --help  show this help message and exit
+  --dry-run   Show what would be cleaned without actually deleting
 ```
 
 Main Theme:

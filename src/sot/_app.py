@@ -615,7 +615,7 @@ def run(argv=None):  # noqa: C901
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
         dest="command",
-        metavar="{info,bench,disk}",
+        metavar="{info,bench,disk,clean}",
     )
 
     # Add info subcommand
@@ -653,6 +653,18 @@ def run(argv=None):  # noqa: C901
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    # Add clean subcommand
+    clean_parser = subparsers.add_parser(
+        "clean",
+        help="Deep clean system caches, logs, and temp files",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    clean_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be cleaned without actually deleting",
+    )
+
     args = parser.parse_args(argv)
 
     # Handle info subcommand
@@ -672,6 +684,12 @@ def run(argv=None):  # noqa: C901
         from .disk.cli import disk_command
 
         return disk_command(args)
+
+    # Handle clean subcommand
+    if args.command == "clean":
+        from .clean.cli import clean_command
+
+        return clean_command(args)
 
     # Handle version display
     if args.version:
