@@ -368,7 +368,7 @@ def export_results_json(
 
     cache_dir = str(get_bench_cache_dir())
 
-    data = {
+    data: dict = {
         "disk": {
             "disk_id": disk_info["disk_id"],
             "partitions": disk_info["partitions"],

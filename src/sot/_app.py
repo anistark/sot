@@ -170,7 +170,7 @@ class SotApp(App):
 
     def on_key(self, event) -> None:
         """Handle key events for kill confirmation."""
-        if self._waiting_for_kill_confirmation:
+        if self._waiting_for_kill_confirmation and self.pending_kill:
             if event.key == "y":
                 self._waiting_for_kill_confirmation = False
                 self._kill_process(self.pending_kill["process_info"])
@@ -266,7 +266,7 @@ class SotApp(App):
                 self._waiting_for_kill_confirmation = False
                 self.notify("❌ Kill action expired", severity="error", timeout=2)
 
-        self.set_timer(reset_confirmation, 10.0)
+        self.set_timer(10.0, reset_confirmation)
 
     def _kill_process(self, process_info: dict) -> None:
         """Execute the kill process action."""

@@ -6,7 +6,7 @@ import os
 import platform
 import shutil
 from pathlib import Path
-from typing import NamedTuple, cast
+from typing import NamedTuple
 
 from rich.console import Console
 from rich.panel import Panel
@@ -317,7 +317,7 @@ def _scan_targets(targets: list[CleanTarget], console: Console) -> dict:
                         size += _get_size(path)
             else:
                 # Type narrowing: target.path is Path here
-                path = cast(Path, target.path)
+                path = target.path
                 if path.exists():
                     exists = True
                     size = _get_size(path)
