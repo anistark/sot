@@ -615,7 +615,7 @@ def run(argv=None):  # noqa: C901
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
         dest="command",
-        metavar="{info,bench,disk,clean}",
+        metavar="{info,bench,disk,clean,ps}",
     )
 
     # Add info subcommand
@@ -665,6 +665,13 @@ def run(argv=None):  # noqa: C901
         help="Show what would be cleaned without actually deleting",
     )
 
+    # Add ps subcommand
+    subparsers.add_parser(
+        "ps",
+        help="Interactive process viewer",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
     args = parser.parse_args(argv)
 
     # Handle info subcommand
@@ -690,6 +697,12 @@ def run(argv=None):  # noqa: C901
         from .clean.cli import clean_command
 
         return clean_command(args)
+
+    # Handle ps subcommand
+    if args.command == "ps":
+        from .ps.cli import ps_command
+
+        return ps_command(args)
 
     # Handle version display
     if args.version:
