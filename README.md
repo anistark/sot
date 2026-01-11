@@ -420,6 +420,57 @@ sudo sot clean
 
 ---
 
+## Process Viewer
+
+The `sot ps` command provides an interactive terminal-based process viewer with three synchronized panels for comprehensive system monitoring.
+
+### Usage
+
+```sh
+sot ps
+```
+
+### Features
+
+The process viewer displays three interactive panels:
+
+**Process List**:
+- All running processes with PID, name, memory usage, and CPU percentage
+- Navigate with arrow keys (↑/↓)
+- Sortable columns (same as main `sot` interface)
+- Real-time updates every 2 seconds
+- Shows up to 500 processes
+
+**Listening Ports**:
+- All open ports listening for connections
+- Shows port number, bind address, process name, and PID
+- Useful for identifying which services are running on which ports
+- Updates every 3 seconds
+- **Note**: May require sudo on macOS for full port detection
+
+**Development Environment**:
+- Automatically detects running development servers
+- Supports: Node.js, Python, Docker, Ruby, Go, Rust
+- Shows process count, listening ports, CPU and memory usage per environment type
+- Groups related processes (e.g., all Node processes together)
+- Updates every 5 seconds
+
+### Navigation
+
+- **Tab**: Switch focus between panels
+- **↑/↓**: Navigate within focused panel
+- **Q**: Quit
+
+### Example
+
+The process viewer is particularly useful for developers who want to:
+- Monitor development server resource usage
+- Identify which process is using a specific port
+- Track multiple development environments running simultaneously
+- Debug port conflicts quickly
+
+---
+
 ## Disk Benchmarking
 
 The `sot bench` command allows you to measure disk performance with comprehensive benchmarks including sequential throughput, random IOPS, and latency distribution.
@@ -485,15 +536,16 @@ sot -H
 
 ```
 usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]]
-           {info,bench,disk,clean} ...
+           {info,bench,disk,clean,ps} ...
 
 Command-line System Obervation Tool ≈
 
-commands: {info,bench,disk,clean}
+commands: {info,bench,disk,clean,ps}
     info                Display system information
     bench               Disk benchmarking
     disk                Interactive disk information viewer
     clean               Deep clean system caches, logs, and temp files
+    ps                  Interactive process viewer with ports and dev environment
 
 options:
   --help, -H                Show this help message and exit.
