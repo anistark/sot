@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
-import platform
-
 import psutil
 from rich.align import Align
 from rich.panel import Panel
@@ -14,7 +11,7 @@ from textual import events
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widget import Widget
-from textual.widgets import Static
+from textual.widgets import Footer, Header, Static
 
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
@@ -22,66 +19,6 @@ from ..widgets.processes import get_process_list
 from ..widgets.process_sorter import SortManager
 
 
-class CustomHeader(Static):
-    """Custom header with title, time and battery."""
-
-    def on_mount(self):
-        self.update_header()
-        self.set_interval(1.0, self.update_header)
-
-    def update_header(self):
-        now = datetime.datetime.now()
-        time_str = now.strftime("%H:%M:%S")
-        date_str = now.strftime("%Y-%m-%d")
-
-        battery_str = ""
-        try:
-            battery = psutil.sensors_battery()
-            if battery:
-                percent = int(battery.percent)
-                if battery.power_plugged:
-                    battery_str = f"🔌 {percent}%"
-                else:
-                    if percent > 80:
-                        battery_str = f"🔋 {percent}%"
-                    elif percent > 50:
-                        battery_str = f"🔋 {percent}%"
-                    elif percent > 20:
-                        battery_str = f"🪫 {percent}%"
-                    else:
-                        battery_str = f"🪫 {percent}%"
-        except Exception:
-            pass
-
-        header_table = Table.grid(expand=True, padding=0)
-        header_table.add_column(justify="left", ratio=1)
-        header_table.add_column(justify="right", no_wrap=True)
-
-        left_text = Text("SOT Process Viewer", style="bold bright_cyan")
-
-        right_text = Text()
-        if battery_str:
-            right_text.append(f"{battery_str}  ", style="bright_yellow")
-        right_text.append(f"{date_str} {time_str}", style="bright_white")
-
-        header_table.add_row(left_text, right_text)
-        self.update(header_table)
-
-
-class CustomFooter(Static):
-    """Custom footer showing version."""
-
-    def on_mount(self):
-        self.update_footer()
-
-    def update_footer(self):
-        footer_table = Table.grid(expand=True, padding=0)
-        footer_table.add_column(justify="center", ratio=1)
-
-        version_text = Text(f"SOT v{__version__}", style="dim bright_white")
-        footer_table.add_row(version_text)
-
-        self.update(footer_table)
 
 
 class ProcessListPanel(Widget):
@@ -489,21 +426,6 @@ class ProcessTUIApp(App):
     #right-bottom {
         height: 50%;
     }
-
-    CustomHeader {
-        height: 3;
-        dock: top;
-        background: $panel;
-        border-bottom: solid $primary;
-        padding: 1;
-    }
-
-    CustomFooter {
-        height: 1;
-        dock: bottom;
-        background: $panel;
-        border-top: solid $primary;
-    }
     """
 
     BINDINGS = [
@@ -512,7 +434,7 @@ class ProcessTUIApp(App):
     ]
 
     def compose(self) -> ComposeResult:
-        yield CustomHeader()
+        yield Header()
 
         with Horizontal():
             yield ProcessListPanel(id="left-panel")
@@ -521,11 +443,11 @@ class ProcessTUIApp(App):
                 yield PortListPanel(id="right-top")
                 yield DevEnvPanel(id="right-bottom")
 
-        yield CustomFooter()
+        yield Footer()
 
     def on_mount(self):
-        self.title = "SOT Process Viewer"
-        self.sub_title = f"v{__version__}"
+        self.title = "SOT PS"
+        self.sub_title = "Interactive Process Viewer"
         self.query_one("#left-panel").focus()
 
     def action_focus_next(self):
