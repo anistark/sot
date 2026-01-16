@@ -184,55 +184,18 @@ class SotApp(App):
         self, message: ProcessesWidget.ProcessSelected
     ) -> None:
         """Handle process selection from the process list with enhanced network details."""
+        from ._process_utils import format_process_details
+
         process_info = message.process_info
         process_name = process_info.get("name", "Unknown")
         process_id = process_info.get("pid", "N/A")
-        cpu_percent = process_info.get("cpu_percent", 0) or 0
 
-        details = [f"📋 {process_name} (PID: {process_id})"]
-        details.append(f"💻 CPU: {cpu_percent:.1f}%")
-        memory_info = process_info.get("memory_info")
-        if memory_info:
-            from ._helpers import sizeof_fmt
-
-            memory_str = sizeof_fmt(memory_info.rss, suffix="", sep="")
-            details.append(f"🧠 Memory: {memory_str}")
-
-        num_threads = process_info.get("num_threads")
-        if num_threads:
-            details.append(f"🧵 Threads: {num_threads}")
-
-        total_io_rate = process_info.get("total_io_rate", 0)
-        if total_io_rate > 0:
-            from ._helpers import sizeof_fmt
-
-            net_io_str = sizeof_fmt(total_io_rate, fmt=".1f", suffix="", sep="") + "/s"
-            details.append(f"🌐 Net I/O: {net_io_str}")
-
-        num_connections = process_info.get("num_connections", 0)
-        if num_connections > 0:
-            details.append(f"🔗 Connections: {num_connections}")
-
-        status = process_info.get("status")
-        if status:
-            status_emoji = {
-                "running": "🏃",
-                "sleeping": "😴",
-                "stopped": "⏸️",
-                "zombie": "🧟",
-                "idle": "💤",
-            }.get(status, "❓")
-            details.append(f"{status_emoji} Status: {status}")
+        details = format_process_details(process_info)
 
         if self.log_file:
             self.log(f"Process selected: {process_name} (PID: {process_id})")
 
-        detailed_message = "\n".join(details)
-
-        self.notify(
-            detailed_message,
-            timeout=5,
-        )
+        self.notify("\n".join(details), timeout=5)
 
     def on_processes_widget_kill_request(
         self, message: ProcessesWidget.KillRequest
@@ -270,147 +233,51 @@ class SotApp(App):
 
     def _kill_process(self, process_info: dict) -> None:
         """Execute the kill process action."""
-        import psutil
+        from ._process_utils import kill_process
 
         process_id = process_info.get("pid")
         process_name = process_info.get("name", "Unknown")
 
-        if not process_id:
-            self.notify("❌ Invalid process ID", severity="error", timeout=3)
-            return
-
-        # Log the action attempt if logging is enabled
         if self.log_file:
             self.log(f"Attempting to kill process: {process_name} (PID: {process_id})")
 
-        try:
-            target_process = psutil.Process(process_id)
-            target_process.kill()
-            if self.log_file:
-                self.log(
-                    f"Successfully killed process: {process_name} (PID: {process_id})"
-                )
-            self.notify(
-                f"💥 Killed {process_name} (PID: {process_id})",
-                severity="warning",
-                timeout=4,
-            )
+        result = kill_process(process_id, process_name)
 
-        except psutil.ZombieProcess:
-            self._handle_zombie_process_error(process_name, process_id)
-        except psutil.NoSuchProcess:
-            self._handle_no_such_process_error(process_id)
-        except psutil.AccessDenied:
-            self._handle_access_denied_error(process_name, process_id)
-        except Exception as error:
-            self._handle_general_process_error("kill", process_name, error)
+        if result.success and self.log_file:
+            self.log(f"Successfully killed process: {process_name} (PID: {process_id})")
+
+        self.notify(result.message, severity=result.severity, timeout=4)
 
     def on_processes_widget_process_action(
         self, message: ProcessesWidget.ProcessAction
     ) -> None:
         """Handle process actions like kill/terminate from the process list."""
-        import psutil
+        from ._process_utils import kill_process, terminate_process
 
         action = message.action
         process_info = message.process_info
         process_id = process_info.get("pid")
         process_name = process_info.get("name", "Unknown")
 
-        if not process_id:
-            self.notify("❌ Invalid process ID", severity="error", timeout=3)
-            return
-
-        # Log the action attempt if logging is enabled
         if self.log_file:
             self.log(
                 f"Attempting to {action} process: {process_name} (PID: {process_id})"
             )
 
-        try:
-            target_process = psutil.Process(process_id)
-            self._execute_process_action(
-                target_process, action, process_name, process_id
-            )
-
-        except psutil.ZombieProcess:
-            self._handle_zombie_process_error(process_name, process_id)
-        except psutil.NoSuchProcess:
-            self._handle_no_such_process_error(process_id)
-        except psutil.AccessDenied:
-            self._handle_access_denied_error(process_name, process_id)
-        except Exception as error:
-            self._handle_general_process_error(action, process_name, error)
-
-    def _execute_process_action(self, target_process, action, process_name, process_id):
-        """Execute the specified action on the target process."""
         if action == "kill":
-            target_process.kill()
-            if self.log_file:
-                self.log(
-                    f"Successfully killed process: {process_name} (PID: {process_id})"
-                )
-            self.notify(
-                f"💥 Killed {process_name} (PID: {process_id})",
-                severity="warning",
-                timeout=4,
-            )
+            result = kill_process(process_id, process_name)
         elif action == "terminate":
-            target_process.terminate()
-            if self.log_file:
-                self.log(
-                    f"Successfully terminated process: {process_name} (PID: {process_id})"
-                )
-            self.notify(
-                f"🛑 Terminated {process_name} (PID: {process_id})",
-                severity="information",
-                timeout=4,
-            )
+            result = terminate_process(process_id, process_name)
         else:
             self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
+            return
 
-    def _handle_no_such_process_error(self, process_id):
-        """Handle the case when a process no longer exists."""
-        error_msg = f"Process {process_id} no longer exists"
-        if self.log_file:
-            self.log(f"Error: {error_msg}")
-        self.notify(
-            f"❌ {error_msg}",
-            severity="error",
-            timeout=3,
-        )
+        if result.success and self.log_file:
+            self.log(
+                f"Successfully {action}ed process: {process_name} (PID: {process_id})"
+            )
 
-    def _handle_access_denied_error(self, process_name, process_id):
-        """Handle the case when access is denied to a process."""
-        error_msg = f"Access denied to {process_name} (PID: {process_id})"
-        if self.log_file:
-            self.log(f"Error: {error_msg}")
-        self.notify(
-            f"🔒 {error_msg}. Try running with elevated privileges.",
-            severity="error",
-            timeout=5,
-        )
-
-    def _handle_zombie_process_error(self, process_name, process_id):
-        """Handle the case when a process is a zombie."""
-        error_msg = f"Process {process_name} (PID: {process_id}) is a zombie process"
-        if self.log_file:
-            self.log(f"Warning: {error_msg}")
-        self.notify(
-            f"🧟 {error_msg}",
-            severity="warning",
-            timeout=4,
-        )
-
-    def _handle_general_process_error(self, action, process_name, error):
-        """Handle general process action errors."""
-        error_msg = f"Error {action}ing process {process_name}: {str(error)}"
-        if self.log_file:
-            self.log(f"Exception: {error_msg}")
-        self.notify(
-            f"❌ {error_msg}",
-            severity="error",
-            timeout=5,
-        )
+        self.notify(result.message, severity=result.severity, timeout=4)
 
 
 def _show_styled_version():
