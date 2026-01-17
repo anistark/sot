@@ -663,7 +663,7 @@ class DevEnvPanel(Widget):
             style = "black on white" if is_selected else None
             table.add_row(env_type, name, ports, cpu, mem, style=style)
 
-        total_count = sum(s["count"] for s in self.dev_servers)
+        total_count = sum((s["count"] for s in self.dev_servers), start=0)
         total_types = len(self.dev_servers)
         sort_dir = "↓" if self.sort_reverse else "↑"
         help_text = "O sort | S dir | ↑↓ | ⏎ info | R refresh"
@@ -840,6 +840,10 @@ class ProcessTUIApp(App):
         pid = proc.get("pid")
         name = proc.get("name", "Unknown")
 
+        if not isinstance(pid, int):
+            self.notify("❌ Invalid process ID", severity="error", timeout=3)
+            return
+
         if action == "kill":
             result = kill_process(pid, name)
         elif action == "terminate":
@@ -889,7 +893,7 @@ class ProcessTUIApp(App):
         pid = port_info.get("pid")
         name = port_info["name"]
 
-        if not pid:
+        if not isinstance(pid, int):
             self.notify(
                 "❌ No process associated with this port", severity="error", timeout=3
             )
@@ -924,6 +928,10 @@ class ProcessTUIApp(App):
 
         pid = proc.get("pid")
         name = proc.get("name", "Unknown")
+
+        if not isinstance(pid, int):
+            self.notify("❌ Invalid process ID", severity="error", timeout=3)
+            return
 
         result = kill_process(pid, name)
         self.notify(result.message, severity=result.severity, timeout=4)

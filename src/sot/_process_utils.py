@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 import psutil
 from psutil import AccessDenied, NoSuchProcess, ZombieProcess
+
+SeverityLevel = Literal["information", "warning", "error"]
 
 
 class ProcessActionResult:
@@ -13,7 +17,7 @@ class ProcessActionResult:
         self,
         success: bool,
         message: str,
-        severity: str = "information",
+        severity: SeverityLevel = "information",
     ):
         self.success = success
         self.message = message
