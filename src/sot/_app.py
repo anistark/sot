@@ -238,6 +238,10 @@ class SotApp(App):
         process_id = process_info.get("pid")
         process_name = process_info.get("name", "Unknown")
 
+        if not isinstance(process_id, int):
+            self.notify("❌ Invalid process ID", severity="error", timeout=3)
+            return
+
         if self.log_file:
             self.log(f"Attempting to kill process: {process_name} (PID: {process_id})")
 
@@ -258,6 +262,10 @@ class SotApp(App):
         process_info = message.process_info
         process_id = process_info.get("pid")
         process_name = process_info.get("name", "Unknown")
+
+        if not isinstance(process_id, int):
+            self.notify("❌ Invalid process ID", severity="error", timeout=3)
+            return
 
         if self.log_file:
             self.log(
