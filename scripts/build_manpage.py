@@ -53,8 +53,20 @@ def build_manpage():
         help="Network interface to display (default: auto-detect best interface)",
     )
 
+    parser.add_argument(
+        "--disk",
+        "-D",
+        type=str,
+        nargs="?",
+        const="__select__",
+        default=None,
+        help="Disk mountpoint to display (use without value for interactive selection)",
+    )
+
     # Create subparsers for subcommands
-    subparsers = parser.add_subparsers(dest="command", metavar="{info,bench,disk}")
+    subparsers = parser.add_subparsers(
+        dest="command", metavar="{info,bench,disk,clean,ps}"
+    )
 
     # Add info subcommand
     subparsers.add_parser(
@@ -91,6 +103,25 @@ def build_manpage():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    # Add clean subcommand
+    clean_parser = subparsers.add_parser(
+        "clean",
+        help="Deep clean system caches, logs, and temp files",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    clean_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be cleaned without actually deleting",
+    )
+
+    # Add ps subcommand
+    subparsers.add_parser(
+        "ps",
+        help="Interactive process viewer",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
     # Get version
     from sot.__about__ import __current_year__, __version__
 
@@ -111,7 +142,9 @@ def build_manpage():
         "Additional subcommands are available for specific tasks:\n\n"
         "  info   - Display detailed system information with OS-specific ASCII logo\n"
         "  bench  - Run comprehensive disk benchmarking tests\n"
-        "  disk   - Launch interactive disk information viewer"
+        "  disk   - Launch interactive disk information viewer\n"
+        "  clean  - Deep clean system caches, logs, and temp files\n"
+        "  ps     - Launch interactive process viewer with port and dev environment panels"
     )
     manpage.project = "sot"  # type: ignore[attr-defined]
     manpage.version = __version__  # type: ignore[attr-defined]
@@ -133,6 +166,12 @@ Launch the interactive system monitoring TUI
 .B sot --net eth0
 Monitor system with specific network interface
 .TP
+.B sot --disk
+Interactive disk mountpoint selection
+.TP
+.B sot --disk /
+Monitor system with root disk
+.TP
 .B sot info
 Display comprehensive system information
 .TP
@@ -144,6 +183,15 @@ Run 30-second benchmarks and save results to JSON
 .TP
 .B sot disk
 View interactive disk information
+.TP
+.B sot clean --dry-run
+Preview what would be cleaned without deleting
+.TP
+.B sot clean
+Deep clean system caches and temp files
+.TP
+.B sot ps
+Launch interactive process viewer with ports and dev environments
 
 .SH FEATURES
 .SS System Monitoring
@@ -180,8 +228,32 @@ Latency percentiles (p50, p95, p99)
 .IP \\(bu 2
 JSON export for results
 
+.SS System Cleaning (sot clean)
+.IP \\(bu 2
+Clean system caches (user, system, font caches)
+.IP \\(bu 2
+Remove temporary files
+.IP \\(bu 2
+Clear application logs and crash reports
+.IP \\(bu 2
+Dry-run mode to preview changes
+.IP \\(bu 2
+macOS-specific cleaning (Xcode, Homebrew, etc.)
+
+.SS Process Viewer (sot ps)
+.IP \\(bu 2
+Interactive process list with sorting
+.IP \\(bu 2
+Port monitoring with process association
+.IP \\(bu 2
+Development environment detection
+.IP \\(bu 2
+Kill/terminate processes interactively
+.IP \\(bu 2
+Multi-panel interface with tab navigation
+
 .SH INTERACTIVE CONTROLS
-When running the main sot interface:
+.SS Main Interface
 .TP
 .B q
 Quit the application
@@ -194,6 +266,35 @@ Navigate columns in order-by mode
 .TP
 .B Enter
 Toggle sort direction (DESC ↓ → ASC ↑ → OFF)
+
+.SS Process Viewer (sot ps)
+.TP
+.B Tab
+Switch between panels (processes, ports, dev environments)
+.TP
+.B ↑/↓
+Navigate list items
+.TP
+.B Enter
+Show detailed information
+.TP
+.B K
+Kill selected process (requires confirmation)
+.TP
+.B T
+Terminate selected process gracefully
+.TP
+.B O
+Change sort column (cycles through available columns)
+.TP
+.B S
+Toggle sort direction (ascending/descending)
+.TP
+.B R
+Refresh panel data
+.TP
+.B q
+Quit the application
 
 .SH CONFIGURATION
 sot does not require configuration files. All options are provided via command-line arguments.
