@@ -15,48 +15,33 @@ jobs:
           VERSION="${VERSION#v}"  # Remove 'v' prefix if present
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Fetch PyPI package info
-        id: pypi
+      - name: Wait for PyPI package availability
         run: |
           VERSION="${{ steps.release.outputs.version }}"
 
-          # Retry up to 5 times with exponential backoff
-          MAX_RETRIES=5
+          # Wait for package to be available on PyPI (up to 5 minutes)
+          MAX_RETRIES=30
           RETRY_COUNT=0
           RETRY_DELAY=10
 
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "Attempt $((RETRY_COUNT + 1)) of $MAX_RETRIES: Fetching PyPI info for sot $VERSION"
+          echo "Waiting for sot $VERSION to be available on PyPI..."
 
-            HTTP_CODE=$(curl -sL -w "%{http_code}" -o /tmp/pypi.json "https://pypi.org/pypi/sot/$VERSION/json")
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -sL -w "%{http_code}" -o /dev/null "https://pypi.org/pypi/sot/$VERSION/json")
 
             if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Successfully fetched PyPI metadata"
-
-              # Extract source distribution URL and SHA256
-              URL=$(python3 -c "import sys, json; data=json.load(open('/tmp/pypi.json')); urls=[u for u in data['urls'] if u['packagetype']=='sdist']; print(urls[0]['url'])" 2>/dev/null)
-              SHA256=$(python3 -c "import sys, json; data=json.load(open('/tmp/pypi.json')); urls=[u for u in data['urls'] if u['packagetype']=='sdist']; print(urls[0]['digests']['sha256'])" 2>/dev/null)
-
-              if [ -n "$URL" ] && [ -n "$SHA256" ]; then
-                echo "url=$URL" >> $GITHUB_OUTPUT
-                echo "sha256=$SHA256" >> $GITHUB_OUTPUT
-                exit 0
-              else
-                echo "⚠️ Failed to extract URL or SHA256 from PyPI response"
-              fi
-            else
-              echo "⚠️ PyPI request failed with HTTP $HTTP_CODE"
+              echo "✅ Package sot $VERSION is available on PyPI"
+              exit 0
             fi
 
             RETRY_COUNT=$((RETRY_COUNT + 1))
             if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-              echo "Waiting ${RETRY_DELAY}s before retry..."
+              echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Package not yet available (HTTP $HTTP_CODE), waiting ${RETRY_DELAY}s..."
               sleep $RETRY_DELAY
-              RETRY_DELAY=$((RETRY_DELAY * 2))  # Exponential backoff
             fi
           done
 
-          echo "❌ Failed to fetch PyPI info after $MAX_RETRIES attempts"
+          echo "❌ Package not available on PyPI after $MAX_RETRIES attempts"
           exit 1
 
       - name: Trigger homebrew-tools update
@@ -69,8 +54,6 @@ jobs:
               "event_type": "update-formula",
               "client_payload": {
                 "formula": "sot",
-                "version": "${{ steps.release.outputs.version }}",
-                "url": "${{ steps.pypi.outputs.url }}",
-                "sha256": "${{ steps.pypi.outputs.sha256 }}"
+                "version": "${{ steps.release.outputs.version }}"
               }
             }'
