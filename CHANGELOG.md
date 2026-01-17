@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+...
+
+## [6.0.0](https://github.com/anistark/sot/releases/tag/v6.0.0) - 2026-01-18
+
+### Added
+- **Process Viewer** - New `sot ps` command for interactive process monitoring with three synchronized panels:
+  - **Process List**: All running processes with PID, name, memory usage, and CPU percentage
+    - Navigate with arrow keys (↑/↓)
+    - Sortable columns (press `O` to enter order by mode)
+    - Real-time updates every 2 seconds
+    - Shows up to 500 processes
+    - Interactive actions: Enter for details, K to kill, T to terminate, R to refresh
+  - **Listening Ports**: All open ports listening for connections
+    - Shows port number, bind address, process name, and PID
+    - Updates every 3 seconds
+    - May require sudo on macOS for full port detection
+    - Interactive process management for port-related processes
+  - **Development Environment**: Automatically detects running development servers
+    - Supports: Node.js, Python, Docker, Ruby, Go, Rust
+    - Shows process count, listening ports, CPU and memory usage per environment type
+    - Groups related processes together
+    - Updates every 5 seconds
+  - **Navigation**: Tab to switch panels, arrow keys to navigate, Q to quit
+
+### Changed
+- **Textual Framework Upgrade** - Upgraded from version 5.3.0 to 7.3.0:
+  - Enhanced TUI performance and stability
+  - Improved widget rendering and event handling
+  - Better cross-platform compatibility
+
+## [5.1.0](https://github.com/anistark/sot/releases/tag/v5.1.0) - 2026-01-02
+
 ### Added
 - **System Deep Cleaning** - New `sot clean` command for removing system caches, logs, and temporary files:
   - Interactive mode with confirmation prompt before deletion
@@ -29,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Direct mountpoint specification (e.g., `sot --disk /Volumes/External`)
   - Shows only user-relevant volumes (Macintosh HD and mounted drives)
   - Displays accurate disk usage for macOS (uses Data volume for correct percentages)
+
+### Changed
+- **Man Page Enhancements** - Comprehensive man page documentation:
+  - Detailed command descriptions and usage examples
+  - Complete option and flag reference
+  - Added examples for all subcommands
+
+### Fixed
+- Type annotations and formatting improvements
+
+## [5.0.0](https://github.com/anistark/sot/releases/tag/v5.0.0) - 2025-12-06
 
 ### Added
 - **Interactive Disk TUI** - New `sot disk` command for viewing all physical disks:
@@ -63,6 +106,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Accurate disk latency measurements using fsync for real disk I/O
   - 1GB test files for proper disk performance characterization
 
+- **Installation Script** - Bash installation script for easier source installation
+
 ### Changed
 - **Help Output Formatting** - Improved command-line help display:
   - Subcommands now display inline: `commands: {info,bench}` instead of separate lines
@@ -73,6 +118,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Disk sizes display with appropriate units (B, KB, MB, GB, TB)
   - Throughput shows in best-fit units (MB/s, GB/s, TB/s)
   - Latency measurements scale intelligently (ns, µs, ms, s)
+
+### Fixed
+- Release binary format issues
+- Formatting improvements
 
 ## [4.4.2](https://github.com/anistark/sot/releases/tag/v4.4.2) - 2024-11-25
 
