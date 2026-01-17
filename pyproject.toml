@@ -7,13 +7,13 @@ dev-dependencies = [
   "watchdog>=6.0.0",
   "textual-dev>=1.8.0",
   "black>=25.12.0",
-  "isort>=6.0.1",
+  "isort>=7.0.0",
   "flake8>=7.3.0",
   "blacken-docs>=1.20.0",
-  "build>=1.3.0",
+  "build>=1.4.0",
   "twine>=6.2.0",
-  "ty>=0.0.8",
-  "argparse-manpage>=4.7",
+  "ty>=0.0.12",
+  "argparse-manpage>=4",
 ]
 
 [tool.isort]
@@ -45,7 +45,7 @@ requires-python = ">=3.10"
 dependencies = [
   "py-cpuinfo>=9.0.0",
   "distro>=1.9.0",
-  "psutil>=7.1.3",
+  "psutil>=7.2.1",
   "rich>=14.2.0",
   "textual>=7.3.0",
 ]
