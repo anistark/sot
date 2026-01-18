@@ -45,12 +45,42 @@ jobs:
           uv run python -m build --wheel
           VERSION=${GITHUB_REF#refs/tags/}
           WHEEL=$(ls dist/sot-*.whl | head -1)
-          fpm -s python -t deb -v "${VERSION}" \
-            -a ${{ matrix.arch }} \
+
+          # Create virtualenv and install
+          python${{ matrix.python-version }} -m venv /tmp/sot-venv
+          /tmp/sot-venv/bin/pip install --upgrade pip
+          /tmp/sot-venv/bin/pip install "${WHEEL}"
+
+          # Create package structure
+          mkdir -p /tmp/package/opt/sot
+          mkdir -p /tmp/package/usr/bin
+          mkdir -p /tmp/package/usr/share/man/man1
+
+          # Copy virtualenv
+          cp -r /tmp/sot-venv/* /tmp/package/opt/sot/
+
+          # Create wrapper script
+          cat > /tmp/package/usr/bin/sot << 'EOF'
+          #!/bin/bash
+          exec /opt/sot/bin/python /opt/sot/bin/sot "$@"
+          EOF
+          chmod +x /tmp/package/usr/bin/sot
+
+          # Copy man page
+          cp man/sot.1 /tmp/package/usr/share/man/man1/
+
+          # Build .deb package
+          fpm -s dir -t deb \
             -n sot \
-            --python-pip pip \
-            --python-package-name-default "sot" \
-            "${WHEEL}"
+            -v "${VERSION}" \
+            -a ${{ matrix.arch }} \
+            --description "Command-line System Observation Tool" \
+            --url "https://github.com/anistark/sot" \
+            --license "MIT" \
+            --maintainer "Kumar Anirudha <sot@anirudha.dev>" \
+            -C /tmp/package \
+            opt usr
+
           mv *.deb "sot-${VERSION}-${{ matrix.arch }}.deb" 2>/dev/null || true
 
       - name: Upload .deb artifacts
@@ -95,12 +125,42 @@ jobs:
           uv run python -m build --wheel
           VERSION=${GITHUB_REF#refs/tags/}
           WHEEL=$(ls dist/sot-*.whl | head -1)
-          fpm -s python -t rpm -v "${VERSION}" \
-            -a ${{ matrix.arch }} \
+
+          # Create virtualenv and install
+          python${{ matrix.python-version }} -m venv /tmp/sot-venv
+          /tmp/sot-venv/bin/pip install --upgrade pip
+          /tmp/sot-venv/bin/pip install "${WHEEL}"
+
+          # Create package structure
+          mkdir -p /tmp/package/opt/sot
+          mkdir -p /tmp/package/usr/bin
+          mkdir -p /tmp/package/usr/share/man/man1
+
+          # Copy virtualenv
+          cp -r /tmp/sot-venv/* /tmp/package/opt/sot/
+
+          # Create wrapper script
+          cat > /tmp/package/usr/bin/sot << 'EOF'
+          #!/bin/bash
+          exec /opt/sot/bin/python /opt/sot/bin/sot "$@"
+          EOF
+          chmod +x /tmp/package/usr/bin/sot
+
+          # Copy man page
+          cp man/sot.1 /tmp/package/usr/share/man/man1/
+
+          # Build .rpm package
+          fpm -s dir -t rpm \
             -n sot \
-            --python-pip pip \
-            --python-package-name-default "sot" \
-            "${WHEEL}"
+            -v "${VERSION}" \
+            -a ${{ matrix.arch }} \
+            --description "Command-line System Observation Tool" \
+            --url "https://github.com/anistark/sot" \
+            --license "MIT" \
+            --maintainer "Kumar Anirudha <sot@anirudha.dev>" \
+            -C /tmp/package \
+            opt usr
+
           mv *.rpm "sot-${VERSION}-${{ matrix.arch }}.rpm" 2>/dev/null || true
 
       - name: Upload .rpm artifacts
