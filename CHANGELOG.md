@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ...
 
+## [6.0.1](https://github.com/anistark/sot/releases/tag/v6.0.1) - 2026-01-18
+
+### Fixed
+- **PyPI Package** - Fixed critical packaging issue where source code was excluded from sdist tarball
+  - Removed overly restrictive `include` directive in `pyproject.toml` that excluded `src/` directory
+  - Package can now be properly installed via pip and Homebrew
+  - Version 6.0.0 was broken due to missing source files
+
 ## [6.0.0](https://github.com/anistark/sot/releases/tag/v6.0.0) - 2026-01-18
 
 ### Added

@@ -63,10 +63,6 @@ packages = ["src/sot"]
 exclude = [
   "images",
 ]
-include = [
-  "man/sot.1",
-  "scripts/build_manpage.py",
-]
 
 [project.urls]
 Code = "https://github.com/anistark/sot"
