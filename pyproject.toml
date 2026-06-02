@@ -12,15 +12,21 @@ dev = [
   "blacken-docs>=1.20.0",
   "build>=1.5.0",
   "twine>=6.2.0",
-  # ty is pre-1.0; held at the last release that type-checks the codebase clean.
-  # 0.0.14+ add false positives on heterogeneous dict literals (str|int|set|list
-  # values) in the TUI code. Revisit when ty stabilizes / those checks improve.
-  "ty>=0.0.13,<0.0.14",
+  "mypy>=1.18.2",
+  "types-psutil>=7.0.0",
   "argparse-manpage>=4",
 ]
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+python_version = "3.10"
+
+# py-cpuinfo and distro ship no type information.
+[[tool.mypy.overrides]]
+module = ["cpuinfo", "distro"]
+ignore_missing_imports = true
 
 [project]
 name = "sot"

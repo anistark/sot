@@ -207,10 +207,10 @@ uv run black --check .
 uv run flake8 .
 
 # Run type checking
-uv run ty check
+uv run mypy src/sot
 
-# Auto-fix type issues
-uv run ty --createstub
+# Install missing type stubs
+uv run mypy --install-types --non-interactive src/sot
 ```
 
 **With pip:**
@@ -225,17 +225,17 @@ black --check .
 flake8 .
 
 # Run type checking
-ty check
+mypy src/sot
 
-# Auto-fix type issues
-ty --createstub
+# Install missing type stubs
+mypy --install-types --non-interactive src/sot
 ```
 
 The project uses:
 - **Black** for code formatting
 - **isort** for import sorting
 - **flake8** for linting
-- **ty** for type checking
+- **mypy** for type checking
 - **blacken-docs** for documentation formatting
 
 ### Testing

@@ -237,11 +237,11 @@ lint:
 
 type: lint
 	@echo "🔍 Running type checking..."
-	uv run ty check
+	uv run mypy src/sot
 
 type-fix:
-	@echo "🔧 Auto-fixing type issues..."
-	uv run ty --createstub
+	@echo "🔧 Installing missing type stubs..."
+	uv run mypy --install-types --non-interactive src/sot
 
 # Help command
 help:
@@ -275,8 +275,8 @@ help:
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  just lint                   - Run linting (black + flake8)"
-	@echo "  just type                   - Run type checking with ty"
-	@echo "  just type-fix               - Auto-fix type issues with ty"
+	@echo "  just type                   - Run type checking with mypy"
+	@echo "  just type-fix               - Install missing type stubs with mypy"
 	@echo "  just format                 - Format code with black and isort"
 	@echo ""
 	@echo "Publishing:"

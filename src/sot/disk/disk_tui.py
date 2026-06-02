@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import platform
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import psutil
 from rich.console import Group
@@ -339,7 +339,7 @@ class DiskTUIApp(App):
     def get_volume_info(self) -> List[Dict]:
         """Get information about all volumes, grouping by physical disk."""
         # First, collect all partitions by physical disk
-        disks_dict = {}
+        disks_dict: Dict[str, Dict[str, Any]] = {}
         partitions_list = [
             p for p in psutil.disk_partitions() if not p.device.startswith("/dev/loop")
         ]

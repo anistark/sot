@@ -306,7 +306,7 @@ def get_cpu_info() -> Tuple[str, int]:
     if not cpu_name:
         cpu_name = platform.processor() or "Unknown"
 
-    cpu_count = psutil.cpu_count(logical=True)
+    cpu_count = psutil.cpu_count(logical=True) or 1
     return cpu_name, cpu_count
 
 
