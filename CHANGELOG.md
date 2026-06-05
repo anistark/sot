@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-...
+### Added
+- **GPU Monitoring Widget** - Live GPU statistics now appear in the main `sot` dashboard:
+  - Real-time utilization history graph with current percentage
+  - Memory usage (used/total on NVIDIA; in-use and allocated on Apple Silicon's unified memory)
+  - Temperature and power draw where the platform exposes them
+  - Renderer/Tiler utilization breakdown and GPU core count on Apple Silicon
+  - Cross-platform detection: Apple Silicon via `ioreg` (no sudo required), NVIDIA via `nvidia-smi`, AMD via `rocm-smi` (best effort)
+  - Falls back to the decorative animation when no GPU is detected
+  - No new runtime dependencies
 
 ## [6.0.1](https://github.com/anistark/sot/releases/tag/v6.0.1) - 2026-01-18
 
