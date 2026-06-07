@@ -8,6 +8,7 @@ Each widget is responsible for displaying specific system information.
 from .base_widget import BaseWidget
 from .cpu import CPUWidget
 from .disk import DiskWidget
+from .gpu import GpuWidget
 from .health_score import HealthScoreWidget
 from .info import InfoWidget
 from .memory import MemoryWidget
@@ -20,6 +21,7 @@ __all__ = [
     "BaseWidget",
     "CPUWidget",
     "DiskWidget",
+    "GpuWidget",
     "HealthScoreWidget",
     "InfoWidget",
     "SotWidget",

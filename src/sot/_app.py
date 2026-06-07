@@ -13,9 +13,11 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
+from ._gpu import has_gpu
 from .widgets import (
     CPUWidget,
     DiskWidget,
+    GpuWidget,
     HealthScoreWidget,
     InfoWidget,
     MemoryWidget,
@@ -125,14 +127,21 @@ class SotApp(App):
         procs_list.id = "procs-list"
         yield procs_list
 
-        # Row 3: Memory, Sot Widget (Process List continues)
+        # Row 3: Memory, GPU/Sot Widget (Process List continues)
         mem_widget = MemoryWidget()
         mem_widget.id = "mem-widget"
         yield mem_widget
 
-        sot_widget = SotWidget()
-        sot_widget.id = "sot-widget"
-        yield sot_widget
+        # Show live GPU stats when a GPU is detected; otherwise keep the
+        # decorative SOT animation in this slot.
+        if has_gpu():
+            gpu_widget = GpuWidget()
+            gpu_widget.id = "gpu-widget"
+            yield gpu_widget
+        else:
+            sot_widget = SotWidget()
+            sot_widget.id = "sot-widget"
+            yield sot_widget
 
         # Row 4: Disk, Network Connections, Network Widget
         disk_widget = DiskWidget(self.disk_mountpoint)

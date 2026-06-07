@@ -246,6 +246,17 @@ sot
   - Used
   - Swap
 
+### GPU
+
+- **Live GPU Widget** - Real-time GPU stats in the main dashboard (shown automatically when a GPU is detected)
+  - Utilization history graph with current percentage
+  - Memory usage (used/total, or in-use/allocated on unified-memory systems)
+  - Temperature and power draw, when exposed by the platform
+- Cross-platform detection
+  - **Apple Silicon** (via `ioreg`, no sudo): utilization, memory, renderer/tiler breakdown, core count
+  - **NVIDIA** (via `nvidia-smi`): utilization, memory, temperature, power
+  - **AMD** (via `rocm-smi`): best-effort
+
 ### Network
 
 - Local IP
