@@ -392,6 +392,7 @@ The clean command intelligently detects your operating system and cleans platfor
 - Python pip cache
 - npm cache
 - Trash bin
+- Coding agent caches (Claude Code, pi, opencode, Kilo Code)
 
 **Linux:**
 - User cache (`~/.cache`)
@@ -401,6 +402,7 @@ The clean command intelligently detects your operating system and cleans platfor
 - Browser caches
 - Python pip cache
 - npm cache
+- Coding agent caches (Claude Code, pi, opencode, Kilo Code)
 
 **Windows:**
 - User temporary files (`%TEMP%`)
@@ -409,6 +411,33 @@ The clean command intelligently detects your operating system and cleans platfor
 - Browser caches
 - Python pip cache
 - npm cache
+- Coding agent caches (Claude Code, pi, opencode, Kilo Code)
+
+### Coding Agent Caches
+
+Agents are only listed when they're actually installed, so the table stays limited to what's on your machine. Only caches, logs and scratch directories are touched. Conversation history, sessions, credentials and config are left alone.
+
+| Agent | Cleaned |
+| ----- | ------- |
+| Claude Code | `~/.claude/{cache,paste-cache,debug,shell-snapshots,session-env,statsig}`, `~/.cache/claude`, `~/Library/Caches/claude-cli-nodejs` |
+| pi | `~/.pi/{cache,logs}`, `~/.cache/pi` |
+| opencode | `~/.cache/opencode`, `~/.local/share/opencode/{cache,log}` |
+| Kilo Code | `~/.kilocode/cache`, plus `kilocode.kilo-code/{cache,checkpoints}` under the VS Code, Cursor and VSCodium global storage directories |
+
+Notably left alone: `~/.claude/projects` (session transcripts that `claude --resume` reads) and `~/.local/share/claude/versions` (the installed binaries).
+
+If you've relocated a cache directory, `sot` picks it up from the environment rather than assuming the default. Exported variables are read from the shell you run `sot` in:
+
+| Variable | Overrides |
+| -------- | --------- |
+| `CLAUDE_CONFIG_DIR` | `~/.claude` |
+| `XDG_CACHE_HOME` | `~/.cache` |
+| `XDG_DATA_HOME` | `~/.local/share` |
+| `XDG_CONFIG_HOME` | `~/.config` |
+| `APPDATA` / `LOCALAPPDATA` | `~/AppData/Roaming`, `~/AppData/Local` |
+| `VSCODE_PORTABLE` | VS Code portable-mode user data (no default; paths are skipped when unset) |
+
+Use `sot clean --dry-run` to confirm the resolved locations before deleting anything.
 
 ### Permissions
 

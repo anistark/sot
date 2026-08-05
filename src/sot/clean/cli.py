@@ -14,6 +14,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.text import Text
 
+from .agents import CODING_AGENTS, agent_paths, resolve_roots
+
 
 class CleanTarget(NamedTuple):
     """Represents a cleaning target with metadata."""
@@ -51,6 +53,30 @@ def _sizeof_fmt(num: int | float, suffix: str = "B") -> str:
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f}P{suffix}"
+
+
+def _get_coding_agent_targets() -> list[CleanTarget]:
+    """Get cleaning targets for coding agent caches.
+
+    Only agents with at least one existing cache path are returned, so the
+    table stays limited to the agents actually installed on this machine.
+    See ``agents.py`` for the paths themselves.
+    """
+    roots = resolve_roots()
+    targets = []
+
+    for agent in CODING_AGENTS:
+        found = [path for path in agent_paths(agent, roots) if path.exists()]
+        if found:
+            targets.append(
+                CleanTarget(
+                    name=agent.name,
+                    path=found,
+                    description=agent.description,
+                )
+            )
+
+    return targets
 
 
 def _get_macos_targets() -> list[CleanTarget]:
@@ -125,6 +151,8 @@ def _get_macos_targets() -> list[CleanTarget]:
 
     for name, path, desc in browser_paths:
         targets.append(CleanTarget(name=name, path=path, description=desc))
+
+    targets.extend(_get_coding_agent_targets())
 
     return targets
 
@@ -212,6 +240,8 @@ def _get_linux_targets() -> list[CleanTarget]:
     for name, path, desc in browser_paths:
         targets.append(CleanTarget(name=name, path=path, description=desc))
 
+    targets.extend(_get_coding_agent_targets())
+
     return targets
 
 
@@ -274,6 +304,8 @@ def _get_windows_targets() -> list[CleanTarget]:
 
     for name, path, desc in browser_paths:
         targets.append(CleanTarget(name=name, path=path, description=desc))
+
+    targets.extend(_get_coding_agent_targets())
 
     return targets
 
