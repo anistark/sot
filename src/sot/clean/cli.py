@@ -27,6 +27,24 @@ class CleanTarget(NamedTuple):
     recursive: bool = True
 
 
+def _is_elevated() -> bool:
+    """Whether this process can touch targets that need admin rights.
+
+    ``geteuid`` is POSIX only, so Windows is asked through the shell API
+    instead. Anything that fails to answer counts as unprivileged -- the
+    targets are then skipped rather than attempted and half completed.
+    """
+    if hasattr(os, "geteuid"):
+        return os.geteuid() == 0
+
+    try:
+        import ctypes
+
+        return bool(getattr(ctypes, "windll").shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return False
+
+
 def _get_size(path: Path) -> int:
     """Calculate total size of a path (file or directory)."""
     try:
@@ -108,6 +126,19 @@ def _get_macos_targets() -> list[CleanTarget]:
             name="System Logs",
             path=Path("/var/log"),
             description="System log files",
+            requires_sudo=True,
+        ),
+        # Leftover macOS update payload, routinely 10GB+. The data volume path
+        # is the modern layout; the root one covers pre-Catalina installs.
+        # A small "Locked Files" stub inside is SIP protected and survives even
+        # under sudo -- it gets skipped with a warning like any other failure.
+        CleanTarget(
+            name="macOS Install Data",
+            path=[
+                Path("/System/Volumes/Data/macOS Install Data"),
+                Path("/macOS Install Data"),
+            ],
+            description="Leftover macOS installer payload",
             requires_sudo=True,
         ),
         CleanTarget(
@@ -391,8 +422,12 @@ def _clean_path(path: Path, console: Console) -> int:
         return 0
 
 
-def _clean_targets(results: dict, console: Console) -> int:
-    """Clean the targets and return total bytes freed."""
+def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
+    """Clean the targets and return total bytes freed.
+
+    Targets flagged ``requires_sudo`` are only attempted when running with
+    the privileges to do so; otherwise they are reported and left alone.
+    """
     total_freed = 0
     targets_to_clean = [r for r in results.values() if r["exists"] and r["size"] > 0]
 
@@ -406,7 +441,7 @@ def _clean_targets(results: dict, console: Console) -> int:
         for result in targets_to_clean:
             target = result["target"]
 
-            if target.requires_sudo:
+            if target.requires_sudo and not elevated:
                 console.print(
                     f"  [yellow]⚠[/yellow]  Skipping {target.name} (requires sudo)"
                 )
@@ -446,6 +481,10 @@ def clean_command(args) -> int:
     }.get(system, system)
 
     console.print(f"📍 Detected OS: [bright_green]{os_name}[/]")
+
+    elevated = _is_elevated()
+    if elevated:
+        console.print("🔑 Running elevated: [bright_green]sudo targets included[/]")
     console.print()
 
     # Get targets
@@ -516,13 +555,14 @@ def clean_command(args) -> int:
 
     summary.add_row("Total cleanable:", f"[bright_green]{_sizeof_fmt(total_size)}[/]")
     if sudo_size > 0:
+        note = "" if elevated else " [dim](will be skipped)[/]"
         summary.add_row(
             "Requires sudo:",
-            f"[yellow]{_sizeof_fmt(sudo_size)}[/] [dim](will be skipped)[/]",
+            f"[yellow]{_sizeof_fmt(sudo_size)}[/]{note}",
         )
     summary.add_row(
         "Can clean now:",
-        f"[bright_cyan]{_sizeof_fmt(total_size - sudo_size)}[/]",
+        f"[bright_cyan]{_sizeof_fmt(total_size if elevated else total_size - sudo_size)}[/]",
     )
 
     console.print(Panel(summary, title="Summary", border_style="green"))
@@ -534,7 +574,7 @@ def clean_command(args) -> int:
         return 0
 
     # Confirmation
-    if sudo_size > 0:
+    if sudo_size > 0 and not elevated:
         console.print(
             "[yellow]⚠[/yellow]  Items requiring sudo will be skipped. "
             "Run with sudo to clean them."
@@ -556,7 +596,7 @@ def clean_command(args) -> int:
 
     # Clean
     console.print("🧹 Cleaning...")
-    freed = _clean_targets(results, console)
+    freed = _clean_targets(results, console, elevated)
 
     console.print()
 
