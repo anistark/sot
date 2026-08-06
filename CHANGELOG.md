@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.1.0](https://github.com/anistark/sot/releases/tag/v6.1.0) - 2026-08-05
 
 ### Added
 - **GPU Monitoring Widget** - Live GPU statistics now appear in the main `sot` dashboard:
@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cross-platform detection: Apple Silicon via `ioreg` (no sudo required), NVIDIA via `nvidia-smi`, AMD via `rocm-smi` (best effort)
   - Falls back to the decorative animation when no GPU is detected
   - No new runtime dependencies
+- **macOS Install Data cleaning** - `sot clean` now reports the leftover macOS installer payload, routinely 10GB+ on machines that have taken a system update
+  - Covers both the data volume path and the pre-Catalina root path
+  - Marked as requiring sudo; the SIP protected `Locked Files` stub inside is skipped with a warning
+
+### Fixed
+- **`sot clean` under sudo** - Targets marked as requiring sudo were skipped unconditionally, so `sudo sot clean` never cleaned them despite the summary saying it would
+  - The skip now checks for actual elevation, making `Temp Files`, `System Logs` and `macOS Install Data` reclaimable
+  - Running elevated is called out in the header, and the summary no longer reports those targets as "will be skipped"
 
 ## [6.0.1](https://github.com/anistark/sot/releases/tag/v6.0.1) - 2026-01-18
 
