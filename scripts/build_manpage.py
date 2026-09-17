@@ -97,10 +97,16 @@ def build_manpage():
     )
 
     # Add disk subcommand
-    subparsers.add_parser(
+    disk_parser = subparsers.add_parser(
         "disk",
         help="Interactive disk information viewer",
         formatter_class=argparse.RawTextHelpFormatter,
+    )
+    disk_parser.add_argument(
+        "--list",
+        "-l",
+        action="store_true",
+        help="Print disks and partitions as a plain list instead of the TUI",
     )
 
     # Add clean subcommand
@@ -183,6 +189,9 @@ Run 30-second benchmarks and save results to JSON
 .TP
 .B sot disk
 View interactive disk information
+.TP
+.B sot disk --list
+Print disks and partitions as a plain table and exit
 .TP
 .B sot clean --dry-run
 Preview what would be cleaned without deleting

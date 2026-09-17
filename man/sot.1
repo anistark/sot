@@ -41,7 +41,12 @@ Output file for benchmark results (JSON format)
 Duration for each benchmark test in seconds (default: 10s)
 
 .SH COMMAND \fI\,'sot disk'\/\fR
-usage: sot disk [\-h]
+usage: sot disk [\-h] [\-\-list]
+
+.SH OPTIONS \fI\,'sot disk'\/\fR
+.TP
+\fB\-\-list\fR, \fB\-l\fR
+Print disks and partitions as a plain list instead of the TUI
 
 .SH COMMAND \fI\,'sot clean'\/\fR
 usage: sot clean [\-h] [\-\-dry\-run]
@@ -95,6 +100,9 @@ Run 30-second benchmarks and save results to JSON
 .TP
 .B sot disk
 View interactive disk information
+.TP
+.B sot disk --list
+Print disks and partitions as a plain table and exit
 .TP
 .B sot clean --dry-run
 Preview what would be cleaned without deleting

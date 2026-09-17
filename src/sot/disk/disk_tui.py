@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import platform
-from typing import Any, Dict, List, Optional
+from typing import Dict
 
-import psutil
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
@@ -16,6 +14,7 @@ from textual.widgets import Footer, Header, ListItem, ListView, Static
 
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
+from .volumes import get_volume_info, usage_style
 
 
 class VolumeListItem(ListItem):
@@ -49,12 +48,7 @@ class PartitionBox(Static):
         part_free_blocks = part_bar_width - part_used_blocks
 
         # Choose color based on usage
-        if part_usage.percent > 95:
-            bar_style = "red"
-        elif part_usage.percent > 80:
-            bar_style = "yellow"
-        else:
-            bar_style = "green"
+        bar_style = usage_style(part_usage.percent)
 
         # Build partition box content - compact
         part_lines = []
@@ -136,12 +130,7 @@ class VolumeInfoPanel(Static):
         used_blocks = int((usage.percent / 100) * bar_width)
         free_blocks = bar_width - used_blocks
 
-        if usage.percent > 95:
-            main_bar_style = "red"
-        elif usage.percent > 80:
-            main_bar_style = "yellow"
-        else:
-            main_bar_style = "green"
+        main_bar_style = usage_style(usage.percent)
 
         used_str = sizeof_fmt(usage.used, fmt=".1f")
         free_str = sizeof_fmt(usage.free, fmt=".1f")
@@ -207,12 +196,7 @@ class VolumeInfoPanel(Static):
                     part_usage = part["usage"]
 
                     # Choose color based on usage
-                    if part_usage.percent > 95:
-                        bar_style = "red"
-                    elif part_usage.percent > 80:
-                        bar_style = "yellow"
-                    else:
-                        bar_style = "green"
+                    bar_style = usage_style(part_usage.percent)
 
                     # Build compact partition info
                     part_bar_width = 10
@@ -336,162 +320,9 @@ class DiskTUIApp(App):
         # Set interval to refresh volume list
         self.set_interval(5.0, self.refresh_volume_list)
 
-    def get_volume_info(self) -> List[Dict]:
-        """Get information about all volumes, grouping by physical disk."""
-        # First, collect all partitions by physical disk
-        disks_dict: Dict[str, Dict[str, Any]] = {}
-        partitions_list = [
-            p for p in psutil.disk_partitions() if not p.device.startswith("/dev/loop")
-        ]
-
-        for partition in partitions_list:
-            try:
-                usage = psutil.disk_usage(partition.mountpoint)
-                disk_id = self._extract_disk_id(partition.device)
-
-                partition_info = {
-                    "partition_id": self._extract_partition_id(partition.device),
-                    "device": partition.device,
-                    "mountpoint": partition.mountpoint,
-                    "fstype": partition.fstype,
-                    "opts": partition.opts,
-                    "usage": usage,
-                }
-
-                if disk_id not in disks_dict:
-                    disks_dict[disk_id] = {
-                        "disk_id": disk_id,
-                        "partitions": [],
-                        "total_size": 0,
-                        "total_used": 0,
-                        "total_free": 0,
-                    }
-
-                disks_dict[disk_id]["partitions"].append(partition_info)
-                # For APFS containers, volumes share total/free but have individual used space
-                # Track the largest total (all volumes report same total in APFS)
-                if usage.total > disks_dict[disk_id]["total_size"]:
-                    disks_dict[disk_id]["total_size"] = usage.total
-                # Sum all volumes' used space (each volume has unique data)
-                disks_dict[disk_id]["total_used"] += usage.used
-                # Track free space (shared across all volumes in APFS, so just keep the latest)
-                disks_dict[disk_id]["total_free"] = usage.free
-
-            except (PermissionError, FileNotFoundError):
-                continue
-
-        # Now create volumes from disks
-        volumes = []
-        for disk_id, disk_data in disks_dict.items():
-            # Find the primary partition (usually root or first partition)
-            primary_partition = None
-            for part in disk_data["partitions"]:
-                if part["mountpoint"] == "/":
-                    primary_partition = part
-                    break
-            if not primary_partition and disk_data["partitions"]:
-                primary_partition = disk_data["partitions"][0]
-
-            # Determine volume name from primary partition
-            if primary_partition:
-                if primary_partition["mountpoint"] == "/":
-                    volume_name = "System"
-                else:
-                    volume_name = (
-                        primary_partition["mountpoint"].split("/")[-1] or disk_id
-                    )
-
-                # Calculate aggregate usage percentage
-                total_size = disk_data["total_size"]
-                total_used = disk_data["total_used"]
-                usage_percent = (total_used / total_size * 100) if total_size > 0 else 0
-
-                # Create a pseudo usage object for display
-                class UsageInfo:
-                    def __init__(self, total, used, free, percent):
-                        self.total = total
-                        self.used = used
-                        self.free = free
-                        self.percent = percent
-
-                volume = {
-                    "volume_name": volume_name,
-                    "disk_id": disk_id,
-                    "partitions": disk_data["partitions"],
-                    "usage": UsageInfo(
-                        total_size, total_used, disk_data["total_free"], usage_percent
-                    ),
-                }
-
-                # Get I/O statistics for this disk
-                try:
-                    io_counters = psutil.disk_io_counters(perdisk=True)
-                    disk_name = self._get_disk_name_for_io(primary_partition["device"])
-                    if disk_name and disk_name in io_counters:
-                        io_stat = io_counters[disk_name]
-                        volume["io_stats"] = {
-                            "read_count": io_stat.read_count,
-                            "write_count": io_stat.write_count,
-                            "read_bytes": io_stat.read_bytes,
-                            "write_bytes": io_stat.write_bytes,
-                            "read_time": io_stat.read_time,
-                            "write_time": io_stat.write_time,
-                        }
-                except Exception:
-                    pass
-
-                volumes.append(volume)
-
-        return volumes
-
-    def _extract_disk_id(self, device: str) -> str:
-        """Extract disk identifier from device path."""
-        import re
-
-        # macOS: /dev/disk3s1 -> disk3
-        # Linux: /dev/sda1 -> sda
-        match = re.search(r"disk\d+", device)
-        if match:
-            return match.group(0)
-        # Linux: extract base device name (sda from sda1)
-        match = re.search(r"([sh]d[a-z]+)", device)
-        if match:
-            return match.group(1)
-        return device
-
-    def _extract_partition_id(self, device: str) -> str:
-        """Extract full partition identifier from device path."""
-        import re
-
-        # macOS: /dev/disk3s1 -> disk3s1 or /dev/disk3s1s1 -> disk3s1s1
-        # Linux: /dev/sda1 -> sda1
-        match = re.search(r"(disk\d+s\d+(?:s\d+)?|[a-z]+\d+)", device)
-        if match:
-            return match.group(1)
-        return device.split("/")[-1]  # Fallback to just the device name
-
-    def _get_disk_name_for_io(self, device: str) -> Optional[str]:
-        """Get disk name for I/O statistics lookup."""
-        system = platform.system()
-
-        if system == "Darwin":
-            # macOS: /dev/disk3s1 -> disk3
-            import re
-
-            match = re.search(r"disk\d+", device)
-            return match.group(0) if match else None
-        elif system == "Linux":
-            # Linux: /dev/sda1 -> sda
-            import re
-
-            match = re.search(r"([a-z]+)\d*$", device)
-            return match.group(1) if match else None
-
-        return None
-
     def refresh_volume_list(self):
         """Refresh the list of volumes."""
-        self.volumes = self.get_volume_info()
+        self.volumes = get_volume_info()
 
         list_view = self.query_one("#volume-list", ListView)
 
@@ -511,12 +342,7 @@ class DiskTUIApp(App):
             percent = usage.percent
 
             # Color code based on usage
-            if percent > 95:
-                style = "red"
-            elif percent > 80:
-                style = "yellow"
-            else:
-                style = "green"
+            style = usage_style(percent)
 
             label = Text()
             label.append(f"{volume_name} ", style="bold white")

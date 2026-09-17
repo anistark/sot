@@ -531,10 +531,16 @@ def run(argv=None):  # noqa: C901
     )
 
     # Add disk subcommand
-    subparsers.add_parser(
+    disk_parser = subparsers.add_parser(
         "disk",
         help="Interactive disk information viewer",
         formatter_class=argparse.RawTextHelpFormatter,
+    )
+    disk_parser.add_argument(
+        "--list",
+        "-l",
+        action="store_true",
+        help="Print disks and partitions as a plain list instead of the TUI",
     )
 
     # Add clean subcommand

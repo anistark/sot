@@ -229,6 +229,7 @@ sot
   - Real-time disk usage monitoring with accurate APFS container calculations
   - Visual usage bars and percentage indicators
   - I/O statistics (read/write counts and bytes)
+- **Plain Listing** - `sot disk --list` prints every disk and partition as a static table (like `du`, but with usage bars)
 - Disk Usage
   - Per Read/Write
 - Capacity
@@ -362,6 +363,25 @@ The command automatically detects your operating system and distribution, displa
 - Generic Linux/Tux (fallback)
 
 **Windows**: Windows logo
+
+---
+
+## Disk Viewer
+
+The `sot disk` command shows every physical disk with its partitions.
+
+### Usage
+
+```sh
+# Interactive TUI - browse disks with arrow keys, live refresh
+sot disk
+
+# Plain listing - print once and exit, pipe-friendly
+sot disk --list
+sot disk -l
+```
+
+`--list` prints one row per disk, with its partitions nested underneath: device, mountpoint, filesystem, size, used, free, and a colour-coded usage bar (green → yellow above 80% → red above 95%), followed by a total across all disks. On narrow terminals the filesystem column is dropped and the bar shrinks so mountpoints stay readable.
 
 ---
 

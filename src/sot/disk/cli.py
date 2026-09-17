@@ -9,7 +9,7 @@ console = Console()
 
 def disk_command(args) -> int:
     """
-    Launch the disk TUI application.
+    Launch the disk TUI application, or print a static listing with ``--list``.
 
     Args:
         args: Parsed command-line arguments
@@ -17,6 +17,11 @@ def disk_command(args) -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
+    if getattr(args, "list", False):
+        from .listing import print_disk_list
+
+        return print_disk_list(console)
+
     try:
         app = DiskTUIApp()
         app.run()
