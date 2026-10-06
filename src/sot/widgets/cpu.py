@@ -8,19 +8,17 @@ import re
 from pathlib import Path
 
 import psutil
-from rich import box
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..braille_stream import BrailleStream
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
 def val_to_color(val: float, minval: float, maxval: float) -> str:
     t = (val - minval) / (maxval - minval)
-    k = round(t * 3)
-    return {0: "yellow", 1: "dark_orange", 2: "sky_blue3", 3: "aquamarine3"}[k]
+    return theme().colors.load[round(t * 3)]
 
 
 def chunks(lst, n):
@@ -146,10 +144,11 @@ class CPUWidget(BaseWidget):
 
         self.core_threads = core_thread_list
 
-        self.cpu_total_stream = BrailleStream(50, 7, 0.0, 100.0)
+        t = theme()
+        self.cpu_total_stream = t.stream(50, 7, 0.0, 100.0)
 
         self.thread_load_streams = [
-            BrailleStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
+            t.stream(10, 1, 0.0, 100.0) for _ in range(num_threads)
         ]
 
         temps = get_current_temps()
@@ -165,14 +164,13 @@ class CPUWidget(BaseWidget):
             temp_high = 100.0
 
             if self.has_cpu_temp:
-                self.temp_total_stream = BrailleStream(
+                self.temp_total_stream = t.stream(
                     50, 7, temp_low, temp_high, flipud=True
                 )
 
             if self.has_core_temps:
                 self.core_temp_streams = [
-                    BrailleStream(5, 1, temp_low, temp_high)
-                    for _ in range(self.num_cores)
+                    t.stream(5, 1, temp_low, temp_high) for _ in range(self.num_cores)
                 ]
 
         self.has_fan_rpm = False
@@ -185,7 +183,7 @@ class CPUWidget(BaseWidget):
                 if fan_current == 65535:
                     fan_current = 1
                 fan_high = max(fan_current, 1)
-                self.fan_stream = BrailleStream(50, 1, fan_low, fan_high)
+                self.fan_stream = t.stream(50, 1, fan_low, fan_high)
         except (AttributeError, IndexError):
             pass
 
@@ -201,16 +199,16 @@ class CPUWidget(BaseWidget):
             title_align="left",
             subtitle=None,
             subtitle_align="left",
-            border_style="bright_black",
-            box=box.SQUARE,
+            border_style=t.colors.border,
+            box=t.design.inner_box,
             expand=False,
         )
 
         try:
             cpu_model = get_cpu_model()
-            self.panel.title = f"[b]CPU[/] - {cpu_model}"
+            self.set_title("CPU", cpu_model)
         except Exception:
-            self.panel.title = "[b]CPU[/]"
+            self.set_title("CPU")
 
         self.collect_data()
         self.set_interval(2.0, self.collect_data)
@@ -241,21 +239,24 @@ class CPUWidget(BaseWidget):
         lines0 = lines_cpu[0][: -len(current_val_string)] + current_val_string
         lines_cpu = [lines0] + lines_cpu[1:]
 
-        cpu_total_graph = "[yellow]" + "\n".join(lines_cpu) + "[/]\n"
+        t = theme()
+        c = t.colors
+        cpu_total_graph = t.graph(lines_cpu, c.primary)
+        cpu_total_graph.append("\n")
 
         if self.has_cpu_temp:
             lines_temp = self.temp_total_stream.graph
             current_val_string = f"{round(self.temp_total_stream.values[-1]):3d}°C"
             lines0 = lines_temp[-1][: -len(current_val_string)] + current_val_string
             lines_temp = lines_temp[:-1] + [lines0]
-            cpu_total_graph += "[slate_blue1]" + "\n".join(lines_temp) + "[/]"
+            cpu_total_graph.append_text(t.graph(lines_temp, c.temp, flipud=True))
 
         self._refresh_info_box(load_per_thread)
 
-        t = Table(expand=True, show_header=False, padding=0, box=None)
-        t.add_column("graph", no_wrap=True, ratio=1)
-        t.add_column("box", no_wrap=True, justify="left", vertical="middle")
-        t.add_row(cpu_total_graph, self.info_box)
+        table = Table(expand=True, show_header=False, padding=0, box=None)
+        table.add_column("graph", no_wrap=True, ratio=1)
+        table.add_column("box", no_wrap=True, justify="left", vertical="middle")
+        table.add_row(cpu_total_graph, self.info_box)
 
         if self.has_fan_rpm:
             sensors_fans = getattr(psutil, "sensors_fans", lambda: {})()
@@ -274,11 +275,11 @@ class CPUWidget(BaseWidget):
             string = f" {fan_current}rpm"
             graph = Text(
                 self.fan_stream.graph[-1][: -len(string)] + string,
-                style="dark_orange",
+                style=c.warm,
             )
-            t.add_row(graph, "")
+            table.add_row(graph, "")
 
-        self.update_panel_content(t)
+        self.update_panel_content(table)
 
     def _refresh_info_box(self, load_per_thread):
         lines = []
@@ -295,7 +296,8 @@ class CPUWidget(BaseWidget):
             if self.has_core_temps:
                 stream = self.core_temp_streams[core_id]
                 val = stream.values[-1]
-                color = "slate_blue1" if val < 70.0 else "red3"
+                c = theme().colors
+                color = c.temp if val < 70.0 else c.danger
                 line.append(
                     f"[{color}]{stream.graph[0]} {round(stream.values[-1])}°C[/]"
                 )

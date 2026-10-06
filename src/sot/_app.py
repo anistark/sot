@@ -14,6 +14,7 @@ from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
 from ._gpu import has_gpu
+from ._theme import DEFAULT_THEME, THEMES, apply_to_app, set_theme
 from .widgets import (
     CPUWidget,
     DiskWidget,
@@ -95,8 +96,16 @@ class SotApp(App):
     }
     """
 
-    def __init__(self, net_interface=None, disk_mountpoint=None, log_file=None):
+    def __init__(
+        self,
+        net_interface=None,
+        disk_mountpoint=None,
+        log_file=None,
+        theme_name=DEFAULT_THEME,
+    ):
+        set_theme(theme_name)
         super().__init__()
+        apply_to_app(self)
         self.net_interface = net_interface
         self.disk_mountpoint = disk_mountpoint
         self.log_file = log_file
@@ -173,6 +182,10 @@ class SotApp(App):
 
         # Set initial focus to the process list for interactive features
         self.set_focus(self.query_one("#procs-list"))
+
+        # Memory graphs have a fixed height; size their grid row to match.
+        mem = self.query_one("#mem-widget", MemoryWidget)
+        self.screen.styles.grid_rows = f"1 1fr {mem.panel_height} 1.1fr"
 
     async def on_load(self, _):
         self.bind("q", "quit")
@@ -496,6 +509,14 @@ def run(argv=None):  # noqa: C901
         help="Disk mountpoint to display (use without value for interactive selection)",
     )
 
+    parser.add_argument(
+        "--theme",
+        "-T",
+        choices=list(THEMES),
+        metavar="THEME",
+        default=os.environ.get("SOT_THEME", DEFAULT_THEME),
+        help=f"Color theme: {', '.join(THEMES)} (default: $SOT_THEME or classic)",
+    )
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
         dest="command",
@@ -563,6 +584,11 @@ def run(argv=None):  # noqa: C901
     )
 
     args = parser.parse_args(argv)
+
+    if args.theme not in THEMES:
+        print(f"❌ Unknown theme '{args.theme}'. Available: {', '.join(THEMES)}")
+        return 1
+    set_theme(args.theme)
 
     # Handle info subcommand
     if args.command == "info":
@@ -646,7 +672,12 @@ def run(argv=None):  # noqa: C901
         print(f"🐛 Debug logging enabled: {args.log}")
 
     # Create and run the application with the specified options
-    app = SotApp(net_interface=args.net, disk_mountpoint=args.disk, log_file=args.log)
+    app = SotApp(
+        net_interface=args.net,
+        disk_mountpoint=args.disk,
+        log_file=args.log,
+        theme_name=args.theme,
+    )
 
     if args.net:
         print(f"📡 Using network interface: {args.net}")

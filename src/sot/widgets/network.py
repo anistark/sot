@@ -13,7 +13,7 @@ from rich.text import Text
 
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
-from ..braille_stream import BrailleStream
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
@@ -77,7 +77,7 @@ class NetworkWidget(BaseWidget):
             self.interface_source = f"fallback ('{interface}' not found)"
 
         self.sot_string = f"sot v{__version__}"
-        super().__init__(title=f"Network - {self.interface}", **kwargs)
+        super().__init__(title="Network", **kwargs)
 
         self.interface_error = None
         if interface and not _validate_interface(interface):
@@ -86,24 +86,25 @@ class NetworkWidget(BaseWidget):
             )
 
     def on_mount(self):
-        from rich import box
         from rich.panel import Panel
 
+        t = theme()
+        c = t.colors
         self.down_box = Panel(
             "",
             title="▼ down",
             title_align="left",
-            style="aquamarine3",
+            style=c.rx,
             width=20,
-            box=box.SQUARE,
+            box=t.design.inner_box,
         )
         self.up_box = Panel(
             "",
             title="▲ up",
             title_align="left",
-            style="yellow",
+            style=c.tx,
             width=20,
-            box=box.SQUARE,
+            box=t.design.inner_box,
         )
         self.table = Table(expand=True, show_header=False, padding=0, box=None)
         self.table.add_column("graph", no_wrap=True, ratio=1)
@@ -121,7 +122,7 @@ class NetworkWidget(BaseWidget):
         elif self.interface_source == "user-specified":
             title_suffix = " (specified)"
 
-        self.panel.title = f"[b]Network - {self.interface}[/]{title_suffix}"
+        self.set_title("Network", f"{self.interface}{title_suffix}")
         self.panel.subtitle = self.sot_string
         self.panel.subtitle_align = "right"
 
@@ -131,8 +132,8 @@ class NetworkWidget(BaseWidget):
         self.max_sent_bytes_s = 0
         self.max_sent_bytes_s_str = ""
 
-        self.recv_stream = BrailleStream(20, 5, 0.0, 1.0e6)
-        self.sent_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
+        self.recv_stream = t.stream(20, 5, 0.0, 1.0e6)
+        self.sent_stream = t.stream(20, 5, 0.0, 1.0e6, flipud=True)
 
         if self.interface_error:
             self.app.notify(self.interface_error, severity="warning", timeout=5)
@@ -161,29 +162,35 @@ class NetworkWidget(BaseWidget):
             ipv6_str = "\n      ".join(ipv6) if ipv6 else "No IPv6 address"
 
             if len(self.group.renderables) >= 3:
-                self.group.renderables[1] = f"[b]IPv4:[/] {ipv4_str}"
-                self.group.renderables[2] = f"[b]IPv6:[/] {ipv6_str}"
+                self.group.renderables[1] = (
+                    f"[{theme().colors.label}]IPv4:[/] {ipv4_str}"
+                )
+                self.group.renderables[2] = (
+                    f"[{theme().colors.label}]IPv6:[/] {ipv6_str}"
+                )
         except KeyError:
             if len(self.group.renderables) >= 3:
                 self.group.renderables[1] = (
-                    f"[b]IPv4:[/] Interface '{self.interface}' not found"
+                    f"[{theme().colors.label}]IPv4:[/] Interface '{self.interface}' not found"
                 )
-                self.group.renderables[2] = "[b]IPv6:[/] ---"
+                self.group.renderables[2] = f"[{theme().colors.label}]IPv6:[/] ---"
         except Exception as e:
             if len(self.group.renderables) >= 3:
-                self.group.renderables[1] = f"[b]IPv4:[/] Error: {str(e)}"
-                self.group.renderables[2] = "[b]IPv6:[/] ---"
+                self.group.renderables[1] = (
+                    f"[{theme().colors.label}]IPv4:[/] Error: {str(e)}"
+                )
+                self.group.renderables[2] = f"[{theme().colors.label}]IPv6:[/] ---"
 
     def refresh_panel(self):
         try:
             net = psutil.net_io_counters(pernic=True)[self.interface]
         except KeyError:
             error_msg = f"Interface '{self.interface}' not found"
-            self.update_panel_content(Text(error_msg, style="red3"))
+            self.update_panel_content(Text(error_msg, style=theme().colors.danger))
             return
         except Exception as e:
             error_msg = f"Error reading interface data: {str(e)}"
-            self.update_panel_content(Text(error_msg, style="red3"))
+            self.update_panel_content(Text(error_msg, style=theme().colors.danger))
             return
 
         if self.last_net is None:
@@ -229,29 +236,23 @@ class NetworkWidget(BaseWidget):
         self.update_panel_content(self.group)
 
     def refresh_graphs(self):
+        t = theme()
+        down = t.graph(self.recv_stream.graph, t.colors.rx)
+        up = t.graph(self.sent_stream.graph, t.colors.tx, flipud=True)
         if (
             hasattr(self.table.columns[0], "_cells")
             and len(self.table.columns[0]._cells) >= 2
         ):
-            self.table.columns[0]._cells[0] = Text(
-                "\n".join(self.recv_stream.graph), style="aquamarine3"
-            )
-            self.table.columns[0]._cells[1] = Text(
-                "\n".join(self.sent_stream.graph), style="yellow"
-            )
+            self.table.columns[0]._cells[0] = down
+            self.table.columns[0]._cells[1] = up
         else:
             # Recreate table instead of using private _clear method
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
             self.table.add_column("graph", no_wrap=True, ratio=1)
             self.table.add_column("box", no_wrap=True, width=20)
 
-            self.table.add_row(
-                Text("\n".join(self.recv_stream.graph), style="aquamarine3"),
-                self.down_box,
-            )
-            self.table.add_row(
-                Text("\n".join(self.sent_stream.graph), style="yellow"), self.up_box
-            )
+            self.table.add_row(down, self.down_box)
+            self.table.add_row(up, self.up_box)
 
             if len(self.group.renderables) > 0:
                 self.group.renderables[0] = self.table

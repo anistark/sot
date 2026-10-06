@@ -7,14 +7,12 @@ Displays disk usage and I/O statistics.
 import platform
 
 import psutil
-from rich import box
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 from .._helpers import sizeof_fmt
-from ..braille_stream import BrailleStream
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
@@ -55,7 +53,7 @@ class DiskWidget(BaseWidget):
             self.specified_mountpoint
         ):
             self.mountpoints = [self.specified_mountpoint]
-            self.panel.title = f"[b]Disk - {self.specified_mountpoint}[/]"
+            self.set_title("Disk", self.specified_mountpoint)
         else:
             self.mountpoints = _autoselect_mountpoint()
             if self.specified_mountpoint:
@@ -73,22 +71,24 @@ class DiskWidget(BaseWidget):
         else:
             self.has_io_counters = True
 
+        t = theme()
+        c = t.colors
         if self.has_io_counters:
             self.down_box = Panel(
                 "",
                 title="read",
                 title_align="left",
-                style="aquamarine3",
+                style=c.rx,
                 width=20,
-                box=box.SQUARE,
+                box=t.design.inner_box,
             )
             self.up_box = Panel(
                 "",
                 title="write",
                 title_align="left",
-                style="yellow",
+                style=c.tx,
                 width=20,
-                box=box.SQUARE,
+                box=t.design.inner_box,
             )
 
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
@@ -108,8 +108,8 @@ class DiskWidget(BaseWidget):
             self.read_latency_ms = 0.0
             self.write_latency_ms = 0.0
 
-            self.read_stream = BrailleStream(20, 5, 0.0, 1.0e6)
-            self.write_stream = BrailleStream(20, 5, 0.0, 1.0e6, flipud=True)
+            self.read_stream = t.stream(20, 5, 0.0, 1.0e6)
+            self.write_stream = t.stream(20, 5, 0.0, 1.0e6, flipud=True)
         else:
             self.group = Group("")
 
@@ -193,33 +193,29 @@ class DiskWidget(BaseWidget):
         self.refresh_graphs()
 
     def refresh_graphs(self):
+        t = theme()
+        read = t.graph(self.read_stream.graph, t.colors.rx)
+        write = t.graph(self.write_stream.graph, t.colors.tx, flipud=True)
         if (
             hasattr(self.table.columns[0], "_cells")
             and len(self.table.columns[0]._cells) >= 2
         ):
-            self.table.columns[0]._cells[0] = Text(
-                "\n".join(self.read_stream.graph), style="aquamarine3"
-            )
-            self.table.columns[0]._cells[1] = Text(
-                "\n".join(self.write_stream.graph), style="yellow"
-            )
+            self.table.columns[0]._cells[0] = read
+            self.table.columns[0]._cells[1] = write
         else:
             self.table = Table(expand=True, show_header=False, padding=0, box=None)
             self.table.add_column("graph", no_wrap=True, ratio=1)
             self.table.add_column("box", no_wrap=True, width=20)
 
-            self.table.add_row(
-                Text("\n".join(self.read_stream.graph), style="aquamarine3"),
-                self.down_box,
-            )
-            self.table.add_row(
-                Text("\n".join(self.write_stream.graph), style="yellow"), self.up_box
-            )
+            self.table.add_row(read, self.down_box)
+            self.table.add_row(write, self.up_box)
 
             if len(self.group.renderables) > 0:
                 self.group.renderables[0] = self.table
 
     def refresh_disk_usage(self):
+        t = theme()
+        c = t.colors
         table = Table(box=None, show_header=False, expand=True)
 
         for mp in self.mountpoints:
@@ -230,15 +226,15 @@ class DiskWidget(BaseWidget):
 
             style = None
             if du.percent > 99:
-                style = "red3 reverse bold"
+                style = f"{c.danger} reverse bold"
             elif du.percent > 95:
-                style = "dark_orange"
+                style = c.warm
 
             table.add_row(
-                f"[b]Free:[/] {sizeof_fmt(du.free, fmt='.1f')}",
-                f"[b]Used:[/] {sizeof_fmt(du.used, fmt='.1f')}",
-                f"[b]Total:[/] {sizeof_fmt(du.total, fmt='.1f')}",
-                f"[b]🍕[/] {du.percent:.1f}%",
+                f"[{c.label}]Free:[/] {sizeof_fmt(du.free, fmt='.1f')}",
+                f"[{c.label}]Used:[/] {sizeof_fmt(du.used, fmt='.1f')}",
+                f"[{c.label}]Total:[/] {sizeof_fmt(du.total, fmt='.1f')}",
+                f"[{c.label}]🍕[/] {du.percent:.1f}%",
                 style=style,
             )
 

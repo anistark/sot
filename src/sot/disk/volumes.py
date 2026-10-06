@@ -8,6 +8,8 @@ from typing import Any, Dict, List, NamedTuple, Optional
 
 import psutil
 
+from .._theme import theme
+
 
 class UsageInfo(NamedTuple):
     """Aggregate usage for a physical disk, mirroring ``psutil``'s usage tuple."""
@@ -19,12 +21,13 @@ class UsageInfo(NamedTuple):
 
 
 def usage_style(percent: float) -> str:
-    """Rich style name for a usage percentage: green -> yellow -> red."""
+    """Rich style for a usage percentage: normal -> high -> full."""
+    normal, high, full = theme().colors.usage
     if percent > 95:
-        return "red"
+        return full
     if percent > 80:
-        return "yellow"
-    return "green"
+        return high
+    return normal
 
 
 def extract_disk_id(device: str) -> str:

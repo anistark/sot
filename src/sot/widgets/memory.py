@@ -6,11 +6,13 @@ Displays memory usage information including virtual memory and swap.
 
 import psutil
 from rich.console import Group
-from rich.text import Text
 
 from .._helpers import sizeof_fmt
-from ..braille_stream import BrailleStream
+from .._theme import theme
 from .base_widget import BaseWidget
+
+# Rows per memory graph, regardless of panel height.
+_GRAPH_HEIGHT = 2
 
 
 class MemoryWidget(BaseWidget):
@@ -18,7 +20,7 @@ class MemoryWidget(BaseWidget):
 
     def __init__(self, **kwargs):
         super().__init__(title="Memory", **kwargs)
-        self._color_list = ["yellow", "aquamarine3", "sky_blue3", "slate_blue1", "red3"]
+        self._color_list = theme().colors.memory
         self.attrs = []
         self.mem_streams = []
         self.mem_total_bytes = 0
@@ -42,12 +44,12 @@ class MemoryWidget(BaseWidget):
 
         for attr in self.attrs:
             total = swap.total if attr == "swap" else self.mem_total_bytes
-            self.mem_streams.append(BrailleStream(40, 4, 0.0, total))
+            self.mem_streams.append(theme().stream(40, _GRAPH_HEIGHT, 0.0, total))
 
         self.group = Group("", "", "", "", "")
 
         mem_total_string = sizeof_fmt(self.mem_total_bytes, fmt=".2f")
-        self.panel.title = f"[b]Memory[/] - {mem_total_string}"
+        self.set_title("Memory", mem_total_string)
 
         self.refresh_table()
         self.set_interval(2.0, self.refresh_table)
@@ -76,25 +78,21 @@ class MemoryWidget(BaseWidget):
                     f"({val / total * 100:.0f}%)",
                 ]
             )
-            graph = "\n".join(
-                [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
-            )
+            lines = [val_string + stream.graph[0][len(val_string) :]] + stream.graph[1:]
             if k < len(self.group.renderables):
-                self.group.renderables[k] = Text(graph, style=col)
+                graph = theme().graph(lines, col)
+                graph.stylize(col, 0, len(val_string))
+                self.group.renderables[k] = graph
 
         self.update_panel_content(self.group)
+
+    @property
+    def panel_height(self) -> int:
+        """Rows the panel needs: one graph per series plus the borders."""
+        return len(self.attrs) * _GRAPH_HEIGHT + 2
 
     async def on_resize(self, event):
         for ms in self.mem_streams:
             ms.reset_width(self.size.width - 4)
-
-        n = len(self.attrs)
-        available_height = self.size.height - 2
-        heights = [available_height // n] * n
-        for k in range(available_height % n):
-            heights[k] += 1
-
-        for ms, h in zip(self.mem_streams, heights):
-            ms.reset_height(h)
 
         self.refresh_table()

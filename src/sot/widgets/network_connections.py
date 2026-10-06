@@ -8,6 +8,7 @@ import psutil
 from rich.console import Group
 from rich.text import Text
 
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
@@ -94,6 +95,9 @@ UNAUTHORIZED
                 if conn.raddr:
                     remote_hosts.add(conn.raddr.ip)
 
+            t = theme()
+            c = t.colors
+            good, ok, warn, _ = c.health
             matrix_lines = []
 
             established = status_counts.get("ESTABLISHED", 0)
@@ -101,56 +105,56 @@ UNAUTHORIZED
             time_wait = status_counts.get("TIME_WAIT", 0)
 
             status_line1 = Text()
-            status_line1.append("▲ ACTIVE: ", style="bright_green")
-            status_line1.append(f"{established:>3}", style="bold bright_white")
+            status_line1.append("▲ ACTIVE: ", style=good)
+            status_line1.append(f"{established:>3}", style=f"bold {c.text}")
 
             status_line2 = Text()
-            status_line2.append("◆ LISTEN: ", style="bright_cyan")
-            status_line2.append(f"{listening:>3}", style="bold bright_white")
+            status_line2.append("◆ LISTEN: ", style=ok)
+            status_line2.append(f"{listening:>3}", style=f"bold {c.text}")
 
             status_line3 = Text()
-            status_line3.append("○ WAIT  : ", style="bright_yellow")
-            status_line3.append(f"{time_wait:>3}", style="bold bright_white")
+            status_line3.append("○ WAIT  : ", style=warn)
+            status_line3.append(f"{time_wait:>3}", style=f"bold {c.text}")
 
             matrix_lines.extend([status_line1, status_line2, status_line3])
 
             matrix_lines.append(Text(""))
 
             flow_line = Text()
-            flow_line.append(f"PORTS:{len(local_ports):>2} ", style="bright_cyan")
-            flow_line.append("◄─►", style="bright_white")
-            flow_line.append(f" HOSTS:{len(remote_hosts):>2}", style="bright_green")
+            flow_line.append(f"PORTS:{len(local_ports):>2} ", style=ok)
+            flow_line.append("◄─►", style=c.text)
+            flow_line.append(f" HOSTS:{len(remote_hosts):>2}", style=good)
             matrix_lines.append(flow_line)
 
             matrix_lines.append(Text(""))
-            matrix_lines.append(Text("DATA STREAMS:", style="dim bright_white"))
+            matrix_lines.append(Text("DATA STREAMS:", style=f"dim {c.text}"))
 
             conn_count = 0
             for conn in connections[:3]:
                 if conn.raddr and conn.status == "ESTABLISHED":
                     stream_line = Text()
-                    stream_line.append("▸ ", style="bright_cyan")
-                    stream_line.append(f"{conn.raddr.ip}", style="bright_green")
-                    stream_line.append(f":{conn.raddr.port}", style="bright_yellow")
+                    stream_line.append("▸ ", style=ok)
+                    stream_line.append(f"{conn.raddr.ip}", style=good)
+                    stream_line.append(f":{conn.raddr.port}", style=warn)
                     matrix_lines.append(stream_line)
                     conn_count += 1
                 if conn_count >= 3:
                     break
 
             if conn_count == 0:
-                matrix_lines.append(
-                    Text("▸ NO ACTIVE STREAMS", style="dim bright_black")
-                )
+                matrix_lines.append(Text("▸ NO ACTIVE STREAMS", style=c.muted))
 
             content = Group(*matrix_lines)
 
         except (psutil.AccessDenied, psutil.NoSuchProcess):
             lock_art = self.get_animated_lock()
-            content = Text(lock_art, style="bright_red", justify="center")
+            content = Text(lock_art, style=theme().colors.health[3], justify="center")
 
         except Exception as e:
             content = Text(
-                f"ERROR: {str(e)[:15]}...", style="bright_red", justify="center"
+                f"ERROR: {str(e)[:15]}...",
+                style=theme().colors.health[3],
+                justify="center",
             )
 
         self.update_panel_content(content)
