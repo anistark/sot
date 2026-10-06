@@ -13,6 +13,7 @@ import distro
 import psutil
 from rich.table import Table
 
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
@@ -37,7 +38,7 @@ class InfoWidget(BaseWidget):
         ustring = f"{username} @"
         node = platform.node()
         if node:
-            ustring += f" [b]{platform.node()}[/]"
+            ustring += f" [{theme().colors.label}]{platform.node()}[/]"
 
         system = platform.system()
         if system == "Linux":
@@ -61,23 +62,25 @@ class InfoWidget(BaseWidget):
 
         right = [f"💚 {uptime.days}d, {h}:{m:02d}h"]
 
+        t = theme()
+        c = t.colors
         bat = None
         if hasattr(psutil, "sensors_battery"):
             bat = psutil.sensors_battery()
         if bat is not None:
             bat_string = f"{bat.percent:.1f}%"
             if bat.power_plugged:
-                bat_string = "🔋 [aquamarine3]" + bat_string + "[/]"
+                bat_string = f"🔋 [{c.secondary}]" + bat_string + "[/]"
             elif bat.percent < 10:
-                bat_string = "🪫 [red3 reverse bold]" + bat_string + "[/]"
+                bat_string = f"🪫 [{c.danger} reverse bold]" + bat_string + "[/]"
             elif bat.percent < 15:
-                bat_string = "🪫 [slate_blue1]" + bat_string + "[/]"
+                bat_string = f"🪫 [{c.temp}]" + bat_string + "[/]"
             elif bat.percent < 20:
-                bat_string = "🔋 [yellow]" + bat_string + "[/]"
+                bat_string = f"🔋 [{c.primary}]" + bat_string + "[/]"
 
             # Handle invalid battery percentages
             if bat.percent < 0 or bat.percent > 100:
-                bat_string = "[red3 reverse bold]⚠ [/] " + bat_string
+                bat_string = f"[{c.danger} reverse bold]⚠ [/] " + bat_string
 
             right.append(bat_string)
 

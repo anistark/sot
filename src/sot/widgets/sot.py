@@ -3,10 +3,12 @@ SOT Widget
 """
 
 import math
+import random
 
 from rich.align import Align
 from rich.text import Text
 
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
@@ -50,12 +52,15 @@ class SotWidget(BaseWidget):
 
     def update_sine_wave(self):
         """Generate and display animated sine wave."""
-        width = getattr(self.size, "width", 40) - 4
-        height = getattr(self.size, "height", 10) - 3
+        t = theme()
+        c = t.colors
+        logo = t.design.logo
+        tagline = t.design.tagline
 
-        width = max(20, width)
-        height = max(4, min(7, height))
-
+        # Leave room for the borders, the gap, the logo and the tagline.
+        reserved = 3 + len(logo) + (1 if tagline else 0)
+        width = max(20, getattr(self.size, "width", 40) - 4)
+        height = max(1, min(7, getattr(self.size, "height", 10) - reserved))
         phase = self.animation_frame * 0.2
 
         lines = []
@@ -67,23 +72,31 @@ class SotWidget(BaseWidget):
             wave_line = self.get_sine_wave_line(width, y_offset, line_phase)
 
             if i < height // 3:
-                style = "bright_cyan"
+                style = c.wave[0]
             elif i < 2 * height // 3:
-                style = "sky_blue3"
+                style = c.wave[1]
             else:
-                style = "aquamarine3"
+                style = c.wave[2]
 
             lines.append(Text(wave_line, style=style))
 
-        big_sot_text = Text()
-        big_sot_text.append("\n")
-        big_sot_text.append("\n")
-        big_sot_text.append("      ▄▀▀  ▄▀▀▄  ▀█▀      ", style="bold bright_yellow")
-        big_sot_text.append("\n")
-        big_sot_text.append("      ▀▀▄  █  █   █       ", style="bold bright_yellow")
-        big_sot_text.append("\n")
-        big_sot_text.append("      ▄▄▀  ▀▄▄▀   █       ", style="bold bright_yellow")
-        big_sot_text.append("\n")
+        logo_width = max(len(line) for line in (*logo, tagline or ""))
+
+        big_sot_text = Text("\n\n")
+        glitching = t.design.glitch and self.animation_frame % 40 in (0, 1, 4)
+        for line in logo:
+            line = line.center(logo_width)
+            style = f"bold {c.logo}"
+            if glitching:
+                shift = random.choice((-2, -1, 1, 2))
+                line = line[shift:] + line[:shift]
+                style = f"bold {random.choice((c.danger, c.secondary, c.logo))}"
+            big_sot_text.append(line, style=style)
+            big_sot_text.append("\n")
+        if tagline:
+            big_sot_text.append(tagline.center(logo_width), style=c.muted)
+            big_sot_text.append("\n")
+        big_sot_text.right_crop(1)
 
         wave_display = Text()
         for i, line in enumerate(lines):

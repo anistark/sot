@@ -63,6 +63,14 @@ def build_manpage():
         help="Disk mountpoint to display (use without value for interactive selection)",
     )
 
+    parser.add_argument(
+        "--theme",
+        "-T",
+        metavar="THEME",
+        default="classic",
+        help="Color theme: classic, cyberpunk (default: $SOT_THEME or classic)",
+    )
+
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
         dest="command", metavar="{info,bench,disk,clean,ps}"
@@ -177,6 +185,9 @@ Interactive disk mountpoint selection
 .TP
 .B sot --disk /
 Monitor system with root disk
+.TP
+.B sot --theme cyberpunk
+Launch the TUI with the Cyberpunk 2077 inspired theme
 .TP
 .B sot info
 Display comprehensive system information

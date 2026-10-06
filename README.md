@@ -271,6 +271,9 @@ sot
 - **Disk Selection**: Use `--disk` / `-D` to monitor a specific volume
   - `sot --disk` - Interactive picker with arrow keys
   - `sot --disk /Volumes/External` - Monitor specific volume
+- **Theme**: Use `--theme` / `-T` to pick a color theme (`classic` or `cyberpunk`)
+  - `sot --theme cyberpunk` - Cyberpunk 2077 inspired neon theme
+  - Set `SOT_THEME=cyberpunk` to make it the default; also applies to `sot ps` and `sot disk`
 
 ---
 
@@ -596,7 +599,7 @@ sot -H
 
 ```
 usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]]
-           {info,bench,disk,clean,ps} ...
+           [--theme THEME] {info,bench,disk,clean,ps} ...
 
 Command-line System Obervation Tool ≈
 
@@ -613,6 +616,7 @@ options:
   --log LOG, -L LOG         Debug log file path (enables debug logging)
   --net NET, -N NET         Network interface to display (default: auto-detect best interface)
   --disk [DISK], -D [DISK]  Disk mountpoint to display (use without value for interactive selection)
+  --theme THEME, -T THEME   Color theme: classic, cyberpunk (default: $SOT_THEME or classic)
 ```
 
 For benchmark-specific options:

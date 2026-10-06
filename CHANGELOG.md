@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.0](https://github.com/anistark/sot/releases/tag/v6.3.0) - 2026-10-06
+
+### Added
+- **Themes** - Pick a colour theme with `--theme` / `-T` or the `SOT_THEME` environment variable
+  - `classic` stays the default and looks the same as before
+  - New `cyberpunk` preset inspired by Cyberpunk 2077: neon yellow, cyan, pink and terminal green on near-black
+  - Themes restyle components, not just colours: tag-style panel titles, block bar graphs that fade toward pink, segmented meters, striped tables and a glitching logo
+  - Applies to the main dashboard, `sot ps` and `sot disk`
+
+### Changed
+- **Memory panel** - Each memory graph is now a fixed 2 rows and the panel's row shrinks to fit, giving the spare rows to the CPU, disk and network panels
+  - The GPU graph and the SOT animation shrink to fit the shorter row instead of being cut off
+
 ## [6.2.0](https://github.com/anistark/sot/releases/tag/v6.2.0) - 2026-09-17
 
 ### Added

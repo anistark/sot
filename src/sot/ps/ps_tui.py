@@ -15,6 +15,7 @@ from textual.widget import Widget
 from textual.widgets import Footer, Header
 
 from .._helpers import sizeof_fmt
+from .._theme import apply_to_app, theme
 from ..widgets.process_sorter import SortManager
 from ..widgets.processes import get_process_list
 
@@ -61,16 +62,20 @@ class ProcessListPanel(Widget):
         self.refresh()
 
     def render(self):
+        t = theme()
+        c = t.colors
+        sep = t.design.separator
         table = Table(
+            row_styles=t.row_styles(),
             show_header=True,
-            header_style="bold cyan",
+            header_style=f"bold {c.accent}",
             box=None,
             padding=(0, 1),
             expand=True,
         )
 
         table.add_column("PID", justify="right", width=8)
-        table.add_column("Process", style="aquamarine3", no_wrap=True, ratio=1)
+        table.add_column("Process", style=c.secondary, no_wrap=True, ratio=1)
         table.add_column("Memory", justify="right", width=8)
         table.add_column("CPU %", justify="right", width=7)
 
@@ -84,7 +89,7 @@ class ProcessListPanel(Widget):
             pid = str(proc.get("pid", ""))
             name = proc.get("name", "")
             if is_selected:
-                name = f"▶ {name}"
+                name = f"{t.design.cursor}{name}"
 
             mem_info = proc.get("memory_info")
             mem_str = (
@@ -94,7 +99,7 @@ class ProcessListPanel(Widget):
             cpu = proc.get("cpu_percent", 0) or 0
             cpu_str = f"{cpu:.1f}"
 
-            style = "black on white" if is_selected else None
+            style = c.selected if is_selected else None
             table.add_row(pid, name, mem_str, cpu_str, style=style)
 
         total = len(self.processes)
@@ -109,15 +114,17 @@ class ProcessListPanel(Widget):
             columns_display = " | ".join(
                 col.display_name for col in self.sort_manager.COLUMNS[:4]
             )
-            title = f"[bold yellow on black] ORDER BY [/] - [bold cyan]{current_col}[/] [bold magenta]{direction}[/] - {columns_display}"
-            border_style = "yellow" if self.has_focus else "bright_yellow"
+            title = f"[{c.alert_tag}] ORDER BY [/]{sep}[bold {c.accent}]{current_col}[/] [bold magenta]{direction}[/]{sep}{columns_display}"
+            border_style = c.border_alert
         else:
             sort_indicator = self.sort_manager.get_sort_indicator_str()
             help_text = "O order | ↑↓ | ⏎ info | K kill | T term | R refresh"
-            title = f"[bold]Processes {scroll_info}[/] - [cyan]Sort: {sort_indicator}[/] - [dim]{help_text}[/]"
-            border_style = "bright_cyan" if self.has_focus else "dim"
+            title = f"{t.title(f'Processes {scroll_info}')}{sep}[{c.accent}]Sort: {sort_indicator}[/]{sep}[{c.muted}]{help_text}[/]"
+            border_style = c.accent if self.has_focus else c.muted
 
-        return Panel(table, title=title, border_style=border_style)
+        return Panel(
+            table, title=title, border_style=border_style, box=t.design.app_box
+        )
 
     def handle_navigation_keys(self, key_pressed: str) -> bool:
         if key_pressed == "up":
@@ -332,21 +339,26 @@ class PortListPanel(Widget):
         self.refresh()
 
     def render(self):
+        t = theme()
+        c = t.colors
+        sep = t.design.separator
         if not self.ports:
             content = Align.center(
-                Text("No ports detected\n(May require sudo on macOS)", style="dim"),
+                Text("No ports detected\n(May require sudo on macOS)", style=c.muted),
                 vertical="middle",
             )
-            border_style = "bright_cyan" if self.has_focus else "dim"
+            border_style = c.accent if self.has_focus else c.muted
             return Panel(
                 content,
-                title="[bold]Listening Ports (0)[/]",
+                title=t.title("Listening Ports (0)"),
                 border_style=border_style,
+                box=t.design.app_box,
             )
 
         table = Table(
+            row_styles=t.row_styles(),
             show_header=True,
-            header_style="bold cyan",
+            header_style=f"bold {c.accent}",
             box=None,
             padding=(0, 1),
             expand=True,
@@ -354,7 +366,7 @@ class PortListPanel(Widget):
 
         table.add_column("Port", justify="right", width=7)
         table.add_column("Address", justify="left", width=15)
-        table.add_column("Process", style="aquamarine3", no_wrap=True, ratio=1)
+        table.add_column("Process", style=c.secondary, no_wrap=True, ratio=1)
         table.add_column("PID", justify="right", width=8)
 
         end_index = min(len(self.ports), self.scroll_position + self.visible_rows)
@@ -368,11 +380,11 @@ class PortListPanel(Widget):
             address = port_info["address"]
             name = port_info["name"]
             if is_selected:
-                name = f"▶ {name}"
+                name = f"{t.design.cursor}{name}"
 
             pid = str(port_info["pid"]) if port_info["pid"] else "-"
 
-            style = "black on white" if is_selected else None
+            style = c.selected if is_selected else None
             table.add_row(port, address, name, pid, style=style)
 
         total = len(self.ports)
@@ -383,10 +395,12 @@ class PortListPanel(Widget):
 
         sort_dir = "↓" if self.sort_reverse else "↑"
         help_text = "O sort | S dir | ↑↓ | ⏎ info | K kill | T term | R refresh"
-        title = f"[bold]Ports {scroll_info}[/] - [cyan]Sort: {self.sort_by} {sort_dir}[/] - [dim]{help_text}[/]"
-        border_style = "bright_cyan" if self.has_focus else "dim"
+        title = f"{t.title(f'Ports {scroll_info}')}{sep}[{c.accent}]Sort: {self.sort_by} {sort_dir}[/]{sep}[{c.muted}]{help_text}[/]"
+        border_style = c.accent if self.has_focus else c.muted
 
-        return Panel(table, title=title, border_style=border_style)
+        return Panel(
+            table, title=title, border_style=border_style, box=t.design.app_box
+        )
 
     def handle_navigation_keys(self, key_pressed: str) -> bool:
         if key_pressed == "up":
@@ -617,27 +631,32 @@ class DevEnvPanel(Widget):
         self.refresh()
 
     def render(self):
+        t = theme()
+        c = t.colors
+        sep = t.design.separator
         if not self.dev_servers:
             content = Align.center(
-                Text("No dev servers detected", style="dim"), vertical="middle"
+                Text("No dev servers detected", style=c.muted), vertical="middle"
             )
-            border_style = "bright_cyan" if self.has_focus else "dim"
+            border_style = c.accent if self.has_focus else c.muted
             return Panel(
                 content,
-                title="[bold]Development Environment[/]",
+                title=t.title("Development Environment"),
                 border_style=border_style,
+                box=t.design.app_box,
             )
 
         table = Table(
+            row_styles=t.row_styles(),
             show_header=True,
-            header_style="bold cyan",
+            header_style=f"bold {c.accent}",
             box=None,
             padding=(0, 1),
             expand=True,
         )
 
         table.add_column("Type", justify="left", width=12)
-        table.add_column("Processes", style="aquamarine3", no_wrap=True, ratio=1)
+        table.add_column("Processes", style=c.secondary, no_wrap=True, ratio=1)
         table.add_column("Ports", justify="left", width=15)
         table.add_column("CPU%", justify="right", width=6)
         table.add_column("Mem", justify="right", width=8)
@@ -654,23 +673,25 @@ class DevEnvPanel(Widget):
                 name = ", ".join(processes) if processes else "-"
 
             if is_selected:
-                name = f"▶ {name}"
+                name = f"{t.design.cursor}{name}"
 
             ports = ", ".join(map(str, server["ports"])) if server["ports"] else "-"
             cpu = f"{server['cpu']:.1f}"
             mem = sizeof_fmt(server["memory_mb"] * 1024 * 1024, suffix="", sep="")
 
-            style = "black on white" if is_selected else None
+            style = c.selected if is_selected else None
             table.add_row(env_type, name, ports, cpu, mem, style=style)
 
         total_count = sum((s["count"] for s in self.dev_servers), start=0)
         total_types = len(self.dev_servers)
         sort_dir = "↓" if self.sort_reverse else "↑"
         help_text = "O sort | S dir | ↑↓ | ⏎ info | R refresh"
-        title = f"[bold]Dev Env ({total_types} types, {total_count} procs)[/] - [cyan]Sort: {self.sort_by} {sort_dir}[/] - [dim]{help_text}[/]"
-        border_style = "bright_cyan" if self.has_focus else "dim"
+        title = f"{t.title(f'Dev Env ({total_types} types, {total_count} procs)')}{sep}[{c.accent}]Sort: {self.sort_by} {sort_dir}[/]{sep}[{c.muted}]{help_text}[/]"
+        border_style = c.accent if self.has_focus else c.muted
 
-        return Panel(table, title=title, border_style=border_style)
+        return Panel(
+            table, title=title, border_style=border_style, box=t.design.app_box
+        )
 
     def handle_navigation_keys(self, key_pressed: str) -> bool:
         if key_pressed == "up":
@@ -764,6 +785,10 @@ class ProcessTUIApp(App):
         ("q", "quit", "Quit"),
         ("tab", "focus_next", "Next Section"),
     ]
+
+    def __init__(self):
+        super().__init__()
+        apply_to_app(self)
 
     def compose(self) -> ComposeResult:
         yield Header()

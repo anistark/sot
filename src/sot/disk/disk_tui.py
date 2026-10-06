@@ -14,6 +14,7 @@ from textual.widgets import Footer, Header, ListItem, ListView, Static
 
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
+from .._theme import apply_to_app, theme
 from .volumes import get_volume_info, usage_style
 
 
@@ -42,19 +43,18 @@ class PartitionBox(Static):
         part = self.partition_info
         part_usage = part["usage"]
 
-        # Calculate bar width and blocks
         part_bar_width = 12
-        part_used_blocks = int((part_usage.percent / 100) * part_bar_width)
-        part_free_blocks = part_bar_width - part_used_blocks
 
         # Choose color based on usage
         bar_style = usage_style(part_usage.percent)
 
+        t = theme()
+        c = t.colors
         # Build partition box content - compact
         part_lines = []
-        part_lines.append(Text(f"Device: {part['device']}", style="dim"))
+        part_lines.append(Text(f"Device: {part['device']}", style=c.muted))
         part_lines.append(Text(f"Mount: {part['mountpoint']}", style="white"))
-        part_lines.append(Text(f"FS: {part['fstype']}", style="dim"))
+        part_lines.append(Text(f"FS: {part['fstype']}", style=c.muted))
         part_lines.append(
             Text(f"Size: {sizeof_fmt(part_usage.total, fmt='.1f')}", style="white")
         )
@@ -67,8 +67,11 @@ class PartitionBox(Static):
 
         usage_line = Text()
         usage_line.append(f"{part_used_str} ", style="bold white")
-        usage_line.append("█" * part_used_blocks, style=bar_style)
-        usage_line.append("░" * part_free_blocks, style="dim")
+        usage_line.append_text(
+            t.meter(
+                part_usage.percent / 100, part_bar_width, bar_style, empty_style=c.muted
+            )
+        )
         usage_line.append(f" {part_free_str}", style="bold white")
         part_lines.append(usage_line)
 
@@ -84,6 +87,7 @@ class PartitionBox(Static):
                 partition_content,
                 title=f"[bold]{part['partition_id']}[/bold]",
                 border_style=bar_style,
+                box=t.design.app_box,
                 padding=(0, 1),
             )
         )
@@ -107,9 +111,11 @@ class VolumeInfoPanel(Static):
             self.update("Select a volume to view information")
             return
 
+        t = theme()
+        c = t.colors
         # Build volume information table
         info_table = Table(box=None, show_header=False, expand=True, padding=(0, 1))
-        info_table.add_column("Label", style="bold cyan", width=18)
+        info_table.add_column("Label", style=f"bold {c.accent}", width=18)
         info_table.add_column("Value", style="white")
 
         # Volume/Disk identification
@@ -127,8 +133,6 @@ class VolumeInfoPanel(Static):
 
         # Main disk usage bar
         bar_width = 40
-        used_blocks = int((usage.percent / 100) * bar_width)
-        free_blocks = bar_width - used_blocks
 
         main_bar_style = usage_style(usage.percent)
 
@@ -137,8 +141,9 @@ class VolumeInfoPanel(Static):
 
         main_usage_bar = Text()
         main_usage_bar.append(f"{used_str} ", style="bold white")
-        main_usage_bar.append("█" * used_blocks, style=main_bar_style)
-        main_usage_bar.append("░" * free_blocks, style="dim")
+        main_usage_bar.append_text(
+            t.meter(usage.percent / 100, bar_width, main_bar_style, empty_style=c.muted)
+        )
         main_usage_bar.append(f" {free_str}", style="bold white")
 
         main_percent = Text(
@@ -153,8 +158,8 @@ class VolumeInfoPanel(Static):
 
         # Build content with partition boxes
         content_parts = [
-            Text(f"\n{volume_name}", style="bold bright_cyan"),
-            Text(f"{primary_mountpoint}\n", style="dim"),
+            Text(f"\n{volume_name}", style=f"bold {c.accent}"),
+            Text(f"{primary_mountpoint}\n", style=c.muted),
             info_table,
             Text(""),
             main_usage_bar,
@@ -164,9 +169,9 @@ class VolumeInfoPanel(Static):
         # I/O Statistics (aggregate from all disks)
         io_stats = self.current_volume.get("io_stats")
         if io_stats:
-            content_parts.append(Text("\nI/O Statistics", style="bold yellow"))
+            content_parts.append(Text("\nI/O Statistics", style=f"bold {c.primary}"))
             io_table = Table(box=None, show_header=False, padding=(0, 1))
-            io_table.add_column("Label", style="dim", width=12)
+            io_table.add_column("Label", style=c.muted, width=12)
             io_table.add_column("Value", style="white")
             io_table.add_row(
                 "Read",
@@ -179,9 +184,10 @@ class VolumeInfoPanel(Static):
             content_parts.append(io_table)
 
         # Partitions as compact visual boxes
+        frame = dict(border_style=c.accent, box=t.design.app_box, padding=(0, 1))
         if partitions:
             content_parts.append(
-                Text(f"\n{len(partitions)} Partition(s):", style="bold yellow")
+                Text(f"\n{len(partitions)} Partition(s):", style=f"bold {c.primary}")
             )
 
             # Create rows of 2 partitions each for compact layout
@@ -200,20 +206,21 @@ class VolumeInfoPanel(Static):
 
                     # Build compact partition info
                     part_bar_width = 10
-                    part_used_blocks = int((part_usage.percent / 100) * part_bar_width)
-                    part_free_blocks = part_bar_width - part_used_blocks
 
                     part_used_str = sizeof_fmt(part_usage.used, fmt=".1f")
 
-                    usage_bar = Text()
-                    usage_bar.append("█" * part_used_blocks, style=bar_style)
-                    usage_bar.append("░" * part_free_blocks, style="dim")
+                    usage_bar = t.meter(
+                        part_usage.percent / 100,
+                        part_bar_width,
+                        bar_style,
+                        empty_style=c.muted,
+                    )
 
                     # Create a compact table for this partition
                     part_display = Table.grid(padding=(0, 1))
-                    part_display.add_column(style="bold cyan", justify="left")
+                    part_display.add_column(style=f"bold {c.accent}", justify="left")
                     part_display.add_row(f"[bold]{part['partition_id']}[/bold]")
-                    part_display.add_row(f"[dim]{part['mountpoint']}[/dim]")
+                    part_display.add_row(f"[{c.muted}]{part['mountpoint']}[/]")
                     part_display.add_row(
                         f"{part_used_str} / {sizeof_fmt(part_usage.total, fmt='.1f')}"
                     )
@@ -230,17 +237,22 @@ class VolumeInfoPanel(Static):
                     row_table.add_column(ratio=1)
                     row_table.add_column(ratio=1)
                     row_table.add_row(
-                        Panel(row_parts[0], border_style="cyan", padding=(0, 1)),
-                        Panel(row_parts[1], border_style="cyan", padding=(0, 1)),
+                        Panel(row_parts[0], **frame),
+                        Panel(row_parts[1], **frame),
                     )
                     content_parts.append(row_table)
                 elif len(row_parts) == 1:
-                    content_parts.append(
-                        Panel(row_parts[0], border_style="cyan", padding=(0, 1))
-                    )
+                    content_parts.append(Panel(row_parts[0], **frame))
 
         content = Group(*content_parts)
-        self.update(Panel(content, title="Volume Information", border_style="cyan"))
+        self.update(
+            Panel(
+                content,
+                title=t.title("Volume Information"),
+                border_style=c.accent,
+                box=t.design.app_box,
+            )
+        )
 
     def on_mount(self):
         """Set interval to refresh volume info."""
@@ -293,6 +305,7 @@ class DiskTUIApp(App):
 
     def __init__(self):
         super().__init__()
+        apply_to_app(self)
         self.volumes = []
 
     def compose(self) -> ComposeResult:
@@ -346,7 +359,7 @@ class DiskTUIApp(App):
 
             label = Text()
             label.append(f"{volume_name} ", style="bold white")
-            label.append(f"\n  {used}/{total} ", style="dim")
+            label.append(f"\n  {used}/{total} ", style=theme().colors.muted)
             label.append(f"({percent:.3f}%)", style=style)
 
             list_item = VolumeListItem(volume, Static(label))

@@ -9,6 +9,7 @@ from rich.align import Align
 from rich.console import Group
 from rich.text import Text
 
+from .._theme import theme
 from .base_widget import BaseWidget
 
 
@@ -94,37 +95,29 @@ class HealthScoreWidget(BaseWidget):
 
         return overall_score, scores
 
+    @staticmethod
+    def get_score_level(score):
+        """Health level for a score: 0 (good) to 3 (critical)."""
+        if score >= 80:
+            return 0
+        elif score >= 60:
+            return 1
+        elif score >= 40:
+            return 2
+        return 3
+
     def get_score_color(self, score):
         """Get color based on score value"""
-        if score >= 80:
-            return "bright_green"
-        elif score >= 60:
-            return "bright_cyan"
-        elif score >= 40:
-            return "bright_yellow"
-        else:
-            return "bright_red"
+        return theme().colors.health[self.get_score_level(score)]
 
     def get_ascii_bar(self, score, width=8):
-        """Generate ASCII bar graph for a score (0-100)"""
-        filled_blocks = int((score / 100) * width)
-        empty_blocks = width - filled_blocks
-
-        if score >= 80:
-            fill_char = "█"
-            color = "bright_green"
-        elif score >= 60:
-            fill_char = "▓"
-            color = "bright_cyan"
-        elif score >= 40:
-            fill_char = "▒"
-            color = "bright_yellow"
-        else:
-            fill_char = "░"
-            color = "bright_red"
-
-        bar = fill_char * filled_blocks + "░" * empty_blocks
-        return f"[{color}]{bar}[/]"
+        """Generate a meter for a score (0-100)"""
+        return theme().meter(
+            score / 100,
+            width,
+            self.get_score_color(score),
+            level=self.get_score_level(score),
+        )
 
     def update_content(self):
         """Update the health score content with cyberpunk styling."""
@@ -133,9 +126,11 @@ class HealthScoreWidget(BaseWidget):
         main_bar = self.get_ascii_bar(overall_score, available_width)
         score_color = self.get_score_color(overall_score)
         score_display = Text()
-        score_display.append("▸ ", style="bright_cyan")
+        t = theme()
+        c = t.colors
+        score_display.append("▸ ", style=c.accent)
         score_display.append(f"{overall_score:.0f}", style=f"bold {score_color}")
-        score_display.append("%", style="dim bright_white")
+        score_display.append("%", style=f"dim {c.text}")
 
         status_lines = []
         component_width = max(16, self.size.width - 6) if hasattr(self, "size") else 16
@@ -143,21 +138,10 @@ class HealthScoreWidget(BaseWidget):
         for component, (score, weight) in component_scores.items():
             color = self.get_score_color(score)
 
-            if score >= 80:
-                indicator = "●"
-                ind_color = "bright_green"
-            elif score >= 60:
-                indicator = "◐"
-                ind_color = "bright_cyan"
-            elif score >= 40:
-                indicator = "◑"
-                ind_color = "bright_yellow"
-            else:
-                indicator = "○"
-                ind_color = "bright_red"
+            indicator = t.design.indicators[self.get_score_level(score)]
 
             status_line = Text()
-            status_line.append(f"{indicator} ", style=ind_color)
+            status_line.append(f"{indicator} ", style=color)
             component_name = component if component != "Processes" else "Procs"
             if component == "Temperature":
                 component_name = "Temperature"
@@ -170,7 +154,7 @@ class HealthScoreWidget(BaseWidget):
                 1, component_width - total_left_width - len(percentage_text)
             )
 
-            status_line.append(left_part, style="bright_white")
+            status_line.append(left_part, style=c.text)
             status_line.append(" " * spaces_needed, style="")
             status_line.append(percentage_text, style=color)
 

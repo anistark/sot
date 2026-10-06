@@ -3,7 +3,7 @@
 sot \- sot is a Command\-line System Observation Tool in the spirit of top. It displays various interesting system stats and graphs them. Works on all operating systems.
 .SH SYNOPSIS
 .B sot
-[--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] {info,bench,disk,clean,ps} ...
+[--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] [--theme THEME] {info,bench,disk,clean,ps} ...
 .SH DESCRIPTION
 Command\-line System Observation Tool ≈
 
@@ -75,6 +75,10 @@ Network interface to display (default: auto\-detect best interface)
 .TP
 \fB\-\-disk\fR \fI\,[DISK]\/\fR, \fB\-D\fR \fI\,[DISK]\/\fR
 Disk mountpoint to display (use without value for interactive selection)
+
+.TP
+\fB\-\-theme\fR \fI\,THEME\/\fR, \fB\-T\fR \fI\,THEME\/\fR
+Color theme: classic, cyberpunk (default: $SOT_THEME or classic)
 .SH EXAMPLES
 .TP
 .B sot
@@ -88,6 +92,9 @@ Interactive disk mountpoint selection
 .TP
 .B sot --disk /
 Monitor system with root disk
+.TP
+.B sot --theme cyberpunk
+Launch the TUI with the Cyberpunk 2077 inspired theme
 .TP
 .B sot info
 Display comprehensive system information

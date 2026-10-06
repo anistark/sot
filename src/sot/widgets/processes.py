@@ -13,6 +13,7 @@ from textual import events
 from textual.message import Message
 
 from .._helpers import sizeof_fmt
+from .._theme import theme
 from .base_widget import BaseWidget
 from .process_sorter import SortManager
 
@@ -315,9 +316,12 @@ class ProcessesWidget(BaseWidget):
 
     def refresh_display(self):
         """Refresh the process list display with current selection and scrolling."""
+        t = theme()
+        c = t.colors
         process_table = Table(
+            row_styles=t.row_styles(),
             show_header=True,
-            header_style="bold",
+            header_style=c.label,
             box=None,
             padding=(0, 1),
             expand=True,
@@ -326,17 +330,17 @@ class ProcessesWidget(BaseWidget):
         process_table.add_column(
             Text("PID", justify="left"), no_wrap=True, justify="right", width=8
         )
-        process_table.add_column("Process", style="aquamarine3", no_wrap=True, ratio=1)
+        process_table.add_column("Process", style=c.secondary, no_wrap=True, ratio=1)
         process_table.add_column(
             Text("🧵", justify="left"),
-            style="aquamarine3",
+            style=c.secondary,
             no_wrap=True,
             justify="right",
             width=4,
         )
         process_table.add_column(
             Text("Memory", justify="left"),
-            style="aquamarine3",
+            style=c.secondary,
             no_wrap=True,
             justify="right",
             width=8,
@@ -345,14 +349,14 @@ class ProcessesWidget(BaseWidget):
         if self.show_network_details:
             process_table.add_column(
                 Text("Net I/O", justify="left"),
-                style="yellow",
+                style=c.primary,
                 no_wrap=True,
                 justify="right",
                 width=9,
             )
             process_table.add_column(
                 Text("Conn", justify="left"),
-                style="sky_blue3",
+                style=c.info,
                 no_wrap=True,
                 justify="right",
                 width=4,
@@ -420,8 +424,8 @@ class ProcessesWidget(BaseWidget):
 
             row_style = None
             if is_selected_row:
-                row_style = "black on white"
-                process_name = f"▶ {process_name}"
+                row_style = c.selected
+                process_name = f"{t.design.cursor}{process_name}"
 
             row_data = [
                 process_id_str,
@@ -456,7 +460,7 @@ class ProcessesWidget(BaseWidget):
             scroll_info = f"({total_processes})"
 
         title_parts = [
-            "[b]📋 Processes[/]",
+            t.title("📋 Processes"),
             f"{total_processes} {scroll_info} ({total_num_threads} 🧵)",
             f"{num_sleeping_processes} 😴",
         ]
@@ -465,7 +469,7 @@ class ProcessesWidget(BaseWidget):
             title_parts.append(f"{total_connections} 🌐")
 
         sort_indicator = self.sort_manager.get_sort_indicator_str()
-        title_parts.append(f"[cyan]Sort: {sort_indicator}[/]")
+        title_parts.append(f"[{c.accent}]Sort: {sort_indicator}[/]")
 
         focus_indicator = "🔍" if self.has_focus else "○"
         if self.sort_manager.sort_mode_active:
@@ -475,11 +479,10 @@ class ProcessesWidget(BaseWidget):
                 col.display_name for col in self.sort_manager.COLUMNS
             )
 
-            panel_title = f"[bold yellow on black] ORDER BY [/] - [bold cyan]{current_col}[/] [bold magenta]{direction}[/] - {columns_display}"
+            sep = t.design.separator
+            panel_title = f"[{c.alert_tag}] ORDER BY [/]{sep}[bold {c.accent}]{current_col}[/] [bold magenta]{direction}[/]{sep}{columns_display}"
             self.panel.title = panel_title
-
-            border_style = "yellow" if self.has_focus else "bright_yellow"
-            self.panel.border_style = border_style
+            self.panel.border_style = c.border_alert
         else:
             if self.is_interactive_mode:
                 help_text = "O order | ↑↓ | ⏎ info | K kill | T terminate | R refresh"
@@ -487,17 +490,16 @@ class ProcessesWidget(BaseWidget):
                     help_text += " | N hide net"
                 else:
                     help_text += " | N show net"
-                title_parts.append(f"[dim]{focus_indicator} {help_text}[/]")
+                title_parts.append(f"[{c.muted}]{focus_indicator} {help_text}[/]")
             else:
                 title_parts.append(
-                    f"[dim]{focus_indicator} Press I for interactive mode[/]"
+                    f"[{c.muted}]{focus_indicator} Press I for interactive mode[/]"
                 )
 
-            panel_title = " - ".join(title_parts)
+            panel_title = t.design.separator.join(title_parts)
             self.panel.title = panel_title
 
-            border_style = "bright_white" if self.has_focus else "bright_black"
-            self.panel.border_style = border_style
+            self.panel.border_style = c.border_focus if self.has_focus else c.border
 
         self.update_panel_content(process_table)
 
