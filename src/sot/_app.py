@@ -9,24 +9,12 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from textual.app import App, ComposeResult
-from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
-from ._gpu import has_gpu
-from ._theme import DEFAULT_THEME, THEMES, apply_to_app, set_theme
-from .widgets import (
-    CPUWidget,
-    DiskWidget,
-    GpuWidget,
-    HealthScoreWidget,
-    InfoWidget,
-    MemoryWidget,
-    NetworkConnectionsWidget,
-    NetworkWidget,
-    ProcessesWidget,
-    SotWidget,
-)
+from ._theme import DEFAULT_THEME, THEMES, set_theme, theme
+from .tui.app import SotApp
+
+__all__ = ["SotApp", "run"]
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
@@ -75,255 +63,21 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
             super().start_section(heading)
 
 
-# Main SOT Application
-class SotApp(App):
-    """SOT - System Observation Tool with interactive process management."""
-
-    CSS = """
-    Screen {
-        layout: grid;
-        grid-size: 3;
-        grid-columns: 35fr 20fr 45fr;
-        grid-rows: 1 1fr 1.2fr 1.1fr;
-    }
-
-    #info-line {
-        column-span: 3;
-    }
-
-    #procs-list {
-        row-span: 2;
-    }
-    """
-
-    def __init__(
-        self,
-        net_interface=None,
-        disk_mountpoint=None,
-        log_file=None,
-        theme_name=DEFAULT_THEME,
-    ):
-        set_theme(theme_name)
-        super().__init__()
-        apply_to_app(self)
-        self.net_interface = net_interface
-        self.disk_mountpoint = disk_mountpoint
-        self.log_file = log_file
-        self.pending_kill = None
-        self._waiting_for_kill_confirmation = False
-
-        if log_file:
-            os.environ["TEXTUAL_LOG"] = log_file
-
-    def compose(self) -> ComposeResult:
-        yield Header()
-
-        # Row 1: Info line (spans all 3 columns)
-        info_line = InfoWidget()
-        info_line.id = "info-line"
-        yield info_line
-
-        # Row 2: CPU, Health Score, Process List (starts)
-        cpu_widget = CPUWidget()
-        cpu_widget.id = "cpu-widget"
-        yield cpu_widget
-
-        health_widget = HealthScoreWidget()
-        health_widget.id = "health-widget"
-        yield health_widget
-
-        procs_list = ProcessesWidget()
-        procs_list.id = "procs-list"
-        yield procs_list
-
-        # Row 3: Memory, GPU/Sot Widget (Process List continues)
-        mem_widget = MemoryWidget()
-        mem_widget.id = "mem-widget"
-        yield mem_widget
-
-        # Show live GPU stats when a GPU is detected; otherwise keep the
-        # decorative SOT animation in this slot.
-        if has_gpu():
-            gpu_widget = GpuWidget()
-            gpu_widget.id = "gpu-widget"
-            yield gpu_widget
-        else:
-            sot_widget = SotWidget()
-            sot_widget.id = "sot-widget"
-            yield sot_widget
-
-        # Row 4: Disk, Network Connections, Network Widget
-        disk_widget = DiskWidget(self.disk_mountpoint)
-        disk_widget.id = "disk-widget"
-        yield disk_widget
-
-        connections_widget = NetworkConnectionsWidget()
-        connections_widget.id = "connections-widget"
-        yield connections_widget
-
-        # Pass the network interface to the NetworkWidget
-        net_widget = NetworkWidget(self.net_interface)
-        net_widget.id = "net-widget"
-        yield net_widget
-
-    def on_mount(self) -> None:
-        self.title = "SOT"
-
-        subtitle_parts = []
-        if self.net_interface:
-            subtitle_parts.append(f"Net: {self.net_interface}")
-        if self.disk_mountpoint:
-            subtitle_parts.append(f"Disk: {self.disk_mountpoint}")
-
-        if subtitle_parts:
-            self.sub_title = f"System Observation Tool - {', '.join(subtitle_parts)}"
-        else:
-            self.sub_title = "System Observation Tool"
-
-        # Set initial focus to the process list for interactive features
-        self.set_focus(self.query_one("#procs-list"))
-
-        # Memory graphs have a fixed height; size their grid row to match.
-        mem = self.query_one("#mem-widget", MemoryWidget)
-        self.screen.styles.grid_rows = f"1 1fr {mem.panel_height} 1.1fr"
-
-    async def on_load(self, _):
-        self.bind("q", "quit")
-
-    def on_key(self, event) -> None:
-        """Handle key events for kill confirmation."""
-        if self._waiting_for_kill_confirmation and self.pending_kill:
-            if event.key == "y":
-                self._waiting_for_kill_confirmation = False
-                self._kill_process(self.pending_kill["process_info"])
-            else:
-                # Any other key cancels
-                self._waiting_for_kill_confirmation = False
-                self.notify("❌ Kill cancelled", timeout=2)
-            event.prevent_default()
-
-    def on_processes_widget_process_selected(
-        self, message: ProcessesWidget.ProcessSelected
-    ) -> None:
-        """Handle process selection from the process list with enhanced network details."""
-        from ._process_utils import format_process_details
-
-        process_info = message.process_info
-        process_name = process_info.get("name", "Unknown")
-        process_id = process_info.get("pid", "N/A")
-
-        details = format_process_details(process_info)
-
-        if self.log_file:
-            self.log(f"Process selected: {process_name} (PID: {process_id})")
-
-        self.notify("\n".join(details), timeout=5)
-
-    def on_processes_widget_kill_request(
-        self, message: ProcessesWidget.KillRequest
-    ) -> None:
-        """Handle kill request by showing a pending confirmation."""
-        process_info = message.process_info
-        process_name = process_info.get("name", "Unknown")
-        process_id = process_info.get("pid", "N/A")
-
-        # Store pending kill for confirmation
-        self.pending_kill = {
-            "process_info": process_info,
-            "process_name": process_name,
-            "process_id": process_id,
-            "timestamp": 0,
-        }
-
-        # Show confirmation prompt with danger emoji and error severity (red)
-        self.notify(
-            f"⚠️  KILL {process_name}? Press 'y' to confirm, any key to cancel",
-            severity="error",
-            timeout=10,
-        )
-
-        # Listen for confirmation key in the next on_key event
-        self._waiting_for_kill_confirmation = True
-
-        # Auto-cancel after 10 seconds (matching notification timeout)
-        def reset_confirmation():
-            if self._waiting_for_kill_confirmation:
-                self._waiting_for_kill_confirmation = False
-                self.notify("❌ Kill action expired", severity="error", timeout=2)
-
-        self.set_timer(10.0, reset_confirmation)
-
-    def _kill_process(self, process_info: dict) -> None:
-        """Execute the kill process action."""
-        from ._process_utils import kill_process
-
-        process_id = process_info.get("pid")
-        process_name = process_info.get("name", "Unknown")
-
-        if not isinstance(process_id, int):
-            self.notify("❌ Invalid process ID", severity="error", timeout=3)
-            return
-
-        if self.log_file:
-            self.log(f"Attempting to kill process: {process_name} (PID: {process_id})")
-
-        result = kill_process(process_id, process_name)
-
-        if result.success and self.log_file:
-            self.log(f"Successfully killed process: {process_name} (PID: {process_id})")
-
-        self.notify(result.message, severity=result.severity, timeout=4)
-
-    def on_processes_widget_process_action(
-        self, message: ProcessesWidget.ProcessAction
-    ) -> None:
-        """Handle process actions like kill/terminate from the process list."""
-        from ._process_utils import kill_process, terminate_process
-
-        action = message.action
-        process_info = message.process_info
-        process_id = process_info.get("pid")
-        process_name = process_info.get("name", "Unknown")
-
-        if not isinstance(process_id, int):
-            self.notify("❌ Invalid process ID", severity="error", timeout=3)
-            return
-
-        if self.log_file:
-            self.log(
-                f"Attempting to {action} process: {process_name} (PID: {process_id})"
-            )
-
-        if action == "kill":
-            result = kill_process(process_id, process_name)
-        elif action == "terminate":
-            result = terminate_process(process_id, process_name)
-        else:
-            self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
-            return
-
-        if result.success and self.log_file:
-            self.log(
-                f"Successfully {action}ed process: {process_name} (PID: {process_id})"
-            )
-
-        self.notify(result.message, severity=result.severity, timeout=4)
-
-
 def _show_styled_version():
     """Display a clean and focused version information."""
     console = Console()
+    t = theme()
+    c = t.colors
 
     title_text = Text()
-    title_text.append("      ▄▀▀  ▄▀▀▄  ▀█▀      \n", style="bold bright_yellow")
-    title_text.append("      ▀▀▄  █  █   █       \n", style="bold bright_yellow")
-    title_text.append("      ▄▄▀  ▀▄▄▀   █       \n", style="bold bright_yellow")
+    for line in t.design.logo:
+        title_text.append(f"{line}\n", style=f"bold {c.logo}")
     title_text.append("\n")
-    title_text.append("System Observation Tool", style="bold bright_cyan")
+    title_text.append("System Observation Tool", style=f"bold {c.accent}")
 
     version_table = Table(show_header=False, box=None, padding=(0, 1))
-    version_table.add_column("Label", style="dim", width=12)
-    version_table.add_column("Value", style="bold")
+    version_table.add_column("Label", style=c.muted, width=12)
+    version_table.add_column("Value", style=f"bold {c.text}")
 
     python_version = f"{version_info.major}.{version_info.minor}.{version_info.micro}"
     system_info = platform.system()
@@ -337,23 +91,25 @@ def _show_styled_version():
         except ImportError:
             system_info = f"Linux {platform.release()}"
 
-    version_table.add_row("Version:", f"[bright_green]{__version__}[/]")
-    version_table.add_row("Python:", f"[bright_blue]{python_version}[/]")
-    version_table.add_row("Platform:", f"[bright_magenta]{system_info}[/]")
-    version_table.add_row("Architecture:", f"[bright_yellow]{platform.machine()}[/]")
+    version_table.add_row("Version:", f"[{c.ok}]{__version__}[/]")
+    version_table.add_row("Python:", f"[{c.info}]{python_version}[/]")
+    version_table.add_row("Platform:", f"[{c.secondary}]{system_info}[/]")
+    version_table.add_row("Architecture:", f"[{c.primary}]{platform.machine()}[/]")
 
     main_panel = Panel(
         title_text,
-        title="[bold bright_white]System Observation Tool[/]",
+        title=f"[bold {c.text}]System Observation Tool[/]",
         title_align="center",
-        border_style="bright_cyan",
+        border_style=c.accent,
+        box=t.design.app_box,
         padding=(1, 2),
     )
 
     info_panel = Panel(
         version_table,
         title="[bold]📋 Version Information[/]",
-        border_style="bright_green",
+        border_style=c.ok,
+        box=t.design.app_box,
         padding=(1, 2),
     )
 
@@ -364,19 +120,21 @@ def _show_styled_version():
 
     # Footer with copyright and links
     footer_text = Text()
-    footer_text.append("MIT License © 2024-", style="dim")
-    footer_text.append(f"{__current_year__}", style="dim")
-    footer_text.append(" Kumar Anirudha\n", style="dim")
-    footer_text.append("🔗 ", style="bright_blue")
+    footer_text.append("MIT License © 2024-", style=c.muted)
+    footer_text.append(f"{__current_year__}", style=c.muted)
+    footer_text.append(" Kumar Anirudha\n", style=c.muted)
+    footer_text.append("🔗 ", style=c.info)
     footer_text.append(
         "https://github.com/anistark/sot", style="link https://github.com/anistark/sot"
     )
-    footer_text.append(" | 📖 ", style="bright_green")
-    footer_text.append("sot --help", style="bold bright_white")
-    footer_text.append(" | 🚀 ", style="bright_yellow")
-    footer_text.append("sot", style="bold bright_cyan")
+    footer_text.append(" | 📖 ", style=c.ok)
+    footer_text.append("sot --help", style=f"bold {c.text}")
+    footer_text.append(" | 🚀 ", style=c.primary)
+    footer_text.append("sot", style=f"bold {c.accent}")
 
-    console.print(Panel(footer_text, border_style="dim", padding=(0, 2)))
+    console.print(
+        Panel(footer_text, border_style=c.muted, box=t.design.app_box, padding=(0, 2))
+    )
 
 
 def _get_volume_display_name(mp: str) -> str:
@@ -603,10 +361,13 @@ def run(argv=None):  # noqa: C901
         return benchmark_command(args)
 
     # Handle disk subcommand
+    start_mode = "overview"
     if args.command == "disk":
-        from .disk.cli import disk_command
+        if args.list:
+            from .disk.listing import print_disk_list
 
-        return disk_command(args)
+            return print_disk_list()
+        start_mode = "disks"
 
     # Handle clean subcommand
     if args.command == "clean":
@@ -614,11 +375,8 @@ def run(argv=None):  # noqa: C901
 
         return clean_command(args)
 
-    # Handle ps subcommand
     if args.command == "ps":
-        from .ps.cli import ps_command
-
-        return ps_command(args)
+        start_mode = "processes"
 
     # Handle version display
     if args.version:
@@ -673,6 +431,7 @@ def run(argv=None):  # noqa: C901
 
     # Create and run the application with the specified options
     app = SotApp(
+        start_mode=start_mode,
         net_interface=args.net,
         disk_mountpoint=args.disk,
         log_file=args.log,

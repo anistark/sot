@@ -12,7 +12,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .._theme import theme
+from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -117,10 +118,19 @@ def get_current_freq():
 class CPUWidget(BaseWidget):
     """CPU widget displaying usage, temperature, and frequency information."""
 
+    STATE = (
+        "cpu_total_stream",
+        "thread_load_streams",
+        "temp_total_stream",
+        "core_temp_streams",
+        "fan_stream",
+    )
+
     def __init__(self, **kwargs):
         super().__init__(title="CPU", **kwargs)
 
     def on_mount(self):
+        restored = self.restore_state()
         self.width = 0
         self.height = 0
 
@@ -145,11 +155,11 @@ class CPUWidget(BaseWidget):
         self.core_threads = core_thread_list
 
         t = theme()
-        self.cpu_total_stream = t.stream(50, 7, 0.0, 100.0)
-
-        self.thread_load_streams = [
-            t.stream(10, 1, 0.0, 100.0) for _ in range(num_threads)
-        ]
+        if not restored:
+            self.cpu_total_stream = ThemedStream(50, 7, 0.0, 100.0)
+            self.thread_load_streams = [
+                ThemedStream(10, 1, 0.0, 100.0) for _ in range(num_threads)
+            ]
 
         temps = get_current_temps()
 
@@ -163,14 +173,15 @@ class CPUWidget(BaseWidget):
             temp_low = 30.0
             temp_high = 100.0
 
-            if self.has_cpu_temp:
-                self.temp_total_stream = t.stream(
+            if self.has_cpu_temp and not restored:
+                self.temp_total_stream = ThemedStream(
                     50, 7, temp_low, temp_high, flipud=True
                 )
 
-            if self.has_core_temps:
+            if self.has_core_temps and not restored:
                 self.core_temp_streams = [
-                    t.stream(5, 1, temp_low, temp_high) for _ in range(self.num_cores)
+                    ThemedStream(5, 1, temp_low, temp_high)
+                    for _ in range(self.num_cores)
                 ]
 
         self.has_fan_rpm = False
@@ -183,7 +194,8 @@ class CPUWidget(BaseWidget):
                 if fan_current == 65535:
                     fan_current = 1
                 fan_high = max(fan_current, 1)
-                self.fan_stream = t.stream(50, 1, fan_low, fan_high)
+                if not restored:
+                    self.fan_stream = ThemedStream(50, 1, fan_low, fan_high)
         except (AttributeError, IndexError):
             pass
 
@@ -211,7 +223,7 @@ class CPUWidget(BaseWidget):
             self.set_title("CPU")
 
         self.collect_data()
-        self.set_interval(2.0, self.collect_data)
+        self.every(refresh.CPU, self.collect_data)
 
     def collect_data(self):
         # CPU loads

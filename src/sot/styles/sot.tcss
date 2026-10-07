@@ -1,0 +1,31 @@
+.panel {
+    border: $sot-frame $sot-border;
+    border-title-align: left;
+    border-subtitle-align: right;
+}
+
+.panel:focus,
+.panel:focus-within {
+    border: $sot-frame $sot-border-focus;
+}
+
+.panel.-alert {
+    border: $sot-frame $sot-border-alert;
+}
+
+App.-theme-classic SotHeader {
+    background: ansi_bright_black;
+    color: ansi_bright_white;
+}
+
+App.-theme-cyberpunk SotHeader {
+    background: $panel;
+}
+
+App.-theme-cyberpunk ListView > ListItem.-highlight {
+    background: $accent 12%;
+}
+
+App.-theme-cyberpunk ListView:focus > ListItem.-highlight {
+    background: $accent 28%;
+}

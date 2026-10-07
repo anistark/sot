@@ -37,7 +37,7 @@ def kill_process(pid: int, name: str = "Unknown") -> ProcessActionResult:
     if not pid:
         return ProcessActionResult(
             success=False,
-            message="❌ Invalid process ID",
+            message="Invalid process ID",
             severity="error",
         )
 
@@ -46,31 +46,31 @@ def kill_process(pid: int, name: str = "Unknown") -> ProcessActionResult:
         target.kill()
         return ProcessActionResult(
             success=True,
-            message=f"💥 Killed {name} (PID: {pid})",
+            message=f"Killed {name} (PID {pid})",
             severity="warning",
         )
     except ZombieProcess:
         return ProcessActionResult(
             success=False,
-            message=f"🧟 {name} (PID: {pid}) is a zombie process",
+            message=f"{name} (PID {pid}) is a zombie process",
             severity="warning",
         )
     except NoSuchProcess:
         return ProcessActionResult(
             success=False,
-            message=f"❌ Process {pid} no longer exists",
+            message=f"Process {pid} no longer exists",
             severity="error",
         )
     except AccessDenied:
         return ProcessActionResult(
             success=False,
-            message=f"🔒 Access denied to {name} (PID: {pid})",
+            message=f"Access denied to {name} (PID {pid})",
             severity="error",
         )
     except Exception as e:
         return ProcessActionResult(
             success=False,
-            message=f"❌ Error: {str(e)}",
+            message=f"Error: {e}",
             severity="error",
         )
 
@@ -88,7 +88,7 @@ def terminate_process(pid: int, name: str = "Unknown") -> ProcessActionResult:
     if not pid:
         return ProcessActionResult(
             success=False,
-            message="❌ Invalid process ID",
+            message="Invalid process ID",
             severity="error",
         )
 
@@ -97,33 +97,44 @@ def terminate_process(pid: int, name: str = "Unknown") -> ProcessActionResult:
         target.terminate()
         return ProcessActionResult(
             success=True,
-            message=f"🛑 Terminated {name} (PID: {pid})",
+            message=f"Terminated {name} (PID {pid})",
             severity="information",
         )
     except ZombieProcess:
         return ProcessActionResult(
             success=False,
-            message=f"🧟 {name} (PID: {pid}) is a zombie process",
+            message=f"{name} (PID {pid}) is a zombie process",
             severity="warning",
         )
     except NoSuchProcess:
         return ProcessActionResult(
             success=False,
-            message=f"❌ Process {pid} no longer exists",
+            message=f"Process {pid} no longer exists",
             severity="error",
         )
     except AccessDenied:
         return ProcessActionResult(
             success=False,
-            message=f"🔒 Access denied to {name} (PID: {pid})",
+            message=f"Access denied to {name} (PID {pid})",
             severity="error",
         )
     except Exception as e:
         return ProcessActionResult(
             success=False,
-            message=f"❌ Error: {str(e)}",
+            message=f"Error: {e}",
             severity="error",
         )
+
+
+def run_process_action(action: str, pid: int, name: str) -> ProcessActionResult:
+    """Run ``kill`` or ``terminate`` on a process."""
+    if action == "kill":
+        return kill_process(pid, name)
+    if action == "terminate":
+        return terminate_process(pid, name)
+    return ProcessActionResult(
+        success=False, message=f"Unknown action: {action}", severity="error"
+    )
 
 
 def format_process_details(process_info: dict) -> list[str]:
@@ -138,39 +149,31 @@ def format_process_details(process_info: dict) -> list[str]:
     from ._helpers import sizeof_fmt
 
     details = [
-        f"📋 {process_info.get('name', 'Unknown')} (PID: {process_info.get('pid', 'N/A')})"
+        f"{process_info.get('name', 'Unknown')} (PID {process_info.get('pid', 'N/A')})"
     ]
 
     cpu_percent = process_info.get("cpu_percent", 0) or 0
-    details.append(f"💻 CPU: {cpu_percent:.1f}%")
+    details.append(f"CPU: {cpu_percent:.1f}%")
 
     mem_info = process_info.get("memory_info")
     if mem_info:
-        mem_str = sizeof_fmt(mem_info.rss, suffix="", sep="")
-        details.append(f"🧠 Memory: {mem_str}")
+        details.append(f"Memory: {sizeof_fmt(mem_info.rss, suffix='', sep='')}")
 
     num_threads = process_info.get("num_threads")
     if num_threads:
-        details.append(f"🧵 Threads: {num_threads}")
+        details.append(f"Threads: {num_threads}")
 
     total_io_rate = process_info.get("total_io_rate", 0)
     if total_io_rate > 0:
         net_io_str = sizeof_fmt(total_io_rate, fmt=".1f", suffix="", sep="") + "/s"
-        details.append(f"🌐 Net I/O: {net_io_str}")
+        details.append(f"Net I/O: {net_io_str}")
 
     num_connections = process_info.get("num_connections", 0)
     if num_connections > 0:
-        details.append(f"🔗 Connections: {num_connections}")
+        details.append(f"Connections: {num_connections}")
 
     status = process_info.get("status")
     if status:
-        status_emoji = {
-            "running": "🏃",
-            "sleeping": "😴",
-            "stopped": "⏸️",
-            "zombie": "🧟",
-            "idle": "💤",
-        }.get(status, "❓")
-        details.append(f"{status_emoji} Status: {status}")
+        details.append(f"Status: {status}")
 
     return details

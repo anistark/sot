@@ -4,37 +4,34 @@ Base Widget Class
 Provides common functionality for all SOT widgets.
 """
 
-from rich.panel import Panel
-from textual.widget import Widget
+from rich.text import Text
 
 from .._theme import theme
+from ..tui.state import SotWidget
 
 
-class BaseWidget(Widget):
-    """Base class for all SOT widgets with common functionality."""
+def panel_title(label: str, detail: str | None = None) -> Text:
+    return Text.from_markup(theme().title(label, detail))
 
-    def __init__(self, title: str, border_style=None, **kwargs):
+
+class BaseWidget(SotWidget):
+    """A framed panel; the frame comes from the theme via the ``panel`` class."""
+
+    def __init__(self, title: str, **kwargs):
         super().__init__(**kwargs)
         self.title = title
-        t = theme()
-        self.border_style = t.colors.border if border_style is None else border_style
-        self.panel = Panel(
-            "",
-            title=t.title(title) if title else "",
-            border_style=self.border_style,
-            title_align="left",
-            box=t.design.box,
-        )
+        self.content = ""
+        if title:
+            self.add_class("panel")
+            self.set_title(title)
 
     def set_title(self, label: str, detail: str | None = None) -> None:
-        self.panel.title = theme().title(label, detail)
+        self.border_title = panel_title(label, detail)
 
     def render(self):
-        return getattr(
-            self, "panel", Panel("Loading...", title=theme().title(self.title))
-        )
+        return self.content
 
     def update_panel_content(self, content):
         """Update the panel content with new data."""
-        self.panel.renderable = content
+        self.content = content
         self.refresh()

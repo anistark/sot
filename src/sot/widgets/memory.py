@@ -8,7 +8,8 @@ import psutil
 from rich.console import Group
 
 from .._helpers import sizeof_fmt
-from .._theme import theme
+from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 # Rows per memory graph, regardless of panel height.
@@ -18,6 +19,8 @@ _GRAPH_HEIGHT = 2
 class MemoryWidget(BaseWidget):
     """Memory widget displaying virtual memory and swap usage."""
 
+    STATE = ("mem_streams",)
+
     def __init__(self, **kwargs):
         super().__init__(title="Memory", **kwargs)
         self._color_list = theme().colors.memory
@@ -26,6 +29,7 @@ class MemoryWidget(BaseWidget):
         self.mem_total_bytes = 0
 
     def on_mount(self):
+        restored = self.restore_state()
         mem = psutil.virtual_memory()
         self.mem_total_bytes = mem.total
 
@@ -42,9 +46,10 @@ class MemoryWidget(BaseWidget):
         maxlen = min(maxlen, 5)
         self.labels = [attr[:maxlen].ljust(maxlen) for attr in self.attrs]
 
-        for attr in self.attrs:
-            total = swap.total if attr == "swap" else self.mem_total_bytes
-            self.mem_streams.append(theme().stream(40, _GRAPH_HEIGHT, 0.0, total))
+        if not restored:
+            for attr in self.attrs:
+                total = swap.total if attr == "swap" else self.mem_total_bytes
+                self.mem_streams.append(ThemedStream(40, _GRAPH_HEIGHT, 0.0, total))
 
         self.group = Group("", "", "", "", "")
 
@@ -52,7 +57,7 @@ class MemoryWidget(BaseWidget):
         self.set_title("Memory", mem_total_string)
 
         self.refresh_table()
-        self.set_interval(2.0, self.refresh_table)
+        self.every(refresh.MEMORY, self.refresh_table)
 
     def refresh_table(self):
         mem = psutil.virtual_memory()

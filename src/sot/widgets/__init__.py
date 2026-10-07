@@ -14,8 +14,7 @@ from .info import InfoWidget
 from .memory import MemoryWidget
 from .network import NetworkWidget
 from .network_connections import NetworkConnectionsWidget
-from .processes import ProcessesWidget
-from .sot import SotWidget
+from .sot import SotLogoWidget
 
 __all__ = [
     "BaseWidget",
@@ -24,9 +23,8 @@ __all__ = [
     "GpuWidget",
     "HealthScoreWidget",
     "InfoWidget",
-    "SotWidget",
+    "SotLogoWidget",
     "MemoryWidget",
     "NetworkWidget",
     "NetworkConnectionsWidget",
-    "ProcessesWidget",
 ]

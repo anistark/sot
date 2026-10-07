@@ -1,86 +1,85 @@
-"""
-Confirmation Modal Widget
-
-Simple confirmation dialog using Textual best practices.
-"""
-
-from typing import Optional
+"""Confirmation dialog for destructive actions."""
 
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal
-from textual.message import Message
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label
 
+from ..tui import keymap
 
-class ConfirmationModal(ModalScreen[bool]):
-    """A modal for confirming actions. Returns True if confirmed, False if cancelled."""
 
-    class Confirmed(Message):
-        """Posted when user confirms."""
+class ConfirmModal(ModalScreen[bool]):
+    """Ask before doing something; dismisses with ``True`` when confirmed."""
 
-        def __init__(self, action_data: dict) -> None:
-            self.action_data = action_data
-            super().__init__()
+    BINDINGS = [*keymap.CONFIRM]
+    AUTO_FOCUS = "#cancel"
 
-    BINDINGS = [("escape", "cancel")]
-
-    CSS = """
-    ConfirmationModal {
+    DEFAULT_CSS = """
+    ConfirmModal {
         align: center middle;
     }
 
-    ConfirmationModal > Container {
+    ConfirmModal > Vertical {
         width: 60;
-        height: 9;
-        border: solid $accent;
+        height: auto;
+        padding: 1 2;
+        border: round $accent;
         background: $panel;
     }
 
-    ConfirmationModal #title {
-        margin: 1 2;
-        width: 1fr;
+    ConfirmModal.-danger > Vertical {
+        border: round $error;
     }
 
-    ConfirmationModal #message {
-        margin: 0 2;
-        width: 1fr;
+    ConfirmModal #title {
+        text-style: bold;
     }
 
-    ConfirmationModal #buttons {
-        margin: 1 2 0 2;
-        width: 1fr;
+    ConfirmModal #message {
+        margin: 1 0;
+        color: $text-muted;
     }
 
-    ConfirmationModal Button {
-        margin-right: 1;
+    ConfirmModal #buttons {
+        height: auto;
+        align-horizontal: right;
+    }
+
+    ConfirmModal Button {
+        margin-left: 1;
     }
     """
 
     def __init__(
-        self, title: str, message: str, action_data: Optional[dict] = None
+        self,
+        title: str,
+        message: str,
+        confirm_label: str = "Confirm",
+        danger: bool = True,
     ) -> None:
-        super().__init__()
+        super().__init__(classes="-danger" if danger else None)
         self.title_text = title
         self.message_text = message
-        self.action_data = action_data or {}
+        self.confirm_label = confirm_label
+        self.danger = danger
 
     def compose(self) -> ComposeResult:
-        with Container():
+        with Vertical():
             yield Label(self.title_text, id="title")
             yield Label(self.message_text, id="message")
             with Horizontal(id="buttons"):
-                yield Button("Kill", variant="error", id="confirm")
-                yield Button("Cancel", id="cancel")
+                yield Button(
+                    f"{self.confirm_label} (y)",
+                    variant="error" if self.danger else "primary",
+                    id="confirm",
+                )
+                yield Button("Cancel (n)", id="cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle button presses."""
-        if event.button.id == "confirm":
-            self.app.post_message(self.Confirmed(self.action_data))
-            self.dismiss(True)
-        else:
-            self.dismiss(False)
+        self.dismiss(event.button.id == "confirm")
+
+    def action_confirm(self) -> None:
+        self.dismiss(True)
 
     def action_cancel(self) -> None:
-        """Handle escape key."""
         self.dismiss(False)

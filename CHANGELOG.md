@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- **One app, three views** - Overview (`1`), Processes (`2`) and Disks (`3`) live in one app; `sot ps` and `sot disk` open it on their view
+  - Switch with the number keys or by clicking the header tabs; each view keeps its selection, sort and scroll while hidden, and stops polling until you come back
+  - Same header, footer and frames on every view; `?` shows every key for the focused panel
+  - Process, port and dev environment lists are scrollable tables with mouse support
+- **Live theme switching** - Change the theme while `sot`, `sot ps` or `sot disk` is running: `Ctrl+P` → Theme
+  - Graphs keep their history and lists keep their selection, sort and scroll position
+  - The theme picker only lists SOT themes
+
+### Changed
+- **BREAKING: keys** - `x` kills (was `k`), `j`/`k` move in every list (vim style), `g`/`G` jump to the first/last row
+- **Process columns adapt to the width** - Narrow panels drop the I/O, connection, user and thread columns before the process name; the old "Net I/O" column is now "I/O" since it shows disk I/O
+- **Frames** - Every panel uses the same theme frame (`solid` in classic, `outer` in cyberpunk)
+- The dashboard's `i` (interactive mode) toggle is gone: the process list responds to keys whenever it has focus
+- **Classic follows your terminal** - The `classic` theme now uses the terminal's own palette and background inside the TUI, matching the printed commands
+- **Confirmation dialog** - Kill and terminate both ask first in a dialog (`y` to confirm, `n` or `Esc` to cancel) instead of a notification
+- **Printed output follows `--theme`** - `sot --version`, `sot info`, `sot bench`, `sot clean` and `sot disk --list` use the theme's colours and frames
+
+### Fixed
+- Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval
+
 ## [6.3.0](https://github.com/anistark/sot/releases/tag/v6.3.0) - 2026-10-06
 
 ### Added

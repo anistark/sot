@@ -13,7 +13,8 @@ from rich.text import Text
 
 from .._gpu import GpuSample, read_gpu
 from .._helpers import sizeof_fmt
-from .._theme import theme
+from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 # Initial graph size; widths are recomputed on resize.
@@ -33,12 +34,15 @@ def _metric_line(label: str, value: str, color: str) -> Text:
 class GpuWidget(BaseWidget):
     """GPU widget showing utilization, memory, temperature, and power."""
 
+    STATE = ("util_stream",)
+
     def __init__(self, **kwargs):
         super().__init__(title="GPU", **kwargs)
         self._metric_count = 0
 
     def on_mount(self):
-        self.util_stream = theme().stream(_GRAPH_WIDTH, _GRAPH_HEIGHT, 0.0, 100.0)
+        if not self.restore_state():
+            self.util_stream = ThemedStream(_GRAPH_WIDTH, _GRAPH_HEIGHT, 0.0, 100.0)
 
         sample = read_gpu()
         if sample is not None and sample.name:
@@ -48,7 +52,7 @@ class GpuWidget(BaseWidget):
             self.set_title("GPU", detail)
 
         self.collect_data()
-        self.set_interval(2.0, self.collect_data)
+        self.every(refresh.GPU, self.collect_data)
 
     def _memory_text(self, sample: GpuSample) -> str:
         used = sizeof_fmt(sample.mem_used, fmt=".1f")

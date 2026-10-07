@@ -5,6 +5,7 @@ Displays network interface statistics including upload/download speeds and IP ad
 """
 
 import socket
+import time
 
 import psutil
 from rich.console import Group
@@ -13,7 +14,8 @@ from rich.text import Text
 
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
-from .._theme import theme
+from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -64,6 +66,17 @@ def _validate_interface(interface_name):
 
 class NetworkWidget(BaseWidget):
     """Network widget displaying interface statistics and IP addresses."""
+
+    STATE = (
+        "recv_stream",
+        "sent_stream",
+        "last_net",
+        "last_net_time",
+        "max_recv_bytes_s",
+        "max_recv_bytes_s_str",
+        "max_sent_bytes_s",
+        "max_sent_bytes_s_str",
+    )
 
     def __init__(self, interface: str | None = None, **kwargs):
         if interface is None:
@@ -123,17 +136,18 @@ class NetworkWidget(BaseWidget):
             title_suffix = " (specified)"
 
         self.set_title("Network", f"{self.interface}{title_suffix}")
-        self.panel.subtitle = self.sot_string
-        self.panel.subtitle_align = "right"
+        self.border_subtitle = Text(self.sot_string, style=t.colors.muted)
 
-        self.last_net = None
-        self.max_recv_bytes_s = 0
-        self.max_recv_bytes_s_str = ""
-        self.max_sent_bytes_s = 0
-        self.max_sent_bytes_s_str = ""
+        if not self.restore_state():
+            self.last_net = None
+            self.last_net_time = 0.0
+            self.max_recv_bytes_s = 0
+            self.max_recv_bytes_s_str = ""
+            self.max_sent_bytes_s = 0
+            self.max_sent_bytes_s_str = ""
 
-        self.recv_stream = t.stream(20, 5, 0.0, 1.0e6)
-        self.sent_stream = t.stream(20, 5, 0.0, 1.0e6, flipud=True)
+            self.recv_stream = ThemedStream(20, 5, 0.0, 1.0e6)
+            self.sent_stream = ThemedStream(20, 5, 0.0, 1.0e6, flipud=True)
 
         if self.interface_error:
             self.app.notify(self.interface_error, severity="warning", timeout=5)
@@ -141,9 +155,8 @@ class NetworkWidget(BaseWidget):
         self.refresh_ips()
         self.refresh_panel()
 
-        self.interval_s = 2.0
-        self.set_interval(self.interval_s, self.refresh_panel)
-        self.set_interval(60.0, self.refresh_ips)
+        self.every(refresh.NETWORK, self.refresh_panel)
+        self.every(refresh.NETWORK_ADDRESSES, self.refresh_ips)
 
     def refresh_ips(self):
         try:
@@ -193,13 +206,16 @@ class NetworkWidget(BaseWidget):
             self.update_panel_content(Text(error_msg, style=theme().colors.danger))
             return
 
-        if self.last_net is None:
+        now = time.monotonic()
+        elapsed = now - self.last_net_time
+
+        if self.last_net is None or elapsed <= 0:
             recv_bytes_s_string = ""
             sent_bytes_s_string = ""
         else:
-            recv_bytes_s = (net.bytes_recv - self.last_net.bytes_recv) / self.interval_s
+            recv_bytes_s = (net.bytes_recv - self.last_net.bytes_recv) / elapsed
             recv_bytes_s_string = sizeof_fmt(recv_bytes_s, fmt=".1f") + "/s"
-            sent_bytes_s = (net.bytes_sent - self.last_net.bytes_sent) / self.interval_s
+            sent_bytes_s = (net.bytes_sent - self.last_net.bytes_sent) / elapsed
             sent_bytes_s_string = sizeof_fmt(sent_bytes_s, fmt=".1f") + "/s"
 
             if recv_bytes_s > self.max_recv_bytes_s:
@@ -214,6 +230,7 @@ class NetworkWidget(BaseWidget):
             self.sent_stream.add_value(sent_bytes_s)
 
         self.last_net = net
+        self.last_net_time = now
 
         total_recv_string = sizeof_fmt(net.bytes_recv, sep=" ", fmt=".1f")
         total_sent_string = sizeof_fmt(net.bytes_sent, sep=" ", fmt=".1f")
