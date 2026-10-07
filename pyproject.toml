@@ -10,8 +10,7 @@ dev = [
   "isort>=9.0.1",
   "flake8>=7.3.0",
   "blacken-docs>=1.20.0",
-  "build>=1.6.1",
-  "twine>=7.0.0",
+  "pytest>=8.0.0",
   "mypy>=2.3.1",
   "types-psutil>=7.0.0",
   "argparse-manpage>=4",
@@ -37,7 +36,6 @@ license = "MIT"
 license-files = ["LICENSE"]
 classifiers = [
   "Development Status :: 4 - Beta",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS",
   "Programming Language :: Python",
@@ -46,6 +44,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Utilities",
 ]
 keywords = ["cli", "system", "monitor", "linux", "tools"]

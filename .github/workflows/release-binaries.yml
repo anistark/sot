@@ -1,6 +1,9 @@
 name: Release Binaries
 
 on:
+  # Called by publish.yml once the GitHub release exists. Releases created
+  # with GITHUB_TOKEN don't fire `release` events, so this is the main path.
+  workflow_call:
   release:
     types: [published]
 
@@ -8,11 +11,12 @@ defaults:
   run:
     shell: bash
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   build-deb:
+    permissions:
+      contents: write
     name: Build .deb package
     runs-on: ubuntu-latest
     strategy:
@@ -24,10 +28,12 @@ jobs:
           - arch: arm64
             python-version: "3.12"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Python via uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -42,8 +48,8 @@ jobs:
           uv sync
           # Generate man page before building
           uv run python scripts/build_manpage.py
-          uv run python -m build --wheel
-          VERSION=${GITHUB_REF#refs/tags/}
+          uv build --wheel
+          VERSION=${GITHUB_REF_NAME}
           WHEEL=$(ls dist/sot-*.whl | head -1)
 
           # Create virtualenv and install
@@ -84,7 +90,7 @@ jobs:
           mv *.deb "sot-${VERSION}-${{ matrix.arch }}.deb" 2>/dev/null || true
 
       - name: Upload .deb artifacts
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: "*.deb"
           draft: ${{ contains(github.ref_name, '-') }}
@@ -93,6 +99,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-rpm:
+    permissions:
+      contents: write
     name: Build .rpm package
     runs-on: ubuntu-latest
     strategy:
@@ -104,10 +112,12 @@ jobs:
           - arch: aarch64
             python-version: "3.12"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install Python via uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -122,8 +132,8 @@ jobs:
           uv sync
           # Generate man page before building
           uv run python scripts/build_manpage.py
-          uv run python -m build --wheel
-          VERSION=${GITHUB_REF#refs/tags/}
+          uv build --wheel
+          VERSION=${GITHUB_REF_NAME}
           WHEEL=$(ls dist/sot-*.whl | head -1)
 
           # Create virtualenv and install
@@ -164,7 +174,7 @@ jobs:
           mv *.rpm "sot-${VERSION}-${{ matrix.arch }}.rpm" 2>/dev/null || true
 
       - name: Upload .rpm artifacts
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: "*.rpm"
           draft: ${{ contains(github.ref_name, '-') }}

@@ -136,30 +136,15 @@ wget https://github.com/anistark/sot/releases/latest/download/sot-*.rpm
 sudo rpm -ivh sot-*.rpm
 ```
 
-### Verifying Package Signatures (Recommended)
+### Verifying Releases
 
-For enhanced security, verify GPG signatures before installing packages:
+PyPI releases are published from GitHub Actions with [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) and carry [PEP 740 attestations](https://docs.pypi.org/attestations/) linking each file to this repository. To verify a release file:
 
 <!--pytest-codeblocks: skip-->
 
 ```sh
-# Import the public signing key (one time setup)
-curl -fsSL https://github.com/anistark/sot/releases/latest/download/public-key.asc | gpg --import
-
-# For DEB packages:
-dpkg-sig --verify sot-*.deb
-# Or verify using detached signature
-gpg --verify sot-*.deb.asc sot-*.deb
-# Verify checksums
-gpg --verify SHA256SUMS.sig && sha256sum -c SHA256SUMS
-
-# For RPM packages:
-gpg --verify sot-*.rpm.asc sot-*.rpm
-# Verify checksums
-gpg --verify SHA256SUMS-RPM.sig && sha256sum -c SHA256SUMS-RPM
+uvx pypi-attestations verify pypi --repository https://github.com/anistark/sot pypi:sot-<version>-py3-none-any.whl
 ```
-
-**GPG Key Fingerprint:** `DCD1 9CA3 2C3F ACAA 1360  1C78 F4D7 EFDB 552E 84C9`
 </details>
 
 <details>

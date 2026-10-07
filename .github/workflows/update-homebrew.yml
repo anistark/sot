@@ -1,8 +1,17 @@
 name: Update Homebrew Formula
 
 on:
+  # Called by publish.yml once the GitHub release exists. Releases created
+  # with GITHUB_TOKEN don't fire `release` events, so this is the main path.
+  workflow_call:
+    secrets:
+      HOMEBREW_TAP_TOKEN:
+        required: true
   release:
     types: [published]
+
+permissions:
+  contents: read
 
 jobs:
   update-homebrew:
@@ -10,15 +19,17 @@ jobs:
     steps:
       - name: Get release info
         id: release
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="$TAG"
           VERSION="${VERSION#v}"  # Remove 'v' prefix if present
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Wait for PyPI package availability
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
-          VERSION="${{ steps.release.outputs.version }}"
-
           # Wait for package to be available on PyPI (up to 5 minutes)
           MAX_RETRIES=30
           RETRY_COUNT=0
@@ -45,15 +56,12 @@ jobs:
           exit 1
 
       - name: Trigger homebrew-tools update
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          curl -X POST \
+          curl -fsS -X POST \
             -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.HOMEBREW_TAP_TOKEN }}" \
+            -H "Authorization: token $HOMEBREW_TAP_TOKEN" \
             https://api.github.com/repos/anistark/homebrew-tools/dispatches \
-            -d '{
-              "event_type": "update-formula",
-              "client_payload": {
-                "formula": "sot",
-                "version": "${{ steps.release.outputs.version }}"
-              }
-            }'
+            -d "{\"event_type\": \"update-formula\", \"client_payload\": {\"formula\": \"sot\", \"version\": \"$VERSION\"}}"

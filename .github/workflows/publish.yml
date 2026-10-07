@@ -1,0 +1,118 @@
+name: Publish
+
+# Pushing a vX.Y.Z tag (via `just publish`) builds the package, publishes it
+# to PyPI with Trusted Publishing and PEP 740 attestations, creates the GitHub
+# release, then builds the .deb/.rpm packages and bumps the Homebrew formula.
+#
+# One-time setup:
+#   - PyPI > sot > Publishing: add a GitHub trusted publisher for
+#     anistark/sot, workflow `publish.yml`, environment `pypi`.
+#   - GitHub > Settings > Environments: create `pypi` with a required reviewer.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: false
+
+      - name: Check tag matches package version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(grep '__version__' src/sot/__about__.py | sed 's/.*"\([^"]*\)".*/\1/')
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "❌ Tag $TAG does not match __version__ $VERSION"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Build man page
+        run: uv run python scripts/build_manpage.py
+
+      - name: Run tests
+        run: uv run pytest tests
+
+      - name: Build
+        run: uv build
+
+      - name: Check distributions
+        run: uvx twine check --strict dist/*
+
+      - name: Smoke test wheel
+        run: uv run --isolated --no-project --with dist/*.whl python -c "import sot; print(sot.__version__)"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/sot
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      # Generates PEP 740 attestations by default.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  github-release:
+    name: Create GitHub release
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --verify-tag
+
+  release-binaries:
+    name: Release binaries
+    needs: github-release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-binaries.yml
+
+  update-homebrew:
+    name: Update Homebrew
+    needs: github-release
+    permissions:
+      contents: read
+    uses: ./.github/workflows/update-homebrew.yml
+    secrets:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
