@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- **Live theme switching** - Change the theme while `sot`, `sot ps` or `sot disk` is running: `Ctrl+P` → Theme
+  - Graphs keep their history and lists keep their selection, sort and scroll position
+  - The theme picker only lists SOT themes
+
+### Changed
+- **Classic follows your terminal** - The `classic` theme now uses the terminal's own palette and background inside the TUI, matching the printed commands
+- **Confirmation dialog** - Kill and terminate both ask first in a dialog (`y` to confirm, `n` or `Esc` to cancel) instead of a notification
+- **Printed output follows `--theme`** - `sot --version`, `sot info`, `sot bench`, `sot clean` and `sot disk --list` use the theme's colours and frames
+- The footer in `sot ps` and `sot disk` lists the keys of the focused panel
+
+### Fixed
+- Dashboard process list: `I` couldn't turn interactive mode back on once it was off
+- Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval
+
 ## [6.3.0](https://github.com/anistark/sot/releases/tag/v6.3.0) - 2026-10-06
 
 ### Added

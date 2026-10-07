@@ -5,6 +5,7 @@ Displays disk usage and I/O statistics.
 """
 
 import platform
+import time
 
 import psutil
 from rich.console import Group
@@ -12,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .._helpers import sizeof_fmt
-from .._theme import theme
+from .._theme import ThemedStream, theme
 from .base_widget import BaseWidget
 
 
@@ -43,6 +44,19 @@ def _autoselect_mountpoint():
 
 class DiskWidget(BaseWidget):
     """Disk widget displaying usage and I/O statistics."""
+
+    STATE = (
+        "read_stream",
+        "write_stream",
+        "last_io",
+        "last_io_time",
+        "max_read_bytes_s",
+        "max_read_bytes_s_str",
+        "max_write_bytes_s",
+        "max_write_bytes_s_str",
+        "read_latency_ms",
+        "write_latency_ms",
+    )
 
     def __init__(self, mountpoint: str | None = None, **kwargs):
         self.specified_mountpoint = mountpoint
@@ -99,17 +113,19 @@ class DiskWidget(BaseWidget):
 
             self.group = Group(self.table, "")
 
-            self.last_io = None
-            self.max_read_bytes_s = 0
-            self.max_read_bytes_s_str = ""
-            self.max_write_bytes_s = 0
-            self.max_write_bytes_s_str = ""
+            if not self.restore_state():
+                self.last_io = None
+                self.last_io_time = 0.0
+                self.max_read_bytes_s = 0
+                self.max_read_bytes_s_str = ""
+                self.max_write_bytes_s = 0
+                self.max_write_bytes_s_str = ""
 
-            self.read_latency_ms = 0.0
-            self.write_latency_ms = 0.0
+                self.read_latency_ms = 0.0
+                self.write_latency_ms = 0.0
 
-            self.read_stream = t.stream(20, 5, 0.0, 1.0e6)
-            self.write_stream = t.stream(20, 5, 0.0, 1.0e6, flipud=True)
+                self.read_stream = ThemedStream(20, 5, 0.0, 1.0e6)
+                self.write_stream = ThemedStream(20, 5, 0.0, 1.0e6, flipud=True)
         else:
             self.group = Group("")
 
@@ -127,16 +143,16 @@ class DiskWidget(BaseWidget):
 
     def refresh_io_counters(self):
         io = psutil.disk_io_counters()
+        now = time.monotonic()
+        elapsed = now - self.last_io_time
 
-        if self.last_io is None or io is None:
+        if self.last_io is None or io is None or elapsed <= 0:
             read_bytes_s_string = ""
             write_bytes_s_string = ""
         else:
-            read_bytes_s = (io.read_bytes - self.last_io.read_bytes) / self.interval_s
+            read_bytes_s = (io.read_bytes - self.last_io.read_bytes) / elapsed
             read_bytes_s_string = sizeof_fmt(read_bytes_s, fmt=".1f") + "/s"
-            write_bytes_s = (
-                io.write_bytes - self.last_io.write_bytes
-            ) / self.interval_s
+            write_bytes_s = (io.write_bytes - self.last_io.write_bytes) / elapsed
             write_bytes_s_string = sizeof_fmt(write_bytes_s, fmt=".1f") + "/s"
 
             if read_bytes_s > self.max_read_bytes_s:
@@ -166,6 +182,7 @@ class DiskWidget(BaseWidget):
                 self.write_latency_ms = 0.0
 
         self.last_io = io
+        self.last_io_time = now
 
         if io is not None:
             total_read_string = sizeof_fmt(io.read_bytes, sep=" ", fmt=".1f")

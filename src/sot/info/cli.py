@@ -10,8 +10,10 @@ from typing import List, Optional, Tuple
 import distro
 import psutil
 from rich.console import Console
+from rich.text import Text
 
 from .._helpers import sizeof_fmt
+from .._theme import theme
 from .logos import get_logo_for_os
 
 console = Console()
@@ -542,7 +544,7 @@ def get_package_counts() -> List[str]:
     return packages
 
 
-def format_system_info() -> str:
+def format_system_info() -> Text:
     """Format all system information with logo."""
     system = platform.system()
 
@@ -640,15 +642,25 @@ def format_system_info() -> str:
         info_lines.append(f"Battery     -  {percent:.0f}% & {status}")
 
     # Combine logo and info
-    output_lines = []
+    c = theme().colors
+    output = Text()
     max_logo_width = max(len(line) for line in logo)
 
     for i in range(max(len(logo), len(info_lines))):
+        if i:
+            output.append("\n")
         logo_part = logo[i] if i < len(logo) else " " * max_logo_width
+        output.append(f"{logo_part}  ", style=c.logo)
         info_part = info_lines[i] if i < len(info_lines) else ""
-        output_lines.append(f"{logo_part}  {info_part}")
+        label, sep, value = info_part.partition("  -  ")
+        if sep:
+            output.append(label, style=c.label)
+            output.append(sep, style=c.muted)
+            output.append(value, style=c.text)
+        else:
+            output.append(info_part, style=c.text)
 
-    return "\n".join(output_lines)
+    return output
 
 
 def info_command(args) -> int:
@@ -658,5 +670,5 @@ def info_command(args) -> int:
         console.print(output)
         return 0
     except Exception as e:
-        console.print(f"[red]Error displaying system info: {e}[/red]")
+        console.print(f"[{theme().colors.danger}]Error displaying system info: {e}[/]")
         return 1

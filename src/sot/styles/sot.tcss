@@ -1,0 +1,23 @@
+App.-theme-classic Header {
+    background: ansi_bright_black;
+    color: ansi_bright_white;
+}
+
+App.-theme-cyberpunk Header {
+    background: $primary;
+    color: $background;
+    text-style: bold;
+}
+
+App.-theme-cyberpunk HeaderClock {
+    background: $error;
+    color: $background;
+}
+
+App.-theme-cyberpunk ListView > ListItem.-highlight {
+    background: $accent 12%;
+}
+
+App.-theme-cyberpunk ListView:focus > ListItem.-highlight {
+    background: $accent 28%;
+}

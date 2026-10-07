@@ -8,13 +8,16 @@ from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header, ListItem, ListView, Static
 
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
-from .._theme import apply_to_app, theme
+from .._theme import theme
+from ..tui import keymap
+from ..tui.base import SotBaseApp
 from .volumes import get_volume_info, usage_style
 
 
@@ -53,10 +56,10 @@ class PartitionBox(Static):
         # Build partition box content - compact
         part_lines = []
         part_lines.append(Text(f"Device: {part['device']}", style=c.muted))
-        part_lines.append(Text(f"Mount: {part['mountpoint']}", style="white"))
+        part_lines.append(Text(f"Mount: {part['mountpoint']}", style=c.text))
         part_lines.append(Text(f"FS: {part['fstype']}", style=c.muted))
         part_lines.append(
-            Text(f"Size: {sizeof_fmt(part_usage.total, fmt='.1f')}", style="white")
+            Text(f"Size: {sizeof_fmt(part_usage.total, fmt='.1f')}", style=c.text)
         )
         part_lines.append(Text(""))
 
@@ -66,13 +69,13 @@ class PartitionBox(Static):
         percent_str = f"{part_usage.percent:.3f}%"
 
         usage_line = Text()
-        usage_line.append(f"{part_used_str} ", style="bold white")
+        usage_line.append(f"{part_used_str} ", style=f"bold {c.text}")
         usage_line.append_text(
             t.meter(
                 part_usage.percent / 100, part_bar_width, bar_style, empty_style=c.muted
             )
         )
-        usage_line.append(f" {part_free_str}", style="bold white")
+        usage_line.append(f" {part_free_str}", style=f"bold {c.text}")
         part_lines.append(usage_line)
 
         percent_line = Text(
@@ -116,7 +119,7 @@ class VolumeInfoPanel(Static):
         # Build volume information table
         info_table = Table(box=None, show_header=False, expand=True, padding=(0, 1))
         info_table.add_column("Label", style=f"bold {c.accent}", width=18)
-        info_table.add_column("Value", style="white")
+        info_table.add_column("Value", style=c.text)
 
         # Volume/Disk identification
         volume_name = self.current_volume["volume_name"]
@@ -140,11 +143,11 @@ class VolumeInfoPanel(Static):
         free_str = sizeof_fmt(usage.free, fmt=".1f")
 
         main_usage_bar = Text()
-        main_usage_bar.append(f"{used_str} ", style="bold white")
+        main_usage_bar.append(f"{used_str} ", style=f"bold {c.text}")
         main_usage_bar.append_text(
             t.meter(usage.percent / 100, bar_width, main_bar_style, empty_style=c.muted)
         )
-        main_usage_bar.append(f" {free_str}", style="bold white")
+        main_usage_bar.append(f" {free_str}", style=f"bold {c.text}")
 
         main_percent = Text(
             f"{usage.percent:.3f}%", style=f"bold {main_bar_style}", justify="center"
@@ -172,7 +175,7 @@ class VolumeInfoPanel(Static):
             content_parts.append(Text("\nI/O Statistics", style=f"bold {c.primary}"))
             io_table = Table(box=None, show_header=False, padding=(0, 1))
             io_table.add_column("Label", style=c.muted, width=12)
-            io_table.add_column("Value", style="white")
+            io_table.add_column("Value", style=c.text)
             io_table.add_row(
                 "Read",
                 f"{io_stats['read_count']:,} ({sizeof_fmt(io_stats['read_bytes'], fmt='.1f')})",
@@ -259,7 +262,7 @@ class VolumeInfoPanel(Static):
         self.set_interval(2.0, self.refresh_content)
 
 
-class DiskTUIApp(App):
+class DiskTUIApp(SotBaseApp):
     """SOT Disk TUI Application."""
 
     CSS = """
@@ -298,15 +301,15 @@ class DiskTUIApp(App):
     """
 
     BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("up,k", "cursor_up", "Move Up"),
-        ("down,j", "cursor_down", "Move Down"),
+        keymap.QUIT,
+        Binding("up,k", "cursor_up", "Move Up", id="sot.list.up"),
+        Binding("down,j", "cursor_down", "Move Down", id="sot.list.down"),
     ]
 
     def __init__(self):
         super().__init__()
-        apply_to_app(self)
         self.volumes = []
+        self.volume_index = 0
 
     def compose(self) -> ComposeResult:
         """Compose the UI layout."""
@@ -339,8 +342,10 @@ class DiskTUIApp(App):
 
         list_view = self.query_one("#volume-list", ListView)
 
-        # Store current selection
-        current_index = list_view.index if list_view.index is not None else 0
+        current_index = (
+            list_view.index if list_view.index is not None else self.volume_index
+        )
+        self.volume_index = current_index
 
         # Clear and repopulate
         list_view.clear()
@@ -358,7 +363,7 @@ class DiskTUIApp(App):
             style = usage_style(percent)
 
             label = Text()
-            label.append(f"{volume_name} ", style="bold white")
+            label.append(f"{volume_name} ", style=f"bold {theme().colors.text}")
             label.append(f"\n  {used}/{total} ", style=theme().colors.muted)
             label.append(f"({percent:.3f}%)", style=style)
 
@@ -371,6 +376,13 @@ class DiskTUIApp(App):
             # Update main panel with current volume
             info_panel = self.query_one("#main-panel", VolumeInfoPanel)
             info_panel.update_volume_info(self.volumes[current_index])
+
+    def rebuilt(self) -> None:
+        self.refresh_volume_list()
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        if event.list_view.index is not None:
+            self.volume_index = event.list_view.index
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle volume selection."""

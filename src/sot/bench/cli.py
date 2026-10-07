@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .._helpers import iops_fmt, latency_fmt, sizeof_fmt, throughput_fmt
+from .._theme import theme
 from .core import BenchmarkResult, DiskBenchmark
 
 console = Console()
@@ -91,20 +92,26 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
     Returns:
             Index of selected disk, or -1 if cancelled
     """
+    c = theme().colors
     if not physical_disks:
-        console.print("[red]❌ No accessible disks found[/]")
+        console.print(f"[{c.danger}]No accessible disks found[/]")
         return -1
 
     from .._helpers import sizeof_fmt
 
     # Display disk table
-    table = Table(title="Available Disks", show_header=True, header_style="bold")
-    table.add_column("#", style="yellow")
-    table.add_column("Disk", style="cyan")
-    table.add_column("Volume", style="cyan")
-    table.add_column("Total", style="magenta")
-    table.add_column("Free", style="green")
-    table.add_column("Partitions", style="dim")
+    table = Table(
+        title="Available Disks",
+        show_header=True,
+        header_style=f"bold {c.accent}",
+        box=theme().design.app_box,
+    )
+    table.add_column("#", style=c.primary)
+    table.add_column("Disk", style=c.accent)
+    table.add_column("Volume", style=c.accent)
+    table.add_column("Total", style=c.info)
+    table.add_column("Free", style=c.ok)
+    table.add_column("Partitions", style=c.muted)
 
     for i, disk in enumerate(physical_disks):
         total_str = sizeof_fmt(disk["total_bytes"], fmt=".1f")
@@ -141,7 +148,7 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
         if not volume_name or volume_name == "/":
             volume_name = "System"
         console.print(
-            f"\n[green]✓ Selected: {volume_name}[/]\n"
+            f"\n[{c.ok}]✓ Selected: {volume_name}[/]\n"
             f"  Using partition: {largest_partition['device']} ({largest_partition['mountpoint']})\n"
         )
 
@@ -236,12 +243,12 @@ def _select_with_arrows(physical_disks: List[Dict]) -> int:
 
 def _select_with_numbers(physical_disks: List[Dict]) -> int:
     """Select disk using number input (fallback)."""
+    c = theme().colors
     while True:
         try:
             selection = console.input(
-                "\n[bold yellow]Select disk by number (0-{}), or 'q' to quit: [/]".format(
-                    len(physical_disks) - 1
-                )
+                f"\n[bold {c.warn}]Select disk by number "
+                f"(0-{len(physical_disks) - 1}), or 'q' to quit: [/]"
             )
 
             if selection.lower() == "q":
@@ -251,10 +258,12 @@ def _select_with_numbers(physical_disks: List[Dict]) -> int:
             if 0 <= index < len(physical_disks):
                 return index
 
-            console.print("[red]Invalid selection. Please try again.[/]")
+            console.print(f"[{c.danger}]Invalid selection. Please try again.[/]")
 
         except ValueError:
-            console.print("[red]Invalid input. Please enter a number or 'q'.[/]")
+            console.print(
+                f"[{c.danger}]Invalid input. Please enter a number or 'q'.[/]"
+            )
 
 
 def display_results(results: List[BenchmarkResult], disk_info: Dict):
@@ -266,6 +275,9 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
             disk_info: Dict with disk information
     """
     from .core import get_bench_cache_dir
+
+    t = theme()
+    c = t.colors
 
     # Extract volume name from mountpoint
     largest_partition = disk_info["largest_partition"]
@@ -291,25 +303,31 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
     disk_panel = Panel(
         info_text,
         title=f"[bold]{volume_name}[/]",
-        style="cyan",
+        style=c.accent,
+        box=t.design.app_box,
     )
 
     console.print(disk_panel)
 
     # Results table
-    table = Table(title="Benchmark Results", show_header=True, header_style="bold")
-    table.add_column("Test", style="cyan")
-    table.add_column("Throughput/IOPS", style="yellow")
-    table.add_column("Avg Latency", style="magenta")
-    table.add_column("p95 Latency", style="magenta")
-    table.add_column("p99 Latency", style="magenta")
-    table.add_column("Duration", style="green")
+    table = Table(
+        title="Benchmark Results",
+        show_header=True,
+        header_style=f"bold {c.accent}",
+        box=t.design.app_box,
+    )
+    table.add_column("Test", style=c.accent)
+    table.add_column("Throughput/IOPS", style=c.primary)
+    table.add_column("Avg Latency", style=c.info)
+    table.add_column("p95 Latency", style=c.info)
+    table.add_column("p99 Latency", style=c.info)
+    table.add_column("Duration", style=c.ok)
 
     for result in results:
         if result.is_error():
             table.add_row(
-                f"[red]{result.test_name}[/]",
-                "[red]Error[/]",
+                f"[{c.danger}]{result.test_name}[/]",
+                f"[{c.danger}]Error[/]",
                 "-",
                 "-",
                 "-",
@@ -325,11 +343,8 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
         else:
             metric = "-"
 
-        # Style based on value (simple heuristic)
-        style = "green"
-
         table.add_row(
-            f"[{style}]{result.test_name}[/{style}]",
+            f"[{c.ok}]{result.test_name}[/]",
             metric,
             latency_fmt(result.avg_latency_ms),
             latency_fmt(result.p95_latency_ms),
@@ -344,11 +359,11 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
     success_count = len(results) - error_count
 
     if error_count == 0:
-        summary_text = "[green]✓ Benchmarking completed successfully[/]"
+        summary_text = f"[{c.ok}]✓ Benchmarking completed successfully[/]"
     elif success_count == 0:
-        summary_text = "[red]✗ Benchmarking failed - no tests completed[/]"
+        summary_text = f"[{c.danger}]✗ Benchmarking failed - no tests completed[/]"
     else:
-        summary_text = f"[yellow]⚠ Benchmarking partially completed ({success_count}/{len(results)} tests)[/]"
+        summary_text = f"[{c.warn}]⚠ Benchmarking partially completed ({success_count}/{len(results)} tests)[/]"
 
     console.print(f"\n{summary_text}\n")
 
@@ -398,9 +413,9 @@ def export_results_json(
     try:
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
-        console.print(f"[green]✓ Results exported to {output_path}[/]")
+        console.print(f"[{theme().colors.ok}]✓ Results exported to {output_path}[/]")
     except Exception as e:
-        console.print(f"[red]✗ Failed to export results: {e}[/]")
+        console.print(f"[{theme().colors.danger}]✗ Failed to export results: {e}[/]")
 
 
 def benchmark_command(args) -> int:
@@ -413,17 +428,26 @@ def benchmark_command(args) -> int:
     Returns:
             Exit code (0 for success, 1 for error)
     """
+    t = theme()
+    c = t.colors
+    console.print()
     console.print(
-        "\n[bold cyan]╔════════════════════════════════════╗[/]"
-        "\n[bold cyan]║      SOT Disk Benchmark Tool       ║[/]"
-        "\n[bold cyan]╚════════════════════════════════════╝[/]\n"
+        Panel(
+            "SOT Disk Benchmark Tool",
+            style=f"bold {c.accent}",
+            box=t.design.app_box,
+            expand=False,
+            padding=(0, 6),
+        )
     )
+    console.print()
 
     # Get available physical disks
     physical_disks = get_physical_disks()
     if not physical_disks:
         console.print(
-            "[red]❌ No accessible disks found. Run with elevated privileges if needed.[/]"
+            f"[{c.danger}]No accessible disks found. "
+            "Run with elevated privileges if needed.[/]"
         )
         return 1
 
@@ -433,7 +457,7 @@ def benchmark_command(args) -> int:
     # Interactive disk selection
     selected_index = display_disk_selection(physical_disks)
     if selected_index < 0:
-        console.print("[yellow]Benchmark cancelled.[/]")
+        console.print(f"[{c.warn}]Benchmark cancelled.[/]")
         return 0
 
     selected_disk = physical_disks[selected_index]
@@ -457,14 +481,14 @@ def benchmark_command(args) -> int:
             pass
     except (PermissionError, OSError) as e:
         console.print(
-            f"[red]✗ Cannot write to cache directory: {e}[/]\n"
-            "[yellow]Try running with elevated privileges (sudo) or check disk space.[/]"
+            f"[{c.danger}]✗ Cannot write to cache directory: {e}[/]\n"
+            f"[{c.warn}]Try running with elevated privileges (sudo) or check disk space.[/]"
         )
         return 1
 
     # Run benchmarks with progress
-    console.print(f"[bold yellow]Running benchmarks on {volume_name}...[/]\n")
-    console.print(f"[dim]Per-benchmark duration: {args.duration}s[/]\n")
+    console.print(f"[bold {c.primary}]Running benchmarks on {volume_name}...[/]\n")
+    console.print(f"[{c.muted}]Per-benchmark duration: {args.duration}s[/]\n")
 
     benchmark = DiskBenchmark(disk_id, mountpoint, duration_seconds=args.duration)
     results = []
@@ -493,7 +517,7 @@ def benchmark_command(args) -> int:
 
     with Progress(
         TextColumn("[progress.description]{task.description}"),
-        BarColumn(complete_style="green", finished_style="green"),
+        BarColumn(complete_style=c.ok, finished_style=c.ok),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         ElapsedTimeColumn(benchmark_start_time),
     ) as progress:
@@ -505,7 +529,7 @@ def benchmark_command(args) -> int:
         ]
 
         task = progress.add_task(
-            "[cyan]Benchmarking...[/]", total=len(tests), visible=True
+            f"[{c.accent}]Benchmarking...[/]", total=len(tests), visible=True
         )
 
         for test_name, test_func in tests:

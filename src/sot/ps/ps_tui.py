@@ -7,39 +7,27 @@ from rich.align import Align
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from textual import events
-from textual.app import App, ComposeResult
+from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
-from textual.widget import Widget
 from textual.widgets import Footer, Header
 
 from .._helpers import sizeof_fmt
-from .._theme import apply_to_app, theme
+from .._theme import theme
+from ..tui import keymap
+from ..tui.base import SotBaseApp
+from ..tui.messages import ProcessAction
+from ..tui.process_list import ProcessListActions
+from ..tui.state import KeepsState, ListCursor
 from ..widgets.process_sorter import SortManager
 from ..widgets.processes import get_process_list
 
 
-class ProcessListPanel(Widget):
+class ProcessListPanel(ProcessListActions):
     """Process list panel on the left."""
 
-    can_focus = True
-
-    class ProcessSelected(Message):
-        def __init__(self, process_info: dict) -> None:
-            self.process_info = process_info
-            super().__init__()
-
-    class ProcessAction(Message):
-        def __init__(self, action: str, process_info: dict) -> None:
-            self.action = action
-            self.process_info = process_info
-            super().__init__()
-
-    class KillRequest(Message):
-        def __init__(self, process_info: dict) -> None:
-            self.process_info = process_info
-            super().__init__()
+    BINDINGS = [*keymap.LIST, *keymap.PROCESS, *keymap.SORT_MODE]
+    STATE = ("processes", "selected_index", "scroll_position", "sort_manager")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -50,16 +38,20 @@ class ProcessListPanel(Widget):
         self.sort_manager = SortManager()
 
     def on_mount(self):
+        self.restore_state()
         self.refresh_processes()
         self.set_interval(2.0, self.refresh_processes)
 
     def refresh_processes(self):
         self.processes = get_process_list(500, self.sort_manager)
-        if self.selected_index >= len(self.processes):
-            self.selected_index = max(0, len(self.processes) - 1)
-        max_scroll = max(0, len(self.processes) - self.visible_rows)
-        self.scroll_position = min(self.scroll_position, max_scroll)
+        self.clamp_cursor()
         self.refresh()
+
+    def redraw(self) -> None:
+        self.refresh()
+
+    def reload(self) -> None:
+        self.refresh_processes()
 
     def render(self):
         t = theme()
@@ -114,7 +106,7 @@ class ProcessListPanel(Widget):
             columns_display = " | ".join(
                 col.display_name for col in self.sort_manager.COLUMNS[:4]
             )
-            title = f"[{c.alert_tag}] ORDER BY [/]{sep}[bold {c.accent}]{current_col}[/] [bold magenta]{direction}[/]{sep}{columns_display}"
+            title = f"[{c.alert_tag}] ORDER BY [/]{sep}[bold {c.accent}]{current_col}[/] [bold {c.secondary}]{direction}[/]{sep}{columns_display}"
             border_style = c.border_alert
         else:
             sort_indicator = self.sort_manager.get_sort_indicator_str()
@@ -126,143 +118,24 @@ class ProcessListPanel(Widget):
             table, title=title, border_style=border_style, box=t.design.app_box
         )
 
-    def handle_navigation_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "up":
-            if self.selected_index > 0:
-                self.selected_index -= 1
-                if self.selected_index < self.scroll_position:
-                    self.scroll_position = self.selected_index
-                self.refresh()
-            return True
-        elif key_pressed == "down":
-            if self.selected_index < len(self.processes) - 1:
-                self.selected_index += 1
-                if self.selected_index >= self.scroll_position + self.visible_rows:
-                    self.scroll_position = self.selected_index - self.visible_rows + 1
-                self.refresh()
-            return True
-        elif key_pressed in ("pageup", "ctrl+u"):
-            self.selected_index = max(0, self.selected_index - self.visible_rows)
-            self.scroll_position = max(0, self.scroll_position - self.visible_rows)
-            self.refresh()
-            return True
-        elif key_pressed in ("pagedown", "ctrl+d"):
-            max_index = len(self.processes) - 1
-            self.selected_index = min(
-                max_index, self.selected_index + self.visible_rows
-            )
-            max_scroll = max(0, len(self.processes) - self.visible_rows)
-            self.scroll_position = min(
-                max_scroll, self.scroll_position + self.visible_rows
-            )
-            self.refresh()
-            return True
-        elif key_pressed in ("home", "ctrl+home"):
-            self.selected_index = 0
-            self.scroll_position = 0
-            self.refresh()
-            return True
-        elif key_pressed in ("end", "ctrl+end"):
-            max_index = len(self.processes) - 1
-            self.selected_index = max_index
-            self.scroll_position = max(0, max_index - self.visible_rows + 1)
-            self.refresh()
-            return True
-        return False
-
-    def handle_sort_mode_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "left":
-            self.sort_manager.navigate_columns(-1)
-            self.refresh()
-            return True
-        elif key_pressed == "right":
-            self.sort_manager.navigate_columns(1)
-            self.refresh()
-            return True
-        elif key_pressed == "enter":
-            self.sort_manager.toggle_column(self.sort_manager.active_column_index)
-            self.refresh_processes()
-            return True
-        elif key_pressed in ("escape", "o"):
-            self.sort_manager.exit_sort_mode()
-            self.refresh()
-            return True
-        return False
-
-    def handle_action_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "o":
-            self.sort_manager.enter_sort_mode()
-            self.refresh()
-            return True
-        elif key_pressed == "enter":
-            if 0 <= self.selected_index < len(self.processes):
-                selected_process = self.processes[self.selected_index]
-                self.post_message(self.ProcessSelected(selected_process))
-            return True
-        elif key_pressed == "k":
-            if 0 <= self.selected_index < len(self.processes):
-                selected_process = self.processes[self.selected_index]
-                self.post_message(self.KillRequest(selected_process))
-            return True
-        elif key_pressed == "t":
-            if 0 <= self.selected_index < len(self.processes):
-                selected_process = self.processes[self.selected_index]
-                self.post_message(self.ProcessAction("terminate", selected_process))
-            return True
-        elif key_pressed == "r":
-            self.refresh_processes()
-            return True
-        return False
-
-    def on_key(self, event: events.Key):
-        if not self.has_focus:
-            return
-
-        if (
-            hasattr(self.app, "_waiting_for_kill_confirmation")
-            and self.app._waiting_for_kill_confirmation
-        ):
-            return
-
-        if not self.processes:
-            return
-
-        key_pressed = event.key
-
-        if self.sort_manager.sort_mode_active:
-            if self.handle_sort_mode_keys(key_pressed):
-                event.prevent_default()
-                return
-        else:
-            if self.handle_navigation_keys(key_pressed):
-                event.prevent_default()
-                return
-            if self.handle_action_keys(key_pressed):
-                event.prevent_default()
-                return
-
     def on_resize(self, event):
         self.visible_rows = max(10, self.size.height - 3)
         self.refresh()
 
 
-class PortListPanel(Widget):
+class PortListPanel(ListCursor, KeepsState):
     """Port list panel showing open ports and their processes."""
 
     can_focus = True
 
-    class ProcessSelected(Message):
-        def __init__(self, port_info: dict) -> None:
-            self.port_info = port_info
-            super().__init__()
+    BINDINGS = [
+        *keymap.LIST,
+        *keymap.PROCESS,
+        *keymap.SORT_CYCLE,
+    ]
+    STATE = ("ports", "selected_index", "scroll_position", "sort_by", "sort_reverse")
 
-    class ProcessAction(Message):
-        def __init__(self, action: str, port_info: dict) -> None:
-            self.action = action
-            self.port_info = port_info
-            super().__init__()
-
-    class KillRequest(Message):
+    class PortSelected(Message):
         def __init__(self, port_info: dict) -> None:
             self.port_info = port_info
             super().__init__()
@@ -277,8 +150,50 @@ class PortListPanel(Widget):
         self.sort_reverse = False
 
     def on_mount(self):
+        self.restore_state()
         self.refresh_ports()
         self.set_interval(3.0, self.refresh_ports)
+
+    def row_count(self) -> int:
+        return len(self.ports)
+
+    def redraw(self) -> None:
+        self.refresh()
+
+    def _selected(self) -> dict | None:
+        if 0 <= self.selected_index < len(self.ports):
+            return self.ports[self.selected_index]
+        return None
+
+    def action_details(self) -> None:
+        if (port := self._selected()) is not None:
+            self.post_message(self.PortSelected(port))
+
+    def _act(self, action: str) -> None:
+        port = self._selected()
+        if port is not None and port.get("pid"):
+            self.post_message(
+                ProcessAction(action, {"pid": port["pid"], "name": port["name"]})
+            )
+
+    def action_kill(self) -> None:
+        self._act("kill")
+
+    def action_terminate(self) -> None:
+        self._act("terminate")
+
+    def action_refresh(self) -> None:
+        self.refresh_ports()
+
+    def action_sort_cycle(self) -> None:
+        options = ["port", "address", "name", "pid"]
+        self.sort_by = options[(options.index(self.sort_by) + 1) % len(options)]
+        self.sort_reverse = False
+        self.refresh_ports()
+
+    def action_sort_reverse(self) -> None:
+        self.sort_reverse = not self.sort_reverse
+        self.refresh_ports()
 
     def refresh_ports(self):
         """Get all listening ports and their processes."""
@@ -331,11 +246,7 @@ class PortListPanel(Widget):
             ports_list.sort(key=lambda x: x["pid"] or 0, reverse=self.sort_reverse)
 
         self.ports = ports_list
-
-        if self.selected_index >= len(self.ports):
-            self.selected_index = max(0, len(self.ports) - 1)
-        max_scroll = max(0, len(self.ports) - self.visible_rows)
-        self.scroll_position = min(self.scroll_position, max_scroll)
+        self.clamp_cursor()
         self.refresh()
 
     def render(self):
@@ -402,116 +313,24 @@ class PortListPanel(Widget):
             table, title=title, border_style=border_style, box=t.design.app_box
         )
 
-    def handle_navigation_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "up":
-            if self.selected_index > 0:
-                self.selected_index -= 1
-                if self.selected_index < self.scroll_position:
-                    self.scroll_position = self.selected_index
-                self.refresh()
-            return True
-        elif key_pressed == "down":
-            if self.selected_index < len(self.ports) - 1:
-                self.selected_index += 1
-                if self.selected_index >= self.scroll_position + self.visible_rows:
-                    self.scroll_position = self.selected_index - self.visible_rows + 1
-                self.refresh()
-            return True
-        elif key_pressed in ("pageup", "ctrl+u"):
-            self.selected_index = max(0, self.selected_index - self.visible_rows)
-            self.scroll_position = max(0, self.scroll_position - self.visible_rows)
-            self.refresh()
-            return True
-        elif key_pressed in ("pagedown", "ctrl+d"):
-            max_index = len(self.ports) - 1
-            self.selected_index = min(
-                max_index, self.selected_index + self.visible_rows
-            )
-            max_scroll = max(0, len(self.ports) - self.visible_rows)
-            self.scroll_position = min(
-                max_scroll, self.scroll_position + self.visible_rows
-            )
-            self.refresh()
-            return True
-        elif key_pressed in ("home", "ctrl+home"):
-            self.selected_index = 0
-            self.scroll_position = 0
-            self.refresh()
-            return True
-        elif key_pressed in ("end", "ctrl+end"):
-            max_index = len(self.ports) - 1
-            self.selected_index = max_index
-            self.scroll_position = max(0, max_index - self.visible_rows + 1)
-            self.refresh()
-            return True
-        return False
-
-    def handle_action_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "o":
-            sort_options = ["port", "address", "name", "pid"]
-            current_idx = sort_options.index(self.sort_by)
-            next_idx = (current_idx + 1) % len(sort_options)
-            self.sort_by = sort_options[next_idx]
-            self.sort_reverse = False
-            self.refresh_ports()
-            return True
-        elif key_pressed == "s":
-            self.sort_reverse = not self.sort_reverse
-            self.refresh_ports()
-            return True
-        elif key_pressed == "enter":
-            if 0 <= self.selected_index < len(self.ports):
-                selected_port = self.ports[self.selected_index]
-                self.post_message(self.ProcessSelected(selected_port))
-            return True
-        elif key_pressed == "k":
-            if 0 <= self.selected_index < len(self.ports):
-                selected_port = self.ports[self.selected_index]
-                if selected_port.get("pid"):
-                    self.post_message(self.KillRequest(selected_port))
-            return True
-        elif key_pressed == "t":
-            if 0 <= self.selected_index < len(self.ports):
-                selected_port = self.ports[self.selected_index]
-                if selected_port.get("pid"):
-                    self.post_message(self.ProcessAction("terminate", selected_port))
-            return True
-        elif key_pressed == "r":
-            self.refresh_ports()
-            return True
-        return False
-
-    def on_key(self, event: events.Key):
-        if not self.has_focus:
-            return
-
-        if (
-            hasattr(self.app, "_waiting_for_kill_confirmation")
-            and self.app._waiting_for_kill_confirmation
-        ):
-            return
-
-        if not self.ports:
-            return
-
-        key_pressed = event.key
-
-        if self.handle_navigation_keys(key_pressed):
-            event.prevent_default()
-            return
-        if self.handle_action_keys(key_pressed):
-            event.prevent_default()
-            return
-
     def on_resize(self, event):
         self.visible_rows = max(5, self.size.height - 3)
         self.refresh()
 
 
-class DevEnvPanel(Widget):
+class DevEnvPanel(ListCursor, KeepsState):
     """Development environment detection panel."""
 
     can_focus = True
+
+    BINDINGS = [*keymap.LIST, keymap.DETAILS, keymap.REFRESH, *keymap.SORT_CYCLE]
+    STATE = (
+        "dev_servers",
+        "selected_index",
+        "scroll_position",
+        "sort_by",
+        "sort_reverse",
+    )
 
     class DevEnvSelected(Message):
         def __init__(self, dev_env: dict) -> None:
@@ -522,12 +341,40 @@ class DevEnvPanel(Widget):
         super().__init__(**kwargs)
         self.dev_servers = []
         self.selected_index = 0
+        self.scroll_position = 0
+        self.visible_rows = 15
         self.sort_by = "type"
         self.sort_reverse = False
 
     def on_mount(self):
+        self.restore_state()
         self.refresh_dev_env()
         self.set_interval(5.0, self.refresh_dev_env)
+
+    def row_count(self) -> int:
+        return len(self.dev_servers)
+
+    def redraw(self) -> None:
+        self.refresh()
+
+    def action_details(self) -> None:
+        if 0 <= self.selected_index < len(self.dev_servers):
+            self.post_message(
+                self.DevEnvSelected(self.dev_servers[self.selected_index])
+            )
+
+    def action_refresh(self) -> None:
+        self.refresh_dev_env()
+
+    def action_sort_cycle(self) -> None:
+        options = ["type", "count", "cpu", "memory"]
+        self.sort_by = options[(options.index(self.sort_by) + 1) % len(options)]
+        self.sort_reverse = False
+        self.refresh_dev_env()
+
+    def action_sort_reverse(self) -> None:
+        self.sort_reverse = not self.sort_reverse
+        self.refresh_dev_env()
 
     def refresh_dev_env(self):  # noqa: C901
         """Detect development servers and collect metrics."""
@@ -624,10 +471,7 @@ class DevEnvPanel(Widget):
             )
 
         self.dev_servers = dev_servers_list
-
-        if self.selected_index >= len(self.dev_servers):
-            self.selected_index = max(0, len(self.dev_servers) - 1)
-
+        self.clamp_cursor()
         self.refresh()
 
     def render(self):
@@ -661,7 +505,10 @@ class DevEnvPanel(Widget):
         table.add_column("CPU%", justify="right", width=6)
         table.add_column("Mem", justify="right", width=8)
 
-        for idx, server in enumerate(self.dev_servers[:15]):  # Show max 15
+        end_index = self.scroll_position + self.visible_rows
+        visible = self.dev_servers[self.scroll_position : end_index]
+        for local_idx, server in enumerate(visible):
+            idx = self.scroll_position + local_idx
             is_selected = self.has_focus and idx == self.selected_index
 
             env_type = f"{server['type'].upper()} ({server['count']})"
@@ -693,68 +540,8 @@ class DevEnvPanel(Widget):
             table, title=title, border_style=border_style, box=t.design.app_box
         )
 
-    def handle_navigation_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "up":
-            if self.selected_index > 0:
-                self.selected_index -= 1
-                self.refresh()
-            return True
-        elif key_pressed == "down":
-            if self.selected_index < len(self.dev_servers) - 1:
-                self.selected_index += 1
-                self.refresh()
-            return True
-        elif key_pressed in ("home", "ctrl+home"):
-            self.selected_index = 0
-            self.refresh()
-            return True
-        elif key_pressed in ("end", "ctrl+end"):
-            self.selected_index = max(0, len(self.dev_servers) - 1)
-            self.refresh()
-            return True
-        return False
 
-    def handle_action_keys(self, key_pressed: str) -> bool:
-        if key_pressed == "o":
-            sort_options = ["type", "count", "cpu", "memory"]
-            current_idx = sort_options.index(self.sort_by)
-            next_idx = (current_idx + 1) % len(sort_options)
-            self.sort_by = sort_options[next_idx]
-            self.sort_reverse = False
-            self.refresh_dev_env()
-            return True
-        elif key_pressed == "s":
-            self.sort_reverse = not self.sort_reverse
-            self.refresh_dev_env()
-            return True
-        elif key_pressed == "enter":
-            if 0 <= self.selected_index < len(self.dev_servers):
-                selected_env = self.dev_servers[self.selected_index]
-                self.post_message(self.DevEnvSelected(selected_env))
-            return True
-        elif key_pressed == "r":
-            self.refresh_dev_env()
-            return True
-        return False
-
-    def on_key(self, event: events.Key):
-        if not self.has_focus:
-            return
-
-        if not self.dev_servers:
-            return
-
-        key_pressed = event.key
-
-        if self.handle_navigation_keys(key_pressed):
-            event.prevent_default()
-            return
-        if self.handle_action_keys(key_pressed):
-            event.prevent_default()
-            return
-
-
-class ProcessTUIApp(App):
+class ProcessTUIApp(SotBaseApp):
     """SOT Process TUI Application."""
 
     CSS = """
@@ -781,14 +568,7 @@ class ProcessTUIApp(App):
     }
     """
 
-    BINDINGS = [
-        ("q", "quit", "Quit"),
-        ("tab", "focus_next", "Next Section"),
-    ]
-
-    def __init__(self):
-        super().__init__()
-        apply_to_app(self)
+    BINDINGS = [keymap.QUIT, keymap.FOCUS_NEXT]
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -806,8 +586,6 @@ class ProcessTUIApp(App):
         self.title = "SOT PS"
         self.sub_title = "Interactive Process Viewer"
         self.query_one("#left-panel").focus()
-        self._waiting_for_kill_confirmation = False
-        self.pending_kill = None
 
     def action_focus_next(self):
         """Cycle focus between the three panels."""
@@ -824,121 +602,21 @@ class ProcessTUIApp(App):
         except (ValueError, AttributeError):
             focusable[0].focus()
 
-    def on_key(self, event: events.Key) -> None:
-        if self._waiting_for_kill_confirmation and self.pending_kill:
-            if event.key == "y":
-                self._waiting_for_kill_confirmation = False
-                self._kill_process(self.pending_kill)
-            else:
-                self._waiting_for_kill_confirmation = False
-                self.notify("❌ Kill cancelled", timeout=2)
-            event.prevent_default()
-
-    def on_process_list_panel_process_selected(
-        self, message: ProcessListPanel.ProcessSelected
-    ) -> None:
-        from .._process_utils import format_process_details
-
-        details = format_process_details(message.process_info)
-        self.notify("\n".join(details), timeout=5)
-
-    def on_process_list_panel_kill_request(
-        self, message: ProcessListPanel.KillRequest
-    ) -> None:
-        proc = message.process_info
-        self.pending_kill = proc
-        self.notify(
-            f"⚠️  KILL {proc.get('name', 'Unknown')}? Press 'y' to confirm, any key to cancel",
-            severity="error",
-            timeout=10,
-        )
-        self._waiting_for_kill_confirmation = True
-        self.set_timer(10.0, self._reset_confirmation)
-
-    def on_process_list_panel_process_action(
-        self, message: ProcessListPanel.ProcessAction
-    ) -> None:
-        from .._process_utils import kill_process, terminate_process
-
-        proc = message.process_info
-        action = message.action
-        pid = proc.get("pid")
-        name = proc.get("name", "Unknown")
-
-        if not isinstance(pid, int):
-            self.notify("❌ Invalid process ID", severity="error", timeout=3)
-            return
-
-        if action == "kill":
-            result = kill_process(pid, name)
-        elif action == "terminate":
-            result = terminate_process(pid, name)
-        else:
-            self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
-            return
-
-        self.notify(result.message, severity=result.severity, timeout=4)
-
-    def on_port_list_panel_process_selected(
-        self, message: PortListPanel.ProcessSelected
+    def on_port_list_panel_port_selected(
+        self, message: PortListPanel.PortSelected
     ) -> None:
         port_info = message.port_info
-        details = [f"🔌 Port {port_info['port']} on {port_info['address']}"]
-        details.append(f"📋 Process: {port_info['name']}")
+        details = [f"Port {port_info['port']} on {port_info['address']}"]
+        details.append(f"Process: {port_info['name']}")
         if port_info["pid"]:
             details.append(f"PID: {port_info['pid']}")
-        self.notify("\n".join(details), timeout=5)
-
-    def on_port_list_panel_kill_request(
-        self, message: PortListPanel.KillRequest
-    ) -> None:
-        port_info = message.port_info
-        if not port_info.get("pid"):
-            self.notify(
-                "❌ No process associated with this port", severity="error", timeout=3
-            )
-            return
-        proc = {"pid": port_info["pid"], "name": port_info["name"]}
-        self.pending_kill = proc
-        self.notify(
-            f"⚠️  KILL {port_info['name']} (Port {port_info['port']})? Press 'y' to confirm, any key to cancel",
-            severity="error",
-            timeout=10,
-        )
-        self._waiting_for_kill_confirmation = True
-        self.set_timer(10.0, self._reset_confirmation)
-
-    def on_port_list_panel_process_action(
-        self, message: PortListPanel.ProcessAction
-    ) -> None:
-        from .._process_utils import kill_process, terminate_process
-
-        port_info = message.port_info
-        action = message.action
-        pid = port_info.get("pid")
-        name = port_info["name"]
-
-        if not isinstance(pid, int):
-            self.notify(
-                "❌ No process associated with this port", severity="error", timeout=3
-            )
-            return
-
-        if action == "kill":
-            result = kill_process(pid, name)
-        elif action == "terminate":
-            result = terminate_process(pid, name)
-        else:
-            self.notify(f"❓ Unknown action: {action}", severity="error", timeout=3)
-            return
-
-        self.notify(result.message, severity=result.severity, timeout=4)
+        self.notify("\n".join(details))
 
     def on_dev_env_panel_dev_env_selected(
         self, message: DevEnvPanel.DevEnvSelected
     ) -> None:
         env = message.dev_env
-        details = [f"🔧 {env['type'].upper()} Environment"]
+        details = [f"{env['type'].upper()} environment"]
         details.append(f"Processes: {env['count']}")
         if env["ports"]:
             details.append(f"Ports: {', '.join(map(str, env['ports']))}")
@@ -946,22 +624,4 @@ class ProcessTUIApp(App):
         details.append(
             f"Memory: {sizeof_fmt(env['memory_mb'] * 1024 * 1024, suffix='', sep='')}"
         )
-        self.notify("\n".join(details), timeout=5)
-
-    def _kill_process(self, proc: dict) -> None:
-        from .._process_utils import kill_process
-
-        pid = proc.get("pid")
-        name = proc.get("name", "Unknown")
-
-        if not isinstance(pid, int):
-            self.notify("❌ Invalid process ID", severity="error", timeout=3)
-            return
-
-        result = kill_process(pid, name)
-        self.notify(result.message, severity=result.severity, timeout=4)
-
-    def _reset_confirmation(self):
-        if self._waiting_for_kill_confirmation:
-            self._waiting_for_kill_confirmation = False
-            self.notify("❌ Kill action expired", severity="error", timeout=2)
+        self.notify("\n".join(details))

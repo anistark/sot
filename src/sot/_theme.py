@@ -9,12 +9,14 @@ theme only overrides the fields that differ from the classic defaults.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from functools import lru_cache
 
 from rich.box import ROUNDED, SQUARE, Box
 from rich.color import Color, blend_rgb
 from rich.text import Text
+from textual.theme import BUILTIN_THEMES
 from textual.theme import Theme as TextualTheme
 
 from .blockchar_stream import BlockCharStream
@@ -81,6 +83,14 @@ class Colors:
     stripe: str = "grey11"
 
     @property
+    def ok(self) -> str:
+        return self.health[0]
+
+    @property
+    def warn(self) -> str:
+        return self.health[2]
+
+    @property
     def memory(self) -> tuple[str, ...]:
         return (self.primary, self.secondary, self.info, self.temp, self.danger)
 
@@ -124,7 +134,6 @@ class SotTheme:
     colors: Colors = field(default_factory=Colors)
     design: Design = field(default_factory=Design)
     textual: TextualTheme | None = None
-    css: str = ""
 
     def title(self, label: str, detail: str | None = None) -> str:
         """Format a panel title, e.g. ``CPU`` with detail ``Apple M1``."""
@@ -189,7 +198,27 @@ def _blend(base: str, target: str, amount: float) -> str:
     return Color.from_triplet(rgb).name
 
 
-CLASSIC = SotTheme(name="classic")
+CLASSIC = SotTheme(
+    name="classic",
+    # ANSI colors so the TUI follows the terminal's own palette and background.
+    textual=TextualTheme(
+        name="classic",
+        primary="ansi_yellow",
+        secondary="ansi_cyan",
+        accent="ansi_cyan",
+        warning="ansi_yellow",
+        error="ansi_red",
+        success="ansi_green",
+        foreground="ansi_default",
+        background="ansi_default",
+        surface="ansi_default",
+        panel="ansi_default",
+        boost="ansi_default",
+        dark=True,
+        ansi=True,
+        variables=dict(BUILTIN_THEMES["ansi-dark"].variables),
+    ),
+)
 
 _CP_BG = "#0b0b10"
 _CP_YELLOW = "#fcee0a"
@@ -248,7 +277,7 @@ CYBERPUNK = SotTheme(
         glitch=True,
     ),
     textual=TextualTheme(
-        name="cyberpunk-2077",
+        name="cyberpunk",
         primary=_CP_YELLOW,
         secondary=_CP_GREEN,
         accent=_CP_CYAN,
@@ -261,23 +290,6 @@ CYBERPUNK = SotTheme(
         panel="#1c0d14",
         dark=True,
     ),
-    css=f"""
-    Header {{
-        background: {_CP_YELLOW};
-        color: {_CP_BG};
-        text-style: bold;
-    }}
-    HeaderClock {{
-        background: {_CP_PINK};
-        color: {_CP_BG};
-    }}
-    ListView > ListItem.-highlight {{
-        background: {_CP_CYAN} 12%;
-    }}
-    ListView:focus > ListItem.-highlight {{
-        background: {_CP_CYAN} 28%;
-    }}
-    """,
 )
 
 THEMES = {t.name: t for t in (CLASSIC, CYBERPUNK)}
@@ -301,11 +313,64 @@ def set_theme(name: str) -> SotTheme:
     return _active
 
 
-def apply_to_app(app) -> None:
-    """Register the active theme's Textual theme and CSS on an App (pre-run)."""
-    t = theme()
-    if t.css:
-        app.CSS = type(app).CSS + t.css
-    if t.textual is not None:
-        app.register_theme(t.textual)
-        app.theme = t.textual.name
+class ThemedStream:
+    """A graph stream that keeps its raw samples and draws them in the style of
+    the active theme, so switching themes keeps the history."""
+
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        minval: float,
+        maxval: float,
+        flipud: bool = False,
+        history: int = 1024,
+    ):
+        self.width = width
+        self.height = height
+        self.minval = minval
+        self.flipud = flipud
+        self.values: deque[float] = deque(maxlen=history)
+        self._maxval = maxval
+        self._stream: BrailleStream | BlockCharStream | None = None
+        self._style: str | None = None
+
+    @property
+    def maxval(self) -> float:
+        return self._maxval
+
+    @maxval.setter
+    def maxval(self, value: float) -> None:
+        self._maxval = value
+        if self._stream is not None:
+            self._stream.maxval = value
+
+    def _drawn(self) -> BrailleStream | BlockCharStream:
+        t = theme()
+        if self._stream is None or self._style != t.design.graph:
+            stream = t.stream(
+                self.width, self.height, self.minval, self._maxval, self.flipud
+            )
+            for value in list(self.values)[-(2 * self.width + 1) :]:
+                stream.add_value(value)
+            self._stream, self._style = stream, t.design.graph
+        return self._stream
+
+    def add_value(self, value: float) -> None:
+        self.values.append(value)
+        if self._stream is not None and self._style == theme().design.graph:
+            self._stream.add_value(value)
+
+    @property
+    def graph(self) -> list[str]:
+        return self._drawn().graph
+
+    def reset_width(self, width: int) -> None:
+        self.width = width
+        if self._stream is not None:
+            self._stream.reset_width(width)
+
+    def reset_height(self, height: int) -> None:
+        self.height = height
+        if self._stream is not None:
+            self._stream.reset_height(height)

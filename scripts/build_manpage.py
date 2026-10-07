@@ -302,7 +302,7 @@ Show detailed information
 Kill selected process (requires confirmation)
 .TP
 .B T
-Terminate selected process gracefully
+Terminate selected process gracefully (requires confirmation)
 .TP
 .B O
 Change sort column (cycles through available columns)

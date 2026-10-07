@@ -14,6 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.text import Text
 
+from .._theme import theme
 from .agents import CODING_AGENTS, agent_paths, resolve_roots
 
 
@@ -402,6 +403,7 @@ def _clean_path(path: Path, console: Console) -> int:
         return 0
 
     size = _get_size(path)
+    c = theme().colors
 
     try:
         if path.is_file():
@@ -415,10 +417,10 @@ def _clean_path(path: Path, console: Console) -> int:
                     elif item.is_dir():
                         shutil.rmtree(item)
                 except (PermissionError, OSError) as e:
-                    console.print(f"  [yellow]⚠[/yellow]  Skipped {item.name}: {e}")
+                    console.print(f"  [{c.warn}]⚠[/]  Skipped {item.name}: {e}")
         return size
     except (PermissionError, OSError) as e:
-        console.print(f"  [red]✗[/red] Failed to clean {path.name}: {e}")
+        console.print(f"  [{c.danger}]✗[/] Failed to clean {path.name}: {e}")
         return 0
 
 
@@ -443,7 +445,7 @@ def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
 
             if target.requires_sudo and not elevated:
                 console.print(
-                    f"  [yellow]⚠[/yellow]  Skipping {target.name} (requires sudo)"
+                    f"  [{theme().colors.warn}]⚠[/]  Skipping {target.name} (requires sudo)"
                 )
                 progress.advance(task)
                 continue
@@ -464,12 +466,14 @@ def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
 def clean_command(args) -> int:
     """Execute the clean command."""
     console = Console()
+    t = theme()
+    c = t.colors
 
     # Show header
     header = Text()
-    header.append("🧹 System Cleanup\n", style="bold bright_cyan")
-    header.append("Deep clean your machine", style="dim")
-    console.print(Panel(header, border_style="bright_cyan"))
+    header.append("🧹 System Cleanup\n", style=f"bold {c.accent}")
+    header.append("Deep clean your machine", style=c.muted)
+    console.print(Panel(header, border_style=c.accent, box=t.design.app_box))
     console.print()
 
     # Detect OS
@@ -480,18 +484,18 @@ def clean_command(args) -> int:
         "Windows": "Windows",
     }.get(system, system)
 
-    console.print(f"📍 Detected OS: [bright_green]{os_name}[/]")
+    console.print(f"📍 Detected OS: [{c.ok}]{os_name}[/]")
 
     elevated = _is_elevated()
     if elevated:
-        console.print("🔑 Running elevated: [bright_green]sudo targets included[/]")
+        console.print(f"🔑 Running elevated: [{c.ok}]sudo targets included[/]")
     console.print()
 
     # Get targets
     targets = _get_targets()
 
     if not targets:
-        console.print("[red]❌ No cleaning targets available for this OS[/]")
+        console.print(f"[{c.danger}]No cleaning targets available for this OS[/]")
         return 1
 
     # Scan targets
@@ -499,11 +503,16 @@ def clean_command(args) -> int:
     results = _scan_targets(targets, console)
 
     # Display results
-    table = Table(title="Cleaning Targets", show_header=True, header_style="bold cyan")
-    table.add_column("Target", style="bright_white", width=20)
+    table = Table(
+        title="Cleaning Targets",
+        show_header=True,
+        header_style=f"bold {c.accent}",
+        box=t.design.app_box,
+    )
+    table.add_column("Target", style=c.text, width=20)
     table.add_column("Status", width=10)
     table.add_column("Size", justify="right", width=12)
-    table.add_column("Description", style="dim", width=30)
+    table.add_column("Description", style=c.muted, width=30)
     table.add_column("Requires Sudo", justify="center", width=13)
 
     total_size = 0
@@ -516,7 +525,7 @@ def clean_command(args) -> int:
         exists = result["exists"]
 
         if exists and size > 0:
-            status = "[green]✓[/]"
+            status = f"[{c.ok}]✓[/]"
             size_str = _sizeof_fmt(size)
             total_size += size
             cleanable_count += 1
@@ -524,13 +533,13 @@ def clean_command(args) -> int:
             if target.requires_sudo:
                 sudo_size += size
         elif exists:
-            status = "[dim]○[/]"
-            size_str = "[dim]empty[/]"
+            status = f"[{c.muted}]○[/]"
+            size_str = f"[{c.muted}]empty[/]"
         else:
-            status = "[dim]-[/]"
-            size_str = "[dim]n/a[/]"
+            status = f"[{c.muted}]-[/]"
+            size_str = f"[{c.muted}]n/a[/]"
 
-        sudo_marker = "[yellow]✓[/]" if target.requires_sudo else "[dim]-[/]"
+        sudo_marker = f"[{c.warn}]✓[/]" if target.requires_sudo else f"[{c.muted}]-[/]"
 
         table.add_row(
             target.name,
@@ -546,50 +555,50 @@ def clean_command(args) -> int:
 
     # Summary
     if cleanable_count == 0:
-        console.print("[green]✨ Nothing to clean! Your system is already clean.[/]")
+        console.print(f"[{c.ok}]Nothing to clean! Your system is already clean.[/]")
         return 0
 
     summary = Table.grid(padding=(0, 2))
     summary.add_column(style="bold")
     summary.add_column()
 
-    summary.add_row("Total cleanable:", f"[bright_green]{_sizeof_fmt(total_size)}[/]")
+    summary.add_row("Total cleanable:", f"[{c.ok}]{_sizeof_fmt(total_size)}[/]")
     if sudo_size > 0:
-        note = "" if elevated else " [dim](will be skipped)[/]"
+        note = "" if elevated else f" [{c.muted}](will be skipped)[/]"
         summary.add_row(
             "Requires sudo:",
-            f"[yellow]{_sizeof_fmt(sudo_size)}[/]{note}",
+            f"[{c.warn}]{_sizeof_fmt(sudo_size)}[/]{note}",
         )
     summary.add_row(
         "Can clean now:",
-        f"[bright_cyan]{_sizeof_fmt(total_size if elevated else total_size - sudo_size)}[/]",
+        f"[{c.accent}]{_sizeof_fmt(total_size if elevated else total_size - sudo_size)}[/]",
     )
 
-    console.print(Panel(summary, title="Summary", border_style="green"))
+    console.print(
+        Panel(summary, title="Summary", border_style=c.ok, box=t.design.app_box)
+    )
     console.print()
 
     # Dry run mode
     if getattr(args, "dry_run", False):
-        console.print("[bright_yellow]🏃 Dry run mode - no files will be deleted[/]")
+        console.print(f"[{c.warn}]Dry run mode - no files will be deleted[/]")
         return 0
 
     # Confirmation
     if sudo_size > 0 and not elevated:
         console.print(
-            "[yellow]⚠[/yellow]  Items requiring sudo will be skipped. "
+            f"[{c.warn}]⚠[/]  Items requiring sudo will be skipped. "
             "Run with sudo to clean them."
         )
         console.print()
 
     try:
-        response = console.input(
-            "[bold bright_yellow]⚠ Proceed with cleaning? (y/N):[/] "
-        )
+        response = console.input(f"[bold {c.warn}]⚠ Proceed with cleaning? (y/N):[/] ")
         if response.lower() not in ["y", "yes"]:
-            console.print("[dim]Cancelled.[/]")
+            console.print(f"[{c.muted}]Cancelled.[/]")
             return 0
     except (KeyboardInterrupt, EOFError):
-        console.print("\n[dim]Cancelled.[/]")
+        console.print(f"\n[{c.muted}]Cancelled.[/]")
         return 0
 
     console.print()
@@ -602,9 +611,9 @@ def clean_command(args) -> int:
 
     # Final summary
     success = Text()
-    success.append("✨ Cleaning Complete!\n", style="bold bright_green")
-    success.append(f"Freed {_sizeof_fmt(freed)} of disk space", style="bright_white")
+    success.append("✨ Cleaning Complete!\n", style=f"bold {c.ok}")
+    success.append(f"Freed {_sizeof_fmt(freed)} of disk space", style=c.text)
 
-    console.print(Panel(success, border_style="bright_green"))
+    console.print(Panel(success, border_style=c.ok, box=t.design.app_box))
 
     return 0

@@ -5,12 +5,12 @@ Provides common functionality for all SOT widgets.
 """
 
 from rich.panel import Panel
-from textual.widget import Widget
 
 from .._theme import theme
+from ..tui.state import KeepsState
 
 
-class BaseWidget(Widget):
+class BaseWidget(KeepsState):
     """Base class for all SOT widgets with common functionality."""
 
     def __init__(self, title: str, border_style=None, **kwargs):

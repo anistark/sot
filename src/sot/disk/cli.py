@@ -2,6 +2,7 @@
 
 from rich.console import Console
 
+from .._theme import theme
 from .disk_tui import DiskTUIApp
 
 console = Console()
@@ -27,8 +28,8 @@ def disk_command(args) -> int:
         app.run()
         return 0
     except KeyboardInterrupt:
-        console.print("\n[yellow]Disk viewer terminated by user[/]")
+        console.print(f"\n[{theme().colors.warn}]Disk viewer terminated by user[/]")
         return 0
     except Exception as e:
-        console.print(f"[red]Error launching disk viewer: {e}[/]")
+        console.print(f"[{theme().colors.danger}]Error launching disk viewer: {e}[/]")
         return 1

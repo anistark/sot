@@ -259,6 +259,7 @@ sot
 - **Theme**: Use `--theme` / `-T` to pick a color theme (`classic` or `cyberpunk`)
   - `sot --theme cyberpunk` - Cyberpunk 2077 inspired neon theme
   - Set `SOT_THEME=cyberpunk` to make it the default; also applies to `sot ps` and `sot disk`
+  - Switch live with `Ctrl+P` → Theme; graphs and selections are kept
 
 ---
 

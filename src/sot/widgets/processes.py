@@ -4,16 +4,18 @@ Processes Widget
 Displays interactive process list with keyboard navigation, process management, and network usage.
 """
 
+import time
 from typing import Optional
 
 import psutil
 from rich.table import Table
 from rich.text import Text
-from textual import events
-from textual.message import Message
+from textual.binding import Binding
 
 from .._helpers import sizeof_fmt
 from .._theme import theme
+from ..tui import keymap
+from ..tui.process_list import ProcessListActions
 from .base_widget import BaseWidget
 from .process_sorter import SortManager
 
@@ -77,53 +79,73 @@ def get_process_list(num_procs: int, sort_manager: Optional[SortManager] = None)
     return processes[:num_procs]
 
 
-class ProcessesWidget(BaseWidget):
+class ProcessesWidget(ProcessListActions, BaseWidget):
     """Interactive process list with arrow key navigation, actions, and network monitoring."""
 
-    can_focus = True
+    BINDINGS = [
+        *keymap.LIST,
+        *keymap.PROCESS,
+        *keymap.SORT_MODE,
+        Binding("i", "toggle_interactive", "Interactive", id="sot.process.interactive"),
+        Binding("n", "toggle_network", "Net columns", id="sot.process.network"),
+    ]
 
-    class ProcessSelected(Message):
-        """Message sent when a process is selected."""
-
-        def __init__(self, process_info: dict) -> None:
-            self.process_info = process_info
-            super().__init__()
-
-    class ProcessAction(Message):
-        """Message sent when an action is requested on a process."""
-
-        def __init__(self, action: str, process_info: dict) -> None:
-            self.action = action
-            self.process_info = process_info
-            super().__init__()
-
-    class KillRequest(Message):
-        """Message sent when kill is requested on a process (requires confirmation)."""
-
-        def __init__(self, process_info: dict) -> None:
-            self.process_info = process_info
-            super().__init__()
+    STATE = (
+        "processes",
+        "selected_index",
+        "scroll_position",
+        "sort_manager",
+        "previous_process_data",
+        "previous_sample_time",
+        "is_interactive_mode",
+        "show_network_details",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(title="Processes", **kwargs)
         self.max_num_procs = 1000
         self.visible_rows = 10
-        self.selected_process_index = 0
-        self.current_scroll_position = 0
-        self.process_list_data = []
+        self.selected_index = 0
+        self.scroll_position = 0
+        self.processes = []
         self.previous_process_data = {}
+        self.previous_sample_time = 0.0
         self.is_interactive_mode = True
         self.show_network_details = True
         self.sort_manager = SortManager()
 
     def on_mount(self):
+        self.restore_state()
         self.collect_data()
         self.set_interval(6.0, self.collect_data)
         self.focus()
 
+    def redraw(self) -> None:
+        self.refresh_display()
+
+    def reload(self) -> None:
+        self.collect_data()
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "toggle_interactive":
+            return not self.sort_manager.sort_mode_active
+        if not self.is_interactive_mode:
+            return False
+        return super().check_action(action, parameters)
+
+    def action_toggle_interactive(self) -> None:
+        self.is_interactive_mode = not self.is_interactive_mode
+        self.refresh_display()
+
+    def action_toggle_network(self) -> None:
+        self.show_network_details = not self.show_network_details
+        self.refresh_display()
+
     def calculate_io_rates(self, current_processes):
         """Calculate I/O rates by comparing with previous data."""
-        interval_seconds = 6.0
+        now = time.monotonic()
+        interval_seconds = now - self.previous_sample_time
+        self.previous_sample_time = now
         for proc in current_processes:
             pid = proc.get("pid")
             if not pid:
@@ -132,7 +154,7 @@ class ProcessesWidget(BaseWidget):
             current_read = proc.get("io_read_bytes", 0)
             current_write = proc.get("io_write_bytes", 0)
 
-            if pid in self.previous_process_data:
+            if pid in self.previous_process_data and interval_seconds > 0:
                 prev_read = self.previous_process_data[pid].get("io_read_bytes", 0)
                 prev_write = self.previous_process_data[pid].get("io_write_bytes", 0)
 
@@ -156,162 +178,11 @@ class ProcessesWidget(BaseWidget):
             if proc.get("pid")
         }
 
-    def handle_navigation_keys(self, key_pressed: str) -> bool:
-        """Handle navigation keys (up, down, page up/down, home, end). Returns True if handled."""
-        if key_pressed == "up":
-            if self.selected_process_index > 0:
-                self.selected_process_index -= 1
-                if self.selected_process_index < self.current_scroll_position:
-                    self.current_scroll_position = self.selected_process_index
-                self.refresh_display()
-            return True
-
-        elif key_pressed == "down":
-            max_index = len(self.process_list_data) - 1
-            if self.selected_process_index < max_index:
-                self.selected_process_index += 1
-                if (
-                    self.selected_process_index
-                    >= self.current_scroll_position + self.visible_rows
-                ):
-                    self.current_scroll_position = (
-                        self.selected_process_index - self.visible_rows + 1
-                    )
-                self.refresh_display()
-            return True
-
-        elif key_pressed == "pageup" or key_pressed == "ctrl+u":
-            self.selected_process_index = max(
-                0, self.selected_process_index - self.visible_rows
-            )
-            self.current_scroll_position = max(
-                0, self.current_scroll_position - self.visible_rows
-            )
-            self.refresh_display()
-            return True
-
-        elif key_pressed == "pagedown" or key_pressed == "ctrl+d":
-            max_index = len(self.process_list_data) - 1
-            self.selected_process_index = min(
-                max_index, self.selected_process_index + self.visible_rows
-            )
-            self.current_scroll_position = min(
-                max(0, len(self.process_list_data) - self.visible_rows),
-                self.current_scroll_position + self.visible_rows,
-            )
-            self.refresh_display()
-            return True
-
-        elif key_pressed == "home" or key_pressed == "ctrl+home":
-            self.selected_process_index = 0
-            self.current_scroll_position = 0
-            self.refresh_display()
-            return True
-
-        elif key_pressed == "end" or key_pressed == "ctrl+end":
-            max_index = len(self.process_list_data) - 1
-            self.selected_process_index = max_index
-            self.current_scroll_position = max(0, max_index - self.visible_rows + 1)
-            self.refresh_display()
-            return True
-
-        return False
-
-    def handle_sort_mode_keys(self, key_pressed: str) -> bool:
-        """Handle keys while in sort mode. Returns True if handled."""
-        if key_pressed == "left":
-            self.sort_manager.navigate_columns(-1)
-            self.refresh_display()
-            return True
-        elif key_pressed == "right":
-            self.sort_manager.navigate_columns(1)
-            self.refresh_display()
-            return True
-        elif key_pressed == "enter":
-            self.sort_manager.toggle_column(self.sort_manager.active_column_index)
-            self.collect_data()
-            return True
-        elif key_pressed == "escape" or key_pressed == "o":
-            self.sort_manager.exit_sort_mode()
-            self.refresh_display()
-            return True
-
-        return False
-
-    def handle_action_keys(self, key_pressed: str) -> bool:
-        """Handle action keys (enter, kill, terminate, refresh, toggle). Returns True if handled."""
-        if key_pressed == "o":
-            self.sort_manager.enter_sort_mode()
-            self.refresh_display()
-            return True
-        elif key_pressed == "enter":
-            if 0 <= self.selected_process_index < len(self.process_list_data):
-                selected_process = self.process_list_data[self.selected_process_index]
-                self.post_message(self.ProcessSelected(selected_process))
-            return True
-        elif key_pressed == "k":
-            if 0 <= self.selected_process_index < len(self.process_list_data):
-                selected_process = self.process_list_data[self.selected_process_index]
-                self.post_message(self.KillRequest(selected_process))
-            return True
-        elif key_pressed == "t":
-            if 0 <= self.selected_process_index < len(self.process_list_data):
-                selected_process = self.process_list_data[self.selected_process_index]
-                self.post_message(self.ProcessAction("terminate", selected_process))
-            return True
-        elif key_pressed == "r":
-            self.collect_data()
-            return True
-        elif key_pressed == "i":
-            self.is_interactive_mode = not self.is_interactive_mode
-            self.refresh_display()
-            return True
-        elif key_pressed == "n":
-            self.show_network_details = not self.show_network_details
-            self.refresh_display()
-            return True
-
-        return False
-
-    def on_key(self, event: events.Key) -> None:
-        """Handle keyboard navigation and actions with scrolling support."""
-        # Check if the app is waiting for kill confirmation
-        # If so, let it bubble up to the app's on_key handler
-        if (
-            hasattr(self.app, "_waiting_for_kill_confirmation")
-            and self.app._waiting_for_kill_confirmation
-        ):
-            return
-
-        if not self.is_interactive_mode or not self.process_list_data:
-            return
-
-        key_pressed = event.key
-
-        if self.sort_manager.sort_mode_active:
-            if self.handle_sort_mode_keys(key_pressed):
-                event.prevent_default()
-                return
-        else:
-            if self.handle_navigation_keys(key_pressed):
-                event.prevent_default()
-                return
-
-            if self.handle_action_keys(key_pressed):
-                event.prevent_default()
-                return
-
     def collect_data(self):
         new_process_data = get_process_list(self.max_num_procs, self.sort_manager)
         self.calculate_io_rates(new_process_data)
-        self.process_list_data = new_process_data
-
-        if self.selected_process_index >= len(self.process_list_data):
-            self.selected_process_index = max(0, len(self.process_list_data) - 1)
-
-        max_scroll = max(0, len(self.process_list_data) - self.visible_rows)
-        self.current_scroll_position = min(self.current_scroll_position, max_scroll)
-
+        self.processes = new_process_data
+        self.clamp_cursor()
         self.refresh_display()
 
     def refresh_display(self):
@@ -370,18 +241,16 @@ class ProcessesWidget(BaseWidget):
         )
 
         end_index = min(
-            len(self.process_list_data),
-            self.current_scroll_position + self.visible_rows,
+            len(self.processes),
+            self.scroll_position + self.visible_rows,
         )
-        visible_processes = self.process_list_data[
-            self.current_scroll_position : end_index
-        ]
+        visible_processes = self.processes[self.scroll_position : end_index]
 
         for local_index, process_info in enumerate(visible_processes):
-            actual_index = self.current_scroll_position + local_index
+            actual_index = self.scroll_position + local_index
 
             is_selected_row = (
-                self.is_interactive_mode and actual_index == self.selected_process_index
+                self.is_interactive_mode and actual_index == self.selected_index
             )
 
             process_id = process_info.get("pid")
@@ -441,20 +310,16 @@ class ProcessesWidget(BaseWidget):
 
             process_table.add_row(*row_data, style=row_style)
 
-        total_num_threads = sum(
-            (p.get("num_threads") or 0) for p in self.process_list_data
-        )
+        total_num_threads = sum((p.get("num_threads") or 0) for p in self.processes)
         num_sleeping_processes = sum(
-            p.get("status") == "sleeping" for p in self.process_list_data
+            p.get("status") == "sleeping" for p in self.processes
         )
-        total_connections = sum(
-            (p.get("num_connections") or 0) for p in self.process_list_data
-        )
+        total_connections = sum((p.get("num_connections") or 0) for p in self.processes)
 
-        total_processes = len(self.process_list_data)
+        total_processes = len(self.processes)
         if total_processes > self.visible_rows:
             scroll_info = (
-                f"({self.current_scroll_position + 1}-{end_index} of {total_processes})"
+                f"({self.scroll_position + 1}-{end_index} of {total_processes})"
             )
         else:
             scroll_info = f"({total_processes})"
@@ -480,7 +345,7 @@ class ProcessesWidget(BaseWidget):
             )
 
             sep = t.design.separator
-            panel_title = f"[{c.alert_tag}] ORDER BY [/]{sep}[bold {c.accent}]{current_col}[/] [bold magenta]{direction}[/]{sep}{columns_display}"
+            panel_title = f"[{c.alert_tag}] ORDER BY [/]{sep}[bold {c.accent}]{current_col}[/] [bold {c.secondary}]{direction}[/]{sep}{columns_display}"
             self.panel.title = panel_title
             self.panel.border_style = c.border_alert
         else:
@@ -520,9 +385,9 @@ class ProcessesWidget(BaseWidget):
         new_visible_rows = max(5, self.size.height - 3)
         self.visible_rows = new_visible_rows
         self.max_num_procs = min(3000, max(500, new_visible_rows * 3))
-        max_scroll = max(0, len(self.process_list_data) - self.visible_rows)
-        self.current_scroll_position = min(self.current_scroll_position, max_scroll)
-        if len(self.process_list_data) < self.max_num_procs:
+        max_scroll = max(0, len(self.processes) - self.visible_rows)
+        self.scroll_position = min(self.scroll_position, max_scroll)
+        if len(self.processes) < self.max_num_procs:
             self.collect_data()
         else:
             self.refresh_display()

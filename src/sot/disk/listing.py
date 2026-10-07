@@ -7,6 +7,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .._helpers import sizeof_fmt
+from .._theme import theme
 from .volumes import get_volume_info, usage_style
 
 BAR_WIDTH = 20
@@ -20,7 +21,7 @@ def _usage_bar(percent: float, width: int = BAR_WIDTH) -> Text:
     used_blocks = int(percent / 100 * width)
     bar = Text()
     bar.append("█" * used_blocks, style=usage_style(percent))
-    bar.append("░" * (width - used_blocks), style="dim")
+    bar.append("░" * (width - used_blocks), style=theme().colors.muted)
     return bar
 
 
@@ -34,11 +35,12 @@ def build_disk_table(volumes: list[dict], width: int = COMPACT_BELOW) -> Table:
     ``width`` is the terminal width; narrow terminals get a compact layout so
     the mountpoints stay readable instead of being truncated.
     """
+    c = theme().colors
     compact = width < COMPACT_BELOW
     bar_width = COMPACT_BAR_WIDTH if compact else BAR_WIDTH
     table = Table(
         show_header=True,
-        header_style="bold cyan",
+        header_style=f"bold {c.accent}",
         box=None,
         padding=(0, 1 if compact else 2),
         pad_edge=False,
@@ -46,7 +48,7 @@ def build_disk_table(volumes: list[dict], width: int = COMPACT_BELOW) -> Table:
     table.add_column("Device", style="bold", no_wrap=True)
     table.add_column("Mount", overflow="fold")
     if not compact:
-        table.add_column("FS", style="dim", no_wrap=True)
+        table.add_column("FS", style=c.muted, no_wrap=True)
     table.add_column("Size", justify="right", no_wrap=True)
     table.add_column("Used", justify="right", no_wrap=True)
     table.add_column("Free", justify="right", no_wrap=True)
@@ -56,7 +58,7 @@ def build_disk_table(volumes: list[dict], width: int = COMPACT_BELOW) -> Table:
     for i, volume in enumerate(volumes):
         usage = volume["usage"]
         table.add_row(
-            Text(volume["disk_id"], style="bold bright_cyan"),
+            Text(volume["disk_id"], style=f"bold {c.accent}"),
             Text(volume["volume_name"], style="bold"),
             *([] if compact else [""]),
             sizeof_fmt(usage.total, fmt=".1f"),
@@ -71,7 +73,7 @@ def build_disk_table(volumes: list[dict], width: int = COMPACT_BELOW) -> Table:
             branch = "└─" if j == len(partitions) - 1 else "├─"
             pu = part["usage"]
             table.add_row(
-                Text(f" {branch} {part['partition_id']}", style="dim"),
+                Text(f" {branch} {part['partition_id']}", style=c.muted),
                 part["mountpoint"],
                 *([] if compact else [part["fstype"]]),
                 sizeof_fmt(pu.total, fmt=".1f"),
@@ -90,10 +92,11 @@ def build_disk_table(volumes: list[dict], width: int = COMPACT_BELOW) -> Table:
 def print_disk_list(console: Console | None = None) -> int:
     """Print every disk and partition as a static table. Returns an exit code."""
     console = console or Console()
+    c = theme().colors
     volumes = get_volume_info()
 
     if not volumes:
-        console.print("[yellow]No disks found.[/]")
+        console.print(f"[{c.warn}]No disks found.[/]")
         return 1
 
     console.print()
@@ -107,13 +110,13 @@ def print_disk_list(console: Console | None = None) -> int:
     percent = (used / total * 100) if total else 0.0
 
     summary = Text()
-    summary.append("Total ", style="dim")
+    summary.append("Total ", style=c.muted)
     summary.append(sizeof_fmt(total, fmt=".1f"), style="bold")
-    summary.append("  ·  Used ", style="dim")
+    summary.append("  ·  Used ", style=c.muted)
     summary.append(sizeof_fmt(used, fmt=".1f"), style="bold")
-    summary.append("  ·  Free ", style="dim")
+    summary.append("  ·  Free ", style=c.muted)
     summary.append(sizeof_fmt(free, fmt=".1f"), style="bold")
-    summary.append("  ·  ", style="dim")
+    summary.append("  ·  ", style=c.muted)
     summary.append_text(_percent(percent))
     console.print()
     console.print(summary)
