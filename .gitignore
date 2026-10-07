@@ -133,6 +133,7 @@ sot_debug.log
 *.svg
 *.png
 NOTES.md
+plan/
 
 # MacOS
 .DS_Store
