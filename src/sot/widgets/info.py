@@ -14,6 +14,7 @@ import psutil
 from rich.table import Table
 
 from .._theme import theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -26,12 +27,12 @@ class InfoWidget(BaseWidget):
     """Info line widget displaying system and user information."""
 
     def __init__(self, **kwargs):
-        super().__init__(title="", border_style="", **kwargs)
+        super().__init__(title="", **kwargs)
 
     def on_mount(self):
         self.width = 0
         self.height = 0
-        self.set_interval(1.0, self.update_info)
+        self.every(refresh.INFO, self.update_info)
 
         # Get user and system information
         username = getpass.getuser()
@@ -98,12 +99,6 @@ class InfoWidget(BaseWidget):
             )
 
         self.update_panel_content(table)
-
-    def render(self):
-        panel = getattr(self, "panel", None)
-        if panel and hasattr(panel, "renderable"):
-            return panel.renderable or Table()
-        return Table()
 
     async def on_resize(self, event):
         self.width = self.size.width

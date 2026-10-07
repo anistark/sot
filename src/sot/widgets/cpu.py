@@ -13,6 +13,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -222,7 +223,7 @@ class CPUWidget(BaseWidget):
             self.set_title("CPU")
 
         self.collect_data()
-        self.set_interval(2.0, self.collect_data)
+        self.every(refresh.CPU, self.collect_data)
 
     def collect_data(self):
         # CPU loads

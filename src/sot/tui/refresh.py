@@ -1,0 +1,18 @@
+"""How often each panel refreshes, in seconds."""
+
+CLOCK = 1.0
+INFO = 1.0
+CPU = 2.0
+MEMORY = 2.0
+DISK = 2.0
+NETWORK = 2.0
+NETWORK_ADDRESSES = 60.0
+GPU = 2.0
+HEALTH = 5.0
+CONNECTIONS = 3.0
+PROCESSES = 2.0
+PORTS = 3.0
+DEV_ENV = 5.0
+VOLUMES = 5.0
+ANIMATION = 0.1
+LOCK_ANIMATION = 0.5

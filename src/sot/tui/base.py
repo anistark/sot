@@ -25,11 +25,11 @@ class SotThemeProvider(ThemeProvider):
 
 class SotBaseApp(App):
     CSS_PATH = Path(__file__).parent.parent / "styles" / "sot.tcss"
-    BINDINGS = [keymap.QUIT]
+    BINDINGS = [keymap.QUIT, keymap.HELP]
 
     def __init__(self, theme_name: str | None = None) -> None:
         super().__init__()
-        # Widget data kept across rebuilds, see ``KeepsState``.
+        # Widget data kept across rebuilds, see ``SotWidget``.
         self.widget_state: dict[str, dict] = {}
         for t in THEMES.values():
             if t.textual is not None:
@@ -49,20 +49,14 @@ class SotBaseApp(App):
         )
 
     def _theme_changed(self, new: Theme) -> None:
-        if new.name in THEMES and new.name != theme().name:
+        if new.name in THEMES:
             set_theme(new.name)
-            self.call_later(self._rebuild)
 
-    async def _rebuild(self) -> None:
-        focused = self.focused.id if self.focused else None
-        await self.recompose()
-        self.rebuilt()
-        if focused:
-            for widget in self.query(f"#{focused}"):
-                widget.focus()
-
-    def rebuilt(self) -> None:
-        """Restore app-level view state after the view was rebuilt."""
+    def action_toggle_help(self) -> None:
+        if self.screen.query("HelpPanel"):
+            self.action_hide_help_panel()
+        else:
+            self.action_show_help_panel()
 
     def on_process_selected(self, message: ProcessSelected) -> None:
         self.notify("\n".join(format_process_details(message.process_info)))

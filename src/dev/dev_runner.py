@@ -16,8 +16,6 @@ class SotDevelopmentApp(SotApp):
     """Development version of SOT with enhanced debugging and performance optimizations."""
 
     def on_mount(self) -> None:
-        super().on_mount()
-
         self.title = "SOT (Development Mode)"
 
         # Show which interface we're using in the subtitle

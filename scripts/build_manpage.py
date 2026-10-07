@@ -273,48 +273,59 @@ Kill/terminate processes interactively
 Multi-panel interface with tab navigation
 
 .SH INTERACTIVE CONTROLS
-.SS Main Interface
+The footer lists the keys for the focused panel; press ? for all of them.
+.SS Views
+.TP
+.B 1 2 3
+Switch to Overview, Processes or Disks (the header tabs are clickable too)
+.TP
+.B Tab / Shift+Tab
+Move focus between panels
+.TP
+.B Ctrl+P
+Command palette, including the theme picker
+.TP
+.B ?
+Show or hide the key help
 .TP
 .B q
 Quit the application
+.SS Lists
 .TP
-.B O
-Enter order-by mode for process sorting
+.B ↑/k, ↓/j
+Move the selection
 .TP
-.B Arrow keys
-Navigate columns in order-by mode
+.B PgUp/Ctrl+U, PgDn/Ctrl+D
+Page up and down
 .TP
-.B Enter
-Toggle sort direction (DESC ↓ → ASC ↑ → OFF)
-
-.SS Process Viewer (sot ps)
-.TP
-.B Tab
-Switch between panels (processes, ports, dev environments)
-.TP
-.B ↑/↓
-Navigate list items
+.B Home/g, End/G
+First and last row
+.SS Process tables
 .TP
 .B Enter
 Show detailed information
 .TP
-.B K
+.B x
 Kill selected process (requires confirmation)
 .TP
-.B T
+.B t
 Terminate selected process gracefully (requires confirmation)
 .TP
-.B O
+.B o
+Enter order-by mode: ←/→ pick a column, Enter toggles direction (DESC ↓ → ASC ↑ → OFF), Esc leaves
+.TP
+.B n
+Show or hide the I/O and connection columns
+.TP
+.B r
+Refresh
+.SS Ports and development environments
+.TP
+.B o
 Change sort column (cycles through available columns)
 .TP
-.B S
+.B s
 Toggle sort direction (ascending/descending)
-.TP
-.B R
-Refresh panel data
-.TP
-.B q
-Quit the application
 
 .SH CONFIGURATION
 sot does not require configuration files. All options are provided via command-line arguments.

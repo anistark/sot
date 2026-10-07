@@ -14,6 +14,7 @@ from rich.table import Table
 
 from .._helpers import sizeof_fmt
 from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -131,8 +132,7 @@ class DiskWidget(BaseWidget):
 
         self.refresh_panel()
 
-        self.interval_s = 2.0
-        self.set_interval(self.interval_s, self.refresh_panel)
+        self.every(refresh.DISK, self.refresh_panel)
 
     def refresh_panel(self):
         if self.has_io_counters:

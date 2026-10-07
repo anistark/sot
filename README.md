@@ -206,7 +206,8 @@ sot
 - CPU Usage
   - Per Core and Thread level
 - Processes with ID, threads, memory and cpu usage
-  - **Interactive Order By**: Press `O` to enter order by mode, navigate columns with arrow keys, toggle sort direction with Enter (DESC ↓ → ASC ↑ → OFF → cycle)
+  - **Interactive Order By**: Press `o` to enter order by mode, pick a column with `←`/`→`, toggle sort direction with Enter (DESC ↓ → ASC ↑ → OFF → cycle)
+- **Views**: `1` Overview, `2` Processes, `3` Disks (or click the tabs in the header); each view keeps its state while you're elsewhere
 
 ### Disk
 
@@ -471,7 +472,7 @@ sudo sot clean
 
 ## Process Viewer
 
-The `sot ps` command provides an interactive terminal-based process viewer with three synchronized panels for comprehensive system monitoring.
+The `sot ps` command opens SOT on its Processes view: three synchronized panels for processes, listening ports and development environments. Press `1` to `3` to switch between views.
 
 ### Usage
 
@@ -504,11 +505,23 @@ The process viewer displays three interactive panels:
 - Groups related processes (e.g., all Node processes together)
 - Updates every 5 seconds
 
-### Navigation
+### Keys
 
-- **Tab**: Switch focus between panels
-- **↑/↓**: Navigate within focused panel
-- **Q**: Quit
+The footer lists the keys for the focused panel; press `?` for all of them.
+
+| Key | Action |
+|---|---|
+| `1` `2` `3` | Overview, Processes, Disks |
+| `Tab` / `Shift+Tab` | Next / previous panel |
+| `↑` `↓` or `k` `j` | Move |
+| `PgUp` `PgDn`, `Home` `End` (`g` `G`) | Page, first, last |
+| `Enter` | Details |
+| `x` / `t` | Kill / terminate (asks first) |
+| `o` | Sort: process tables open a column picker (`←` `→`, `Enter`, `Esc`); ports and dev environments cycle the column, `s` flips direction |
+| `n` | Show or hide the I/O and connection columns |
+| `r` | Refresh |
+| `Ctrl+P` | Command palette (themes, help) |
+| `?` / `q` | Help / quit |
 
 ### Example
 

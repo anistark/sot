@@ -1,17 +1,20 @@
-"""Widget helpers shared by every view."""
+"""Base for every SOT widget."""
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Callable, ClassVar
 
+from textual.timer import Timer
 from textual.widget import Widget
 
 
-class KeepsState(Widget):
-    """A widget whose data survives being remounted, e.g. on a theme switch.
+class SotWidget(Widget):
+    """Keeps listed state across rebuilds and polls on timers its screen can
+    pause while hidden.
 
-    Name the attributes to keep in ``STATE`` and call ``restore_state()`` at
-    the start of ``on_mount``.
+    Name the attributes to keep in ``STATE``, call ``restore_state()`` at the
+    start of ``on_mount``, and poll with ``every()`` instead of
+    ``set_interval()``.
     """
 
     STATE: ClassVar[tuple[str, ...]] = ()
@@ -38,56 +41,20 @@ class KeepsState(Widget):
                 name: getattr(self, name) for name in self.STATE if hasattr(self, name)
             }
 
+    def every(self, seconds: float, callback: Callable[[], object]) -> Timer:
+        timer = self.set_interval(seconds, callback)
+        self._polls = [*getattr(self, "_polls", []), (timer, callback)]
+        return timer
 
-class ListCursor:
-    """Cursor and scrolling over a list of rows, driven by ``keymap.LIST``."""
+    def pause_polling(self) -> None:
+        for timer, _ in getattr(self, "_polls", []):
+            timer.pause()
+        self._paused = True
 
-    selected_index: int = 0
-    scroll_position: int = 0
-    visible_rows: int = 10
-
-    def row_count(self) -> int:
-        raise NotImplementedError
-
-    def redraw(self) -> None:
-        raise NotImplementedError
-
-    def clamp_cursor(self) -> None:
-        rows = self.row_count()
-        self.selected_index = max(0, min(self.selected_index, rows - 1))
-        self.scroll_position = max(
-            0, min(self.scroll_position, rows - self.visible_rows)
-        )
-
-    def select(self, index: int) -> None:
-        rows = self.row_count()
-        if not rows:
+    def resume_polling(self) -> None:
+        if not getattr(self, "_paused", False):
             return
-        self.selected_index = max(0, min(index, rows - 1))
-        if self.selected_index < self.scroll_position:
-            self.scroll_position = self.selected_index
-        elif self.selected_index >= self.scroll_position + self.visible_rows:
-            self.scroll_position = self.selected_index - self.visible_rows + 1
-        self.redraw()
-
-    def action_cursor_up(self) -> None:
-        self.select(self.selected_index - 1)
-
-    def action_cursor_down(self) -> None:
-        self.select(self.selected_index + 1)
-
-    def action_page_up(self) -> None:
-        self.scroll_position = max(0, self.scroll_position - self.visible_rows)
-        self.select(self.selected_index - self.visible_rows)
-
-    def action_page_down(self) -> None:
-        max_scroll = max(0, self.row_count() - self.visible_rows)
-        self.scroll_position = min(max_scroll, self.scroll_position + self.visible_rows)
-        self.select(self.selected_index + self.visible_rows)
-
-    def action_first(self) -> None:
-        self.scroll_position = 0
-        self.select(0)
-
-    def action_last(self) -> None:
-        self.select(self.row_count() - 1)
+        self._paused = False
+        for timer, callback in getattr(self, "_polls", []):
+            callback()
+            timer.resume()

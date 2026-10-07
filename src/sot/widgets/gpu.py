@@ -14,6 +14,7 @@ from rich.text import Text
 from .._gpu import GpuSample, read_gpu
 from .._helpers import sizeof_fmt
 from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 # Initial graph size; widths are recomputed on resize.
@@ -51,7 +52,7 @@ class GpuWidget(BaseWidget):
             self.set_title("GPU", detail)
 
         self.collect_data()
-        self.set_interval(2.0, self.collect_data)
+        self.every(refresh.GPU, self.collect_data)
 
     def _memory_text(self, sample: GpuSample) -> str:
         used = sizeof_fmt(sample.mem_used, fmt=".1f")

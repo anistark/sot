@@ -10,11 +10,12 @@ theme only overrides the fields that differ from the classic defaults.
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 
 from rich.box import ROUNDED, SQUARE, Box
 from rich.color import Color, blend_rgb
+from rich.style import Style
 from rich.text import Text
 from textual.theme import BUILTIN_THEMES
 from textual.theme import Theme as TextualTheme
@@ -105,8 +106,9 @@ class Meter:
 
 @dataclass(frozen=True)
 class Design:
-    box: Box = SQUARE
-    # Frame for the standalone viewers (`sot ps`, `sot disk`).
+    # Textual border type framing every panel.
+    frame: str = "solid"
+    # Frame for Rich panels and printed tables.
     app_box: Box = ROUNDED
     # Frame for boxes nested inside a panel (CPU cores, rx/tx).
     inner_box: Box = SQUARE
@@ -121,7 +123,6 @@ class Design:
     meter: Meter = field(default_factory=lambda: Meter(by_level=("█", "▓", "▒", "░")))
     # Status glyphs, good -> critical.
     indicators: tuple[str, str, str, str] = ("●", "◐", "◑", "○")
-    cursor: str = "▶ "
     stripes: bool = False
     logo: tuple[str, ...] = CLASSIC_LOGO
     tagline: str | None = None
@@ -134,6 +135,29 @@ class SotTheme:
     colors: Colors = field(default_factory=Colors)
     design: Design = field(default_factory=Design)
     textual: TextualTheme | None = None
+
+    def __post_init__(self):
+        if self.textual is not None:
+            variables = {**self._css_variables(), **self.textual.variables}
+            object.__setattr__(
+                self, "textual", replace(self.textual, variables=variables)
+            )
+
+    def _css_variables(self) -> dict[str, str]:
+        """Expose the frame and cursor look to Textual CSS as ``$sot-*``."""
+        c = self.colors
+        selected = Style.parse(c.selected)
+        variables = {
+            "sot-frame": self.design.frame,
+            "sot-border": textual_color(c.border),
+            "sot-border-focus": textual_color(c.border_focus),
+            "sot-border-alert": textual_color(c.border_alert),
+            "sot-stripe": textual_color(c.stripe),
+        }
+        if selected.color and selected.bgcolor:
+            variables["block-cursor-foreground"] = textual_color(selected.color.name)
+            variables["block-cursor-background"] = textual_color(selected.bgcolor.name)
+        return variables
 
     def title(self, label: str, detail: str | None = None) -> str:
         """Format a panel title, e.g. ``CPU`` with detail ``Apple M1``."""
@@ -186,8 +210,21 @@ class SotTheme:
         text.append(m.empty * (width - filled), style=empty_style or color)
         return text
 
-    def row_styles(self) -> list[str] | None:
-        return ["", f"on {self.colors.stripe}"] if self.design.stripes else None
+
+_ANSI_NAMES = {
+    f"{prefix}{name}"
+    for prefix in ("", "bright_")
+    for name in ("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
+}
+
+
+def textual_color(name: str) -> str:
+    """A Rich color name as Textual CSS understands it; ANSI colors stay ANSI."""
+    if name in _ANSI_NAMES:
+        return f"ansi_{name}"
+    if name.startswith("#"):
+        return name
+    return Color.parse(name).get_truecolor().hex
 
 
 @lru_cache(maxsize=256)
@@ -260,7 +297,7 @@ CYBERPUNK = SotTheme(
         stripe="#14101a",
     ),
     design=Design(
-        box=CYBER_BOX,
+        frame="outer",
         app_box=CYBER_BOX,
         inner_box=RAIL_BOX,
         title="tag",
@@ -270,7 +307,6 @@ CYBERPUNK = SotTheme(
         graph_heat=0.8,
         meter=Meter(fill="▰", empty="▱"),
         indicators=("◆", "◈", "◇", "✕"),
-        cursor="▸ ",
         stripes=True,
         logo=CYBER_LOGO,
         tagline="// SYSTEM OBSERVATION TOOL",

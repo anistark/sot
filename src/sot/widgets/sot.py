@@ -9,10 +9,11 @@ from rich.align import Align
 from rich.text import Text
 
 from .._theme import theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
-class SotWidget(BaseWidget):
+class SotLogoWidget(BaseWidget):
     # TODO: Figure out something cool to do with this widget.
 
     def __init__(self, **kwargs):
@@ -22,7 +23,7 @@ class SotWidget(BaseWidget):
 
     def on_mount(self):
         self.update_sine_wave()
-        self.set_interval(0.1, self.animate_wave)
+        self.every(refresh.ANIMATION, self.animate_wave)
 
     def animate_wave(self):
         """Update animation frame and regenerate sine wave."""

@@ -38,10 +38,10 @@ def test_cyberpunk_title_is_tagged_and_uppercased():
 
 def test_custom_theme_overrides_only_what_differs():
     custom = _theme.SotTheme(
-        name="custom", design=_theme.Design(cursor="> ", graph="blocks")
+        name="custom", design=_theme.Design(stripes=True, graph="blocks")
     )
     assert custom.colors == _theme.CLASSIC.colors
-    assert custom.design.box is _theme.CLASSIC.design.box
+    assert custom.design.frame == _theme.CLASSIC.design.frame
     assert isinstance(custom.stream(5, 2, 0, 100), BlockCharStream)
 
 
@@ -76,14 +76,6 @@ def test_heat_graph_shades_rows_toward_heat():
     assert len(styles) == 3
     assert styles[-1] == "#000000"
     assert styles[0] != styles[-1]
-
-
-def test_row_styles_only_when_striped():
-    assert _theme.CLASSIC.row_styles() is None
-    assert _theme.CYBERPUNK.row_styles() == [
-        "",
-        f"on {_theme.CYBERPUNK.colors.stripe}",
-    ]
 
 
 def test_usage_style_follows_theme():
@@ -171,3 +163,17 @@ def test_colors_only_come_from_the_theme():
         if _HARDCODED_COLOR.search(line)
     ]
     assert offenders == []
+
+
+def test_rich_colors_map_to_textual_colors():
+    assert _theme.textual_color("bright_black") == "ansi_bright_black"
+    assert _theme.textual_color("#fcee0a") == "#fcee0a"
+    assert _theme.textual_color("aquamarine3").startswith("#")
+
+
+def test_themes_expose_their_frame_to_css():
+    classic = _theme.CLASSIC.textual.variables
+    cyber = _theme.CYBERPUNK.textual.variables
+    assert (classic["sot-frame"], cyber["sot-frame"]) == ("solid", "outer")
+    assert classic["sot-border"] == "ansi_bright_black"
+    assert cyber["block-cursor-background"] == "#00f0ff"

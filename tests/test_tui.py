@@ -6,10 +6,12 @@ from textual.app import ComposeResult
 from sot import _theme
 from sot._process_utils import ProcessActionResult
 from sot.blockchar_stream import BlockCharStream
-from sot.ps.ps_tui import ProcessListPanel
+from sot.tui.app import SotApp
 from sot.tui.base import SotBaseApp, SotThemeProvider
+from sot.tui.components.header import SotHeader
+from sot.tui.components.process_table import ProcessTable
+from sot.tui.components.table import SotTable, cell
 from sot.tui.messages import ProcessAction
-from sot.tui.state import ListCursor
 from sot.widgets.confirmation_modal import ConfirmModal
 
 
@@ -19,9 +21,9 @@ def _restore_theme():
     _theme.set_theme(_theme.DEFAULT_THEME)
 
 
-def run_app(app, scenario):
+def run_app(app, scenario, size=(120, 40)):
     async def main():
-        async with app.run_test(size=(120, 40)) as pilot:
+        async with app.run_test(size=size) as pilot:
             await scenario(app, pilot)
 
     asyncio.run(main())
@@ -35,62 +37,48 @@ async def wait_for(pilot, condition, timeout=10.0):
     raise AssertionError("condition not met in time")
 
 
-class Rows(ListCursor):
-    def __init__(self, rows, visible=3):
-        self.rows = rows
-        self.visible_rows = visible
-        self.selected_index = 0
-        self.scroll_position = 0
-
-    def row_count(self):
-        return self.rows
-
-    def redraw(self):
-        pass
-
-
-def test_list_cursor_scrolls_with_the_selection():
-    rows = Rows(10)
-    for _ in range(4):
-        rows.action_cursor_down()
-    assert (rows.selected_index, rows.scroll_position) == (4, 2)
-
-    rows.action_page_down()
-    assert (rows.selected_index, rows.scroll_position) == (7, 5)
-
-    rows.action_last()
-    assert (rows.selected_index, rows.scroll_position) == (9, 7)
-
-    rows.action_page_up()
-    assert (rows.selected_index, rows.scroll_position) == (6, 4)
-
-    rows.action_first()
-    rows.action_cursor_up()
-    assert (rows.selected_index, rows.scroll_position) == (0, 0)
-
-
-def test_list_cursor_clamps_when_rows_shrink():
-    rows = Rows(10)
-    rows.action_last()
-    rows.rows = 4
-    rows.clamp_cursor()
-    assert (rows.selected_index, rows.scroll_position) == (3, 1)
-
-
-class ProcessHost(SotBaseApp):
-    def compose(self) -> ComposeResult:
-        yield ProcessListPanel(id="list")
-
-    def on_mount(self) -> None:
-        self.query_one("#list").focus()
-
-
 def _fake_action(calls):
     def run(action, pid, name):
         calls.append((action, pid))
         return ProcessActionResult(True, "done")
 
     return run
+
+
+class Host(SotBaseApp):
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+
+    def compose(self) -> ComposeResult:
+        yield self.widget
+
+    def on_mount(self) -> None:
+        self.widget.focus()
+
+
+def _rows(*keys):
+    return [(key, (cell(key),)) for key in keys]
+
+
+def test_table_keeps_the_cursor_on_the_same_row():
+    table = SotTable("Things")
+
+    async def scenario(app, pilot):
+        table.add_column("Name", key="name")
+        table.set_rows(_rows("a", "b", "c"))
+        await pilot.press("j")
+        await wait_for(pilot, lambda: table.selected_row == "b")
+
+        table.set_rows(_rows("c", "a", "b"))
+        await pilot.pause()
+        assert table.cursor_row == 2
+        assert table.selected_row == "b"
+
+        table.set_rows([("c", (cell("C"),)), ("a", (cell("a"),)), ("b", (cell("b"),))])
+        assert table.get_cell("c", "name").plain == "C"
+
+    run_app(Host(table), scenario)
 
 
 def test_theme_picker_only_lists_sot_themes():
@@ -120,41 +108,87 @@ def test_process_actions_wait_for_confirmation(monkeypatch):
     run_app(SotBaseApp(), scenario)
 
 
-def test_sort_mode_only_accepts_sort_keys(monkeypatch):
-    calls = []
-    monkeypatch.setattr("sot.tui.base.run_process_action", _fake_action(calls))
+def test_sort_mode_only_accepts_sort_keys():
+    table = ProcessTable(id="list")
 
     async def scenario(app, pilot):
-        panel = app.query_one("#list", ProcessListPanel)
         await pilot.press("o")
-        assert panel.sort_manager.sort_mode_active
-        await pilot.press("k")
+        assert table.sort_manager.sort_mode_active
+        assert table.has_class("-alert")
+        await pilot.press("x")
         assert not isinstance(app.screen, ConfirmModal)
         await pilot.press("escape")
-        assert not panel.sort_manager.sort_mode_active
-        await pilot.press("k")
+        assert not table.sort_manager.sort_mode_active
+        await pilot.press("x")
         assert isinstance(app.screen, ConfirmModal)
 
-    run_app(ProcessHost(), scenario)
+    run_app(Host(table), scenario)
 
 
 def test_bindings_can_be_remapped_by_id():
     async def scenario(app, pilot):
-        app.set_keymap({"sot.process.kill": "x"})
-        await pilot.press("k")
-        assert not isinstance(app.screen, ConfirmModal)
+        app.set_keymap({"sot.process.kill": "z"})
         await pilot.press("x")
+        assert not isinstance(app.screen, ConfirmModal)
+        await pilot.press("z")
         assert isinstance(app.screen, ConfirmModal)
 
-    run_app(ProcessHost(), scenario)
+    run_app(Host(ProcessTable(id="list")), scenario)
 
 
-def test_theme_switch_rebuilds_the_dashboard_and_keeps_its_data():
-    from sot._app import SotApp
+def test_narrow_process_table_drops_secondary_columns_first():
+    table = ProcessTable(id="list")
 
     async def scenario(app, pilot):
+        await pilot.pause()
+        keys = table._layout[0]
+        assert "name" in keys and "pid" in keys and "cpu" in keys
+        assert "io" not in keys
+
+    run_app(Host(table), scenario, size=(50, 20))
+
+
+def test_number_keys_switch_views_and_pause_hidden_ones():
+    async def scenario(app, pilot):
+        cpu = app.query_one("#cpu-widget")
+        await pilot.press("2")
+        await wait_for(pilot, lambda: app.current_mode == "processes")
+        assert app.focused.id == "proc-table"
+        assert cpu._paused
+
+        await pilot.press("3")
+        await wait_for(pilot, lambda: app.current_mode == "disks")
+        await pilot.press("1")
+        await wait_for(pilot, lambda: not cpu._paused)
+        assert app.current_mode == "overview"
+
+    run_app(SotApp(), scenario)
+
+
+def test_clicking_a_header_tab_switches_view():
+    async def scenario(app, pilot):
+        header = app.screen.query_one(SotHeader)
+        start, _, mode = header._tabs[1]
+        await pilot.click(SotHeader, offset=(start + 1, 0))
+        await wait_for(pilot, lambda: app.current_mode == mode)
+
+    run_app(SotApp(), scenario)
+
+
+def test_subcommands_start_on_their_view():
+    async def scenario(app, pilot):
+        assert app.current_mode == "processes"
+        assert app.focused.id == "proc-table"
+
+    run_app(SotApp(start_mode="processes"), scenario)
+
+
+def test_theme_switch_rebuilds_the_overview_and_keeps_its_data():
+    async def scenario(app, pilot):
         procs = app.query_one("#procs-list")
-        await pilot.press("down", "down")
+        await pilot.press("j", "j")
+        await wait_for(pilot, lambda: procs.selected_row is not None)
+        selected = procs.selected_row
         cpu_stream = app.query_one("#cpu-widget").cpu_total_stream
 
         app.theme = "cyberpunk"
@@ -162,9 +196,8 @@ def test_theme_switch_rebuilds_the_dashboard_and_keeps_its_data():
         await pilot.pause()
 
         assert _theme.theme() is _theme.CYBERPUNK
-        assert app.has_class("-theme-cyberpunk")
         rebuilt = app.query_one("#procs-list")
-        assert rebuilt.selected_index == 2
+        assert rebuilt.selected_row == selected
         assert app.focused is rebuilt
         assert app.query_one("#cpu-widget").cpu_total_stream is cpu_stream
         assert isinstance(cpu_stream._drawn(), BlockCharStream)
@@ -172,18 +205,32 @@ def test_theme_switch_rebuilds_the_dashboard_and_keeps_its_data():
     run_app(SotApp(), scenario)
 
 
-def test_theme_switch_keeps_the_selected_volume():
-    from sot.disk.disk_tui import DiskTUIApp
-
+def test_hidden_views_rebuild_in_the_new_theme_when_shown():
     async def scenario(app, pilot):
-        if len(app.volumes) < 2:
+        cpu = app.query_one("#cpu-widget")
+        await pilot.press("2")
+        await wait_for(pilot, lambda: app.current_mode == "processes")
+        app.theme = "cyberpunk"
+        await pilot.pause()
+
+        await pilot.press("1")
+        await wait_for(pilot, lambda: app.query_one("#cpu-widget") is not cpu)
+        assert app.screen._built_with == "cyberpunk"
+
+    run_app(SotApp(), scenario)
+
+
+def test_theme_switch_keeps_the_selected_volume():
+    async def scenario(app, pilot):
+        screen = app.screen
+        if len(screen.volumes) < 2:
             pytest.skip("needs two volumes")
-        list_view = app.query_one("#volume-list")
-        await pilot.press("down")
-        await wait_for(pilot, lambda: app.volume_index == 1)
+        list_view = screen.query_one("#volume-list")
+        await pilot.press("j")
+        await wait_for(pilot, lambda: screen.volume_index == 1)
 
         app.theme = "cyberpunk"
-        await wait_for(pilot, lambda: app.query_one("#volume-list") is not list_view)
-        await wait_for(pilot, lambda: app.query_one("#volume-list").index == 1)
+        await wait_for(pilot, lambda: screen.query_one("#volume-list") is not list_view)
+        await wait_for(pilot, lambda: screen.query_one("#volume-list").index == 1)
 
-    run_app(DiskTUIApp(), scenario)
+    run_app(SotApp(start_mode="disks"), scenario)

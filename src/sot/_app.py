@@ -9,25 +9,12 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from textual.app import ComposeResult
-from textual.widgets import Header
 
 from .__about__ import __current_year__, __version__
-from ._gpu import has_gpu
 from ._theme import DEFAULT_THEME, THEMES, set_theme, theme
-from .tui.base import SotBaseApp
-from .widgets import (
-    CPUWidget,
-    DiskWidget,
-    GpuWidget,
-    HealthScoreWidget,
-    InfoWidget,
-    MemoryWidget,
-    NetworkConnectionsWidget,
-    NetworkWidget,
-    ProcessesWidget,
-    SotWidget,
-)
+from .tui.app import SotApp
+
+__all__ = ["SotApp", "run"]
 
 
 class CustomHelpFormatter(argparse.RawTextHelpFormatter):
@@ -74,115 +61,6 @@ class CustomHelpFormatter(argparse.RawTextHelpFormatter):
             super().start_section(None)
         else:
             super().start_section(heading)
-
-
-# Main SOT Application
-class SotApp(SotBaseApp):
-    """SOT - System Observation Tool with interactive process management."""
-
-    CSS = """
-    Screen {
-        layout: grid;
-        grid-size: 3;
-        grid-columns: 35fr 20fr 45fr;
-        grid-rows: 1 1fr 1.2fr 1.1fr;
-    }
-
-    #info-line {
-        column-span: 3;
-    }
-
-    #procs-list {
-        row-span: 2;
-    }
-    """
-
-    def __init__(
-        self,
-        net_interface=None,
-        disk_mountpoint=None,
-        log_file=None,
-        theme_name=DEFAULT_THEME,
-    ):
-        super().__init__(theme_name)
-        self.net_interface = net_interface
-        self.disk_mountpoint = disk_mountpoint
-        self.log_file = log_file
-
-        if log_file:
-            os.environ["TEXTUAL_LOG"] = log_file
-
-    def compose(self) -> ComposeResult:
-        yield Header()
-
-        # Row 1: Info line (spans all 3 columns)
-        info_line = InfoWidget()
-        info_line.id = "info-line"
-        yield info_line
-
-        # Row 2: CPU, Health Score, Process List (starts)
-        cpu_widget = CPUWidget()
-        cpu_widget.id = "cpu-widget"
-        yield cpu_widget
-
-        health_widget = HealthScoreWidget()
-        health_widget.id = "health-widget"
-        yield health_widget
-
-        procs_list = ProcessesWidget()
-        procs_list.id = "procs-list"
-        yield procs_list
-
-        # Row 3: Memory, GPU/Sot Widget (Process List continues)
-        mem_widget = MemoryWidget()
-        mem_widget.id = "mem-widget"
-        yield mem_widget
-
-        # Show live GPU stats when a GPU is detected; otherwise keep the
-        # decorative SOT animation in this slot.
-        if has_gpu():
-            gpu_widget = GpuWidget()
-            gpu_widget.id = "gpu-widget"
-            yield gpu_widget
-        else:
-            sot_widget = SotWidget()
-            sot_widget.id = "sot-widget"
-            yield sot_widget
-
-        # Row 4: Disk, Network Connections, Network Widget
-        disk_widget = DiskWidget(self.disk_mountpoint)
-        disk_widget.id = "disk-widget"
-        yield disk_widget
-
-        connections_widget = NetworkConnectionsWidget()
-        connections_widget.id = "connections-widget"
-        yield connections_widget
-
-        # Pass the network interface to the NetworkWidget
-        net_widget = NetworkWidget(self.net_interface)
-        net_widget.id = "net-widget"
-        yield net_widget
-
-    def on_mount(self) -> None:
-        self.title = "SOT"
-
-        subtitle_parts = []
-        if self.net_interface:
-            subtitle_parts.append(f"Net: {self.net_interface}")
-        if self.disk_mountpoint:
-            subtitle_parts.append(f"Disk: {self.disk_mountpoint}")
-
-        if subtitle_parts:
-            self.sub_title = f"System Observation Tool - {', '.join(subtitle_parts)}"
-        else:
-            self.sub_title = "System Observation Tool"
-
-        # Set initial focus to the process list for interactive features
-        self.set_focus(self.query_one("#procs-list"))
-
-        # Memory graphs have a fixed height; size their grid row to match.
-        mem = self.query_one("#mem-widget", MemoryWidget)
-        self.screen.styles.grid_rows = f"1 1fr {mem.panel_height} 1.1fr"
 
 
 def _show_styled_version():
@@ -483,10 +361,13 @@ def run(argv=None):  # noqa: C901
         return benchmark_command(args)
 
     # Handle disk subcommand
+    start_mode = "overview"
     if args.command == "disk":
-        from .disk.cli import disk_command
+        if args.list:
+            from .disk.listing import print_disk_list
 
-        return disk_command(args)
+            return print_disk_list()
+        start_mode = "disks"
 
     # Handle clean subcommand
     if args.command == "clean":
@@ -494,11 +375,8 @@ def run(argv=None):  # noqa: C901
 
         return clean_command(args)
 
-    # Handle ps subcommand
     if args.command == "ps":
-        from .ps.cli import ps_command
-
-        return ps_command(args)
+        start_mode = "processes"
 
     # Handle version display
     if args.version:
@@ -553,6 +431,7 @@ def run(argv=None):  # noqa: C901
 
     # Create and run the application with the specified options
     app = SotApp(
+        start_mode=start_mode,
         net_interface=args.net,
         disk_mountpoint=args.disk,
         log_file=args.log,

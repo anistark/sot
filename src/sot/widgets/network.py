@@ -15,6 +15,7 @@ from rich.text import Text
 from ..__about__ import __version__
 from .._helpers import sizeof_fmt
 from .._theme import ThemedStream, theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -135,8 +136,7 @@ class NetworkWidget(BaseWidget):
             title_suffix = " (specified)"
 
         self.set_title("Network", f"{self.interface}{title_suffix}")
-        self.panel.subtitle = self.sot_string
-        self.panel.subtitle_align = "right"
+        self.border_subtitle = Text(self.sot_string, style=t.colors.muted)
 
         if not self.restore_state():
             self.last_net = None
@@ -155,9 +155,8 @@ class NetworkWidget(BaseWidget):
         self.refresh_ips()
         self.refresh_panel()
 
-        self.interval_s = 2.0
-        self.set_interval(self.interval_s, self.refresh_panel)
-        self.set_interval(60.0, self.refresh_ips)
+        self.every(refresh.NETWORK, self.refresh_panel)
+        self.every(refresh.NETWORK_ADDRESSES, self.refresh_ips)
 
     def refresh_ips(self):
         try:

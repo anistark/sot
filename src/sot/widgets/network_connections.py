@@ -9,6 +9,7 @@ from rich.console import Group
 from rich.text import Text
 
 from .._theme import theme
+from ..tui import refresh
 from .base_widget import BaseWidget
 
 
@@ -21,8 +22,8 @@ class NetworkConnectionsWidget(BaseWidget):
 
     def on_mount(self):
         self.update_content()
-        self.set_interval(3.0, self.update_content)
-        self.set_interval(0.5, self.animate_frame)
+        self.every(refresh.CONNECTIONS, self.update_content)
+        self.every(refresh.LOCK_ANIMATION, self.animate_frame)
 
     def animate_frame(self):
         """Update animation frame counter"""
