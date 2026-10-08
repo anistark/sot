@@ -544,121 +544,109 @@ def get_package_counts() -> List[str]:
     return packages
 
 
-def format_system_info() -> Text:
-    """Format all system information with logo."""
+Section = tuple[str, list[tuple[str, str]]]
+
+
+def system_logo() -> List[str]:
     system = platform.system()
+    distro_name = distro.name() if system == "Linux" else ""
+    return get_logo_for_os(system, distro_name)
 
-    # Get distro name for Linux systems
-    distro_name = ""
-    if system == "Linux":
-        distro_name = distro.name()
 
-    # Get logo based on OS and distro
-    logo = get_logo_for_os(system, distro_name)
-
-    # Get all system information
-    username = getpass.getuser()
-    hostname = get_hostname()
-    model_name = get_model_name()
-    model_number = get_model_number()
-    machine = get_machine_model()
-    serial = get_serial_number()
-    kernel = get_kernel_version()
-    os_info = get_os_info()
-    chip_details = get_chip_details()
-    firmware = get_firmware_version()
-    de, wm = get_de_wm_info()
-    shell = get_shell_info()
-    terminal = get_terminal_info()
-    brightness = get_brightness()
-    resolutions = get_resolution()
-    uptime = get_uptime()
+def status_section() -> Section:
+    """The fields that change while sot runs."""
     mem_used, mem_total = get_memory_info()
+    rows = [
+        ("Uptime", get_uptime()),
+        ("Memory", f"{sizeof_fmt(mem_used)} / {sizeof_fmt(mem_total)}"),
+    ]
     battery = get_battery_info()
-    gpu_model, gpu_cores, vram = get_gpu_info()
-
-    # Build info lines with proper alignment and categorization
-    info_lines = []
-
-    # === SYSTEM INFORMATION ===
-    info_lines.append(f"Host        -  {username}@{hostname}")
-    if model_name:
-        info_lines.append(f"Model       -  {model_name}")
-    if model_number:
-        info_lines.append(f"SKU         -  {model_number}")
-    if machine:
-        info_lines.append(f"Identifier  -  {machine}")
-    if serial:
-        info_lines.append(f"Serial      -  {serial}")
-
-    info_lines.append("")  # Empty line separator
-
-    # === SOFTWARE ===
-    info_lines.append(f"OS          -  {os_info}")
-    info_lines.append(f"Kernel      -  {kernel}")
-    if firmware:
-        info_lines.append(f"Firmware    -  {firmware}")
-    if de:
-        info_lines.append(f"DE          -  {de}")
-    if wm:
-        info_lines.append(f"WM          -  {wm}")
-    info_lines.append(f"Shell       -  {shell}")
-    if terminal:
-        info_lines.append(f"Terminal    -  {terminal}")
-
-    info_lines.append("")  # Empty line separator
-
-    # === HARDWARE ===
-    if chip_details:
-        info_lines.append(f"Chip        -  {chip_details}")
-    if gpu_model:
-        gpu_info = gpu_model
-        if gpu_cores:
-            gpu_info += f" ({gpu_cores} cores)"
-        if vram:
-            gpu_info += f", {vram}"
-        info_lines.append(f"GPU         -  {gpu_info}")
-    info_lines.append(
-        f"Memory      -  {sizeof_fmt(mem_used)} / {sizeof_fmt(mem_total)}"
-    )
-
-    info_lines.append("")  # Empty line separator
-
-    # === DISPLAYS ===
-    if resolutions:
-        info_lines.append(f"Displays    -  {resolutions[0]}")
-        for res in resolutions[1:]:
-            info_lines.append(f"               {res}")
-    if brightness is not None:
-        info_lines.append(f"Brightness  -  {brightness}%")
-
-    info_lines.append("")  # Empty line separator
-
-    # === STATUS ===
-    info_lines.append(f"Uptime      -  {uptime}")
     if battery:
         percent, charging = battery
-        status = "Charging" if charging else "Discharging"
-        info_lines.append(f"Battery     -  {percent:.0f}% & {status}")
+        rows.append(
+            ("Battery", f"{percent:.0f}% & {'Charging' if charging else 'Discharging'}")
+        )
+    return "Status", rows
 
-    # Combine logo and info
+
+def collect_system_info() -> list[Section]:
+    """Everything `sot info` shows, grouped. Slow: it shells out on macOS."""
+
+    def present(rows: list[tuple[str, Optional[str]]]) -> list[tuple[str, str]]:
+        return [(label, value) for label, value in rows if value]
+
+    de, wm = get_de_wm_info()
+    gpu_model, gpu_cores, vram = get_gpu_info()
+    gpu = gpu_model
+    if gpu and gpu_cores:
+        gpu += f" ({gpu_cores} cores)"
+    if gpu and vram:
+        gpu += f", {vram}"
+
+    resolutions = get_resolution()
+    displays = [("Displays" if i == 0 else "", r) for i, r in enumerate(resolutions)]
+    brightness = get_brightness()
+    if brightness is not None:
+        displays.append(("Brightness", f"{brightness}%"))
+
+    return [
+        (
+            "System",
+            present(
+                [
+                    ("Host", f"{getpass.getuser()}@{get_hostname()}"),
+                    ("Model", get_model_name()),
+                    ("SKU", get_model_number()),
+                    ("Identifier", get_machine_model()),
+                    ("Serial", get_serial_number()),
+                ]
+            ),
+        ),
+        (
+            "Software",
+            present(
+                [
+                    ("OS", get_os_info()),
+                    ("Kernel", get_kernel_version()),
+                    ("Firmware", get_firmware_version()),
+                    ("DE", de),
+                    ("WM", wm),
+                    ("Shell", get_shell_info()),
+                    ("Terminal", get_terminal_info()),
+                ]
+            ),
+        ),
+        ("Hardware", present([("Chip", get_chip_details()), ("GPU", gpu)])),
+        ("Displays", displays),
+        status_section(),
+    ]
+
+
+def format_system_info() -> Text:
+    """Format all system information with logo."""
     c = theme().colors
+    logo = system_logo()
+    info_lines: list[tuple[str, str]] = []
+    for _, rows in collect_system_info():
+        if rows:
+            info_lines.extend(rows)
+            info_lines.append(("", ""))
+    info_lines = info_lines[:-1]
+
     output = Text()
     max_logo_width = max(len(line) for line in logo)
-
     for i in range(max(len(logo), len(info_lines))):
         if i:
             output.append("\n")
         logo_part = logo[i] if i < len(logo) else " " * max_logo_width
         output.append(f"{logo_part}  ", style=c.logo)
-        info_part = info_lines[i] if i < len(info_lines) else ""
-        label, sep, value = info_part.partition("  -  ")
-        if sep:
-            output.append(label, style=c.label)
-            output.append(sep, style=c.muted)
-            output.append(value, style=c.text)
-        else:
-            output.append(info_part, style=c.text)
+        label, value = info_lines[i] if i < len(info_lines) else ("", "")
+        if label:
+            output.append(f"{label:<10}", style=c.label)
+            output.append("  -  ", style=c.muted)
+        elif value:
+            output.append(" " * 15)
+        output.append(value, style=c.text)
 
     return output
 

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, NamedTuple, Optional
 
 import psutil
 
+from .._helpers import sizeof_fmt
 from .._theme import theme
 
 
@@ -169,3 +170,25 @@ def get_volume_info() -> List[Dict]:
         volumes.append(volume)
 
     return volumes
+
+
+def volume_display_name(mountpoint: str) -> str:
+    name = "Macintosh HD" if mountpoint == "/" else mountpoint.split("/")[-1]
+    try:
+        usage_path = "/System/Volumes/Data" if mountpoint == "/" else mountpoint
+        usage = psutil.disk_usage(usage_path)
+        total = sizeof_fmt(usage.total, fmt=".1f")
+        return f"{name} ({total}, {usage.percent:.1f}% used)"
+    except (PermissionError, OSError):
+        return name
+
+
+def volume_choices() -> list[tuple[str, str]]:
+    """User-facing volumes as (label, mountpoint), for pickers."""
+    mountpoints = [
+        p.mountpoint
+        for p in psutil.disk_partitions()
+        if not p.device.startswith("/dev/loop")
+    ]
+    volumes = [mp for mp in mountpoints if mp == "/" or mp.startswith("/Volumes/")]
+    return [(volume_display_name(mp), mp) for mp in volumes or mountpoints]

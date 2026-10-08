@@ -7,14 +7,19 @@ Displays network connection monitoring with cyberpunk styling and animated acces
 import psutil
 from rich.console import Group
 from rich.text import Text
+from textual import events
 
 from .._theme import theme
-from ..tui import refresh
+from ..tui import keymap, refresh
+from ..tui.messages import Reveal
 from .base_widget import BaseWidget
 
 
 class NetworkConnectionsWidget(BaseWidget):
     """Network Connection Monitoring widget showing active connections."""
+
+    can_focus = True
+    BINDINGS = [keymap.OPEN]
 
     def __init__(self, **kwargs):
         super().__init__(title="Network Connections", **kwargs)
@@ -24,6 +29,13 @@ class NetworkConnectionsWidget(BaseWidget):
         self.update_content()
         self.every(refresh.CONNECTIONS, self.update_content)
         self.every(refresh.LOCK_ANIMATION, self.animate_frame)
+
+    def action_open(self) -> None:
+        self.post_message(Reveal("processes", "port-table"))
+
+    def on_click(self, event: events.Click) -> None:
+        if event.chain == 2:
+            self.action_open()
 
     def animate_frame(self):
         """Update animation frame counter"""

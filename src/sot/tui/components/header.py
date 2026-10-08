@@ -50,8 +50,8 @@ class SotHeader(SotWidget):
         text.append(right, style=c.muted)
         return text
 
-    def on_click(self, event: events.Click) -> None:
+    async def on_click(self, event: events.Click) -> None:
         for start, end, mode in self._tabs:
             if start <= event.x < end:
-                self.app.switch_mode(mode)
+                await self.app.run_action(f"switch_mode('{mode}')")
                 return

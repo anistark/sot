@@ -1,6 +1,7 @@
 """Command-line interface for disk benchmarking."""
 
 import json
+import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, List
@@ -82,6 +83,21 @@ def get_physical_disks() -> List[Dict]:
     return physical_disks
 
 
+def volume_label(mountpoint: str) -> str:
+    name = Path(mountpoint).name or mountpoint
+    return "System" if not name or name == "/" else name
+
+
+def find_disk(physical_disks: List[Dict], key: str) -> int:
+    """Index of the disk matching an id (``/dev/disk3``, ``disk3``) or mountpoint."""
+    for index, disk in enumerate(physical_disks):
+        ids = {disk["disk_id"], disk["disk_id"].removeprefix("/dev/")}
+        mounts = {p["mountpoint"] for p in disk["partitions"]}
+        if key in ids or key in mounts:
+            return index
+    return -1
+
+
 def display_disk_selection(physical_disks: List[Dict]) -> int:
     """
     Display available physical disks and let user select interactively.
@@ -121,9 +137,7 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
         # Extract volume name from mountpoint
         largest_partition = disk["largest_partition"]
         mountpoint = largest_partition["mountpoint"]
-        volume_name = Path(mountpoint).name or mountpoint
-        if not volume_name or volume_name == "/":
-            volume_name = "System"
+        volume_name = volume_label(mountpoint)
 
         table.add_row(
             str(i),
@@ -136,109 +150,23 @@ def display_disk_selection(physical_disks: List[Dict]) -> int:
 
     console.print(table)
 
-    # Interactive selection (inline, no screen clearing)
-    selected_index = _select_with_arrows(physical_disks)
+    if not sys.stdin.isatty():
+        console.print(f"[{c.danger}]Pick a disk with --disk when not in a terminal[/]")
+        return -1
+    selected_index = _select_with_numbers(physical_disks)
 
     if selected_index >= 0:
         selected_disk = physical_disks[selected_index]
         largest_partition = selected_disk["largest_partition"]
         # Extract volume name
         mountpoint = largest_partition["mountpoint"]
-        volume_name = Path(mountpoint).name or mountpoint
-        if not volume_name or volume_name == "/":
-            volume_name = "System"
+        volume_name = volume_label(mountpoint)
         console.print(
             f"\n[{c.ok}]✓ Selected: {volume_name}[/]\n"
             f"  Using partition: {largest_partition['device']} ({largest_partition['mountpoint']})\n"
         )
 
     return selected_index
-
-
-def _select_with_arrows(physical_disks: List[Dict]) -> int:
-    """Select disk using arrow keys or number input."""
-    try:
-        import sys
-        import termios
-        import tty
-
-        # Check if stdin is a TTY for raw input
-        if not sys.stdin.isatty():
-            # Non-interactive mode - use number input
-            return _select_with_numbers(physical_disks)
-
-        current_index = 0
-        old_settings = None
-
-        try:
-            # Get terminal settings
-            old_settings = termios.tcgetattr(sys.stdin)
-
-            # Set raw mode for input capture
-            tty.setraw(sys.stdin.fileno())
-
-            # Display options inline as we navigate
-            def show_menu():
-                # Clear screen and move cursor to home
-                sys.stdout.write("\033[2J\033[H")
-                sys.stdout.write(
-                    "\033[1;33mUse arrow keys (↑↓) to navigate, Enter to select, or 'q' to quit:\033[0m\r\n\r\n"
-                )
-                sys.stdout.flush()
-                for i, disk in enumerate(physical_disks):
-                    total_str = sizeof_fmt(disk["total_bytes"], fmt=".1f")
-                    free_str = sizeof_fmt(disk["free_bytes"], fmt=".1f")
-
-                    # Extract volume name from mountpoint
-                    largest_partition = disk["largest_partition"]
-                    mountpoint = largest_partition["mountpoint"]
-                    volume_name = Path(mountpoint).name or mountpoint
-                    if not volume_name or volume_name == "/":
-                        volume_name = "System"
-
-                    disk_info = (
-                        f"{volume_name} - " f"{total_str} total, " f"{free_str} free"
-                    )
-
-                    if i == current_index:
-                        sys.stdout.write(f"  \033[1;36m❯ {i}: {disk_info}\033[0m\r\n")
-                    else:
-                        sys.stdout.write(f"    {i}: {disk_info}\r\n")
-                sys.stdout.flush()
-
-            show_menu()
-            while True:
-                # Read single character
-                ch = sys.stdin.read(1)
-
-                if ch == "q" or ch == "Q":
-                    return -1
-                elif ch == "\n" or ch == "\r":
-                    return current_index
-                elif ch == "\x1b":  # Escape sequence for arrow keys
-                    next1 = sys.stdin.read(1)
-                    if next1 == "[":
-                        next2 = sys.stdin.read(1)
-                        if next2 == "A":  # Up arrow
-                            current_index = (current_index - 1) % len(physical_disks)
-                            show_menu()
-                        elif next2 == "B":  # Down arrow
-                            current_index = (current_index + 1) % len(physical_disks)
-                            show_menu()
-                elif ch.isdigit():  # Number input
-                    index = int(ch)
-                    if 0 <= index < len(physical_disks):
-                        return index
-
-        finally:
-            # Restore terminal settings
-            if old_settings:
-                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-                sys.stdout.flush()
-
-    except Exception:
-        # Fallback to number selection if anything fails
-        return _select_with_numbers(physical_disks)
 
 
 def _select_with_numbers(physical_disks: List[Dict]) -> int:
@@ -282,9 +210,7 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
     # Extract volume name from mountpoint
     largest_partition = disk_info["largest_partition"]
     mountpoint = largest_partition["mountpoint"]
-    volume_name = Path(mountpoint).name or mountpoint
-    if not volume_name or volume_name == "/":
-        volume_name = "System"
+    volume_name = volume_label(mountpoint)
 
     # Build disk info panel
     partitions_text = "\n".join(
@@ -368,7 +294,7 @@ def display_results(results: List[BenchmarkResult], disk_info: Dict):
     console.print(f"\n{summary_text}\n")
 
 
-def export_results_json(
+def write_results_json(
     results: List[BenchmarkResult], disk_info: Dict, output_path: str
 ):
     """
@@ -410,9 +336,16 @@ def export_results_json(
         }
         data["benchmarks"].append(bench_data)
 
+    with open(output_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def export_results_json(
+    results: List[BenchmarkResult], disk_info: Dict, output_path: str
+):
+    """Export benchmark results to JSON file and report it."""
     try:
-        with open(output_path, "w") as f:
-            json.dump(data, f, indent=2)
+        write_results_json(results, disk_info, output_path)
         console.print(f"[{theme().colors.ok}]✓ Results exported to {output_path}[/]")
     except Exception as e:
         console.print(f"[{theme().colors.danger}]✗ Failed to export results: {e}[/]")
@@ -454,8 +387,15 @@ def benchmark_command(args) -> int:
     # Sort disks by free space (descending)
     physical_disks.sort(key=lambda d: d["free_bytes"], reverse=True)
 
-    # Interactive disk selection
-    selected_index = display_disk_selection(physical_disks)
+    disk_key = getattr(args, "bench_disk", None)
+    if disk_key:
+        selected_index = find_disk(physical_disks, disk_key)
+        if selected_index < 0:
+            ids = ", ".join(d["disk_id"] for d in physical_disks)
+            console.print(f"[{c.danger}]No disk matches {disk_key!r}. Disks: {ids}[/]")
+            return 1
+    else:
+        selected_index = display_disk_selection(physical_disks)
     if selected_index < 0:
         console.print(f"[{c.warn}]Benchmark cancelled.[/]")
         return 0
@@ -466,9 +406,7 @@ def benchmark_command(args) -> int:
     mountpoint = largest_partition["mountpoint"]
 
     # Extract volume name from mountpoint
-    volume_name = Path(mountpoint).name or mountpoint
-    if not volume_name or volume_name == "/":
-        volume_name = "System"
+    volume_name = volume_label(mountpoint)
 
     # Verify write permissions and available space on cache directory
     try:

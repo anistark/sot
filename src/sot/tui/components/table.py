@@ -9,6 +9,7 @@ from textual.widgets import DataTable
 from ..._theme import theme
 from ...widgets.base_widget import panel_title
 from .. import keymap
+from ..messages import SelectionMoved, ShowDetails
 from ..state import SotWidget
 
 Row = tuple[str, tuple]
@@ -20,6 +21,9 @@ def cell(value: object, style: str = "", justify: JustifyMethod = "left") -> Tex
 
 class SotTable(DataTable, SotWidget, inherit_bindings=False):
     """A row table that keeps the cursor on the same row across refreshes."""
+
+    # What the detail drawer shows for a row, see ``tui.details``.
+    DETAIL_KIND: str | None = None
 
     BINDINGS = [*keymap.LIST]
 
@@ -51,13 +55,49 @@ class SotTable(DataTable, SotWidget, inherit_bindings=False):
         self.add_class("panel")
         self.label = title
         self.selected_row: str | None = None
+        self.filter_text = ""
         self.set_title(title)
 
     def set_title(self, label: str, detail: str | None = None) -> None:
+        if self.filter_text:
+            filtered = f"[{theme().colors.warn}]/{self.filter_text}[/]"
+            detail = f"{detail} · {filtered}" if detail else filtered
         self.border_title = panel_title(label, detail)
+
+    def reload(self) -> None:
+        raise NotImplementedError
+
+    def set_filter(self, text: str) -> None:
+        self.filter_text = text
+        self.reload()
+
+    def select_key(self, key: str) -> None:
+        if key not in self.rows and self.filter_text:
+            self.set_filter("")
+        if key in self.rows:
+            self.selected_row = key
+            self.move_cursor(row=self.get_row_index(key))
 
     def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
         self.selected_row = event.row_key.value
+        if self.DETAIL_KIND and self.selected_row is not None:
+            self.post_message(SelectionMoved(self.DETAIL_KIND, self.selected_row))
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        # A click on the highlighted row, i.e. a double click.
+        event.stop()
+        self.action_details()
+
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        event.stop()
+        self.sort_by_column(str(event.column_key.value))
+
+    def sort_by_column(self, key: str) -> None:
+        """Sort when a column header is clicked."""
+
+    def action_details(self) -> None:
+        if self.DETAIL_KIND and self.selected_row is not None:
+            self.post_message(ShowDetails(self.DETAIL_KIND, self.selected_row))
 
     def set_rows(self, rows: list[Row]) -> None:
         keep = self.selected_row

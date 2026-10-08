@@ -9,6 +9,7 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
+from textual.message import Message
 from textual.timer import Timer
 from textual.widgets import ListItem, ListView, Static
 
@@ -183,6 +184,29 @@ class VolumeList(ListView):
         Binding("down,j", "cursor_down", "Down", show=False, id="sot.list.down"),
     ]
 
+    class FilterChanged(Message):
+        def __init__(self, text: str) -> None:
+            self.text = text
+            super().__init__()
+
+    @property
+    def filter_text(self) -> str:
+        return getattr(self.screen, "volume_filter", "")
+
+    def set_filter(self, text: str) -> None:
+        self.post_message(self.FilterChanged(text))
+
+
+def _volume_text(volume: dict) -> str:
+    mountpoints = " ".join(p.get("mountpoint") or "" for p in volume["partitions"])
+    return f"{volume['volume_name']} {volume['disk_id']} {mountpoints}".lower()
+
+
+def _holds(volume: dict, key: str) -> bool:
+    return key == volume["disk_id"] or any(
+        p.get("mountpoint") == key for p in volume["partitions"]
+    )
+
 
 class VolumeInfo(BaseWidget):
     def __init__(self, **kwargs):
@@ -219,6 +243,7 @@ class DisksScreen(SotScreen):
         super().__init__()
         self.volumes: list[dict] = []
         self.volume_index = 0
+        self.volume_filter = ""
         self._poll: Timer | None = None
 
     def compose_view(self) -> ComposeResult:
@@ -247,7 +272,13 @@ class DisksScreen(SotScreen):
 
     def refresh_volumes(self) -> None:
         self.volumes = get_volume_info()
+        if self.volume_filter:
+            text = self.volume_filter.lower()
+            self.volumes = [v for v in self.volumes if text in _volume_text(v)]
         volume_list = self.query_one("#volume-list", VolumeList)
+        c = theme().colors
+        filtered = f"[{c.warn}]/{self.volume_filter}[/]" if self.volume_filter else None
+        volume_list.border_title = panel_title("Volumes", filtered)
         index = min(self.volume_index, max(0, len(self.volumes) - 1))
         volume_list.clear()
         volume_list.extend(VolumeItem(volume) for volume in self.volumes)
@@ -258,6 +289,23 @@ class DisksScreen(SotScreen):
     def show_volume(self, index: int) -> None:
         volume = self.volumes[index] if 0 <= index < len(self.volumes) else None
         self.query_one("#volume-info", VolumeInfo).show(volume)
+
+    def on_volume_list_filter_changed(self, message: VolumeList.FilterChanged) -> None:
+        self.volume_filter = message.text
+        self.volume_index = 0
+        self.refresh_volumes()
+
+    def reveal(self, target: str, key: str | None) -> None:
+        if key is not None:
+            if not any(_holds(v, key) for v in self.volumes) and self.volume_filter:
+                self.volume_filter = ""
+                self.refresh_volumes()
+            for index, volume in enumerate(self.volumes):
+                if _holds(volume, key):
+                    self.volume_index = index
+                    self.refresh_volumes()
+                    break
+        self.query_one("#volume-list").focus()
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.list_view.index is not None:

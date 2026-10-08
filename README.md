@@ -207,7 +207,11 @@ sot
   - Per Core and Thread level
 - Processes with ID, threads, memory and cpu usage
   - **Interactive Order By**: Press `o` to enter order by mode, pick a column with `←`/`→`, toggle sort direction with Enter (DESC ↓ → ASC ↑ → OFF → cycle)
-- **Views**: `1` Overview, `2` Processes, `3` Disks (or click the tabs in the header); each view keeps its state while you're elsewhere
+- **Views**: `1` Overview, `2` Processes, `3` Disks, `4` System, `5` Bench, `6` Clean (or click the tabs in the header); each view keeps its state while you're elsewhere
+- **Drill down**: `Enter` on an overview panel opens the matching view on that process or disk; `Esc` goes back
+- **Details**: `Enter` (or a double-click) in a list opens a live detail drawer
+- **Filter**: `/` filters the focused list by name, PID, user or command
+- **Command palette**: `Ctrl+P` jumps to any view, process or volume, acts on the selected process, and switches theme
 
 ### Disk
 
@@ -255,18 +259,43 @@ sot
 ### Options
 
 - **Disk Selection**: Use `--disk` / `-D` to monitor a specific volume
-  - `sot --disk` - Interactive picker with arrow keys
+  - `sot --disk` - Pick a volume from a list inside sot
   - `sot --disk /Volumes/External` - Monitor specific volume
 - **Theme**: Use `--theme` / `-T` to pick a color theme (`classic` or `cyberpunk`)
   - `sot --theme cyberpunk` - Cyberpunk 2077 inspired neon theme
   - Set `SOT_THEME=cyberpunk` to make it the default; also applies to `sot ps` and `sot disk`
-  - Switch live with `Ctrl+P` → Theme; graphs and selections are kept
+  - Switch live with `Ctrl+P` → Theme; graphs and selections are kept, and the choice is remembered
+
+### Configuration
+
+sot reads an optional config file. `sot --config-path` shows where (by default `~/.config/sot/config.toml`, following `$XDG_CONFIG_HOME`):
+
+```toml
+theme = "cyberpunk"          # classic, cyberpunk
+default_view = "processes"   # overview, processes, disks, system, bench, clean
+net = "en0"                  # network interface on the overview
+disk = "/"                   # mountpoint on the overview
+
+[refresh]                    # seconds
+cpu = 1.0
+processes = 2.0
+
+[keymap]                     # binding id = keys
+"sot.process.kill" = "ctrl+k"
+"sot.view.processes" = "p"
+```
+
+- Every key is optional; invalid values are reported and ignored
+- Command-line flags win over `SOT_THEME`, which wins over the config; a theme picked with `Ctrl+P` is remembered and used when nothing else sets one
+- `sot --keys` lists every binding id with its default keys
 
 ---
 
 ## System Information
 
 The `sot info` command displays comprehensive system information with a beautiful OS-specific ASCII logo.
+
+Inside sot, the System view (key 4) shows the same facts as panels, with uptime, memory and battery kept live.
 
 ### Usage
 
@@ -363,7 +392,7 @@ The `sot disk` command shows every physical disk with its partitions.
 ### Usage
 
 ```sh
-# Interactive TUI - browse disks with arrow keys, live refresh
+# Disks view (key 3 inside sot)
 sot disk
 
 # Plain listing - print once and exit, pipe-friendly
@@ -382,10 +411,10 @@ The `sot clean` command performs a deep clean of your system by removing caches,
 ### Usage
 
 ```sh
-# Interactive mode - shows what can be cleaned and asks for confirmation
+# Clean view: pick targets with space, press c to clean after confirming
 sot clean
 
-# Dry run - preview what would be cleaned without deleting
+# Dry run - print what would be cleaned without deleting
 sot clean --dry-run
 ```
 
@@ -464,7 +493,8 @@ sudo sot clean
 ### Safety Features
 
 - **Dry run mode**: Preview what will be cleaned without making changes
-- **Interactive confirmation**: Always asks before deleting files
+- **Interactive confirmation**: Always asks before deleting files (in the Clean view and the printed flow)
+- **Sudo-aware**: Targets that need root are skipped unless sot runs with sudo
 - **Clear reporting**: Shows exactly what will be cleaned and how much space will be freed
 - **Graceful error handling**: Skips files that can't be accessed rather than failing
 
@@ -511,16 +541,19 @@ The footer lists the keys for the focused panel; press `?` for all of them.
 
 | Key | Action |
 |---|---|
-| `1` `2` `3` | Overview, Processes, Disks |
+| `1` to `6` | Overview, Processes, Disks, System, Bench, Clean |
 | `Tab` / `Shift+Tab` | Next / previous panel |
 | `↑` `↓` or `k` `j` | Move |
 | `PgUp` `PgDn`, `Home` `End` (`g` `G`) | Page, first, last |
-| `Enter` | Details |
+| `Enter` | Details drawer (on the overview: open in the Processes or Disks view) |
+| `Esc` | Close the drawer, or go back after a drill-down |
+| `/` | Filter the focused list |
 | `x` / `t` | Kill / terminate (asks first) |
 | `o` | Sort: process tables open a column picker (`←` `→`, `Enter`, `Esc`); ports and dev environments cycle the column, `s` flips direction |
 | `n` | Show or hide the I/O and connection columns |
 | `r` | Refresh |
-| `Ctrl+P` | Command palette (themes, help) |
+| Click a column header | Sort by it |
+| `Ctrl+P` | Command palette (views, processes, volumes, actions, themes) |
 | `?` / `q` | Help / quit |
 
 ### Example
@@ -543,7 +576,13 @@ The `sot bench` command allows you to measure disk performance with comprehensiv
 sot bench
 ```
 
-This will display available disks and let you select one to benchmark interactively.
+This opens the Bench view (key 5 inside sot): pick a disk and press `Enter`. Results fill in as each test finishes; `+`/`-` change the duration, `e` exports JSON, `Esc` cancels after the current test.
+
+`--disk` or `--output`, or running outside a terminal, keeps the printed flow for scripts:
+
+```sh
+sot bench --disk disk3 --duration 5 --output results.json
+```
 
 ### Benchmark Options
 
@@ -597,25 +636,30 @@ sot -H
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]]
-           [--theme THEME] {info,bench,disk,clean,ps} ...
+usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] [--config-path] [--keys]
+           [--theme THEME]
+           {info,bench,disk,clean,ps} ...
 
 Command-line System Obervation Tool ≈
 
 commands: {info,bench,disk,clean,ps}
-    info                Display system information
-    bench               Disk benchmarking
-    disk                Interactive disk information viewer
-    clean               Deep clean system caches, logs, and temp files
-    ps                  Interactive process viewer with ports and dev environment
+    info                Print system information (the System view is key 4)
+    bench               Disk benchmarking view; flags run it without the TUI
+    disk                Disks view; --list prints a table instead
+    clean               Clean caches, logs and temp files; --dry-run only reports
+    ps                  Processes view: processes, listening ports, dev environments
 
 options:
-  --help, -H                Show this help message and exit.
-  --version, -V             Display version information with styling
-  --log LOG, -L LOG         Debug log file path (enables debug logging)
-  --net NET, -N NET         Network interface to display (default: auto-detect best interface)
-  --disk [DISK], -D [DISK]  Disk mountpoint to display (use without value for interactive selection)
-  --theme THEME, -T THEME   Color theme: classic, cyberpunk (default: $SOT_THEME or classic)
+  --help, -H            Show this help message and exit.
+  --version, -V         Display version information with styling
+  --log LOG, -L LOG     Debug log file path (enables debug logging)
+  --net NET, -N NET     Network interface to display (default: auto-detect best interface)
+  --disk [DISK], -D [DISK]
+                        Disk mountpoint to display (use without value for interactive selection)
+  --config-path         Print where sot reads its config file from
+  --keys                List every key binding id, for the [keymap] config table
+  --theme THEME, -T THEME
+                        Color theme: classic, cyberpunk (default: $SOT_THEME, config, or classic)
 ```
 
 For benchmark-specific options:
@@ -627,12 +671,13 @@ sot bench -h
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot bench [-h] [--output OUTPUT] [--duration DURATION]
+usage: sot bench [-h] [--output OUTPUT] [--disk DISK] [--duration DURATION]
 
 options:
   -h, --help            show this help message and exit
   --output OUTPUT, -o OUTPUT
                         Output file for benchmark results (JSON format)
+  --disk DISK           Disk to benchmark, by id (disk3, /dev/sda) or mountpoint; skips the prompt
   --duration DURATION, -d DURATION
                         Duration for each benchmark test in seconds (default: 10s)
 ```

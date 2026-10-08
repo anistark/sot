@@ -17,6 +17,10 @@ LIST = [
 ]
 
 DETAILS = Binding("enter", "details", "Details", id="sot.details")
+OPEN = Binding("enter", "open", "Open", id="sot.open")
+BACK = Binding("escape", "back", "Back", id="sot.back")
+FILTER = Binding("slash", "filter", "Filter", id="sot.filter")
+FILTER_CLEAR = Binding("escape", "clear", "Clear filter", id="sot.filter.clear")
 REFRESH = Binding("r", "refresh", "Refresh", id="sot.refresh")
 
 PROCESS = [
@@ -54,9 +58,30 @@ VIEWS = {
     "overview": "Overview",
     "processes": "Processes",
     "disks": "Disks",
+    "system": "System",
+    "bench": "Bench",
+    "clean": "Clean",
 }
 
 VIEW_KEYS = [
     Binding(str(n), f"switch_mode('{mode}')", label, show=False, id=f"sot.view.{mode}")
     for n, (mode, label) in enumerate(VIEWS.items(), 1)
 ]
+
+
+def all_bindings() -> dict[str, Binding]:
+    """Every binding with a ``sot.`` id, across the loaded widgets and screens."""
+    from textual.dom import DOMNode
+
+    found: dict[str, Binding] = {}
+    classes: list[type] = [DOMNode]
+    while classes:
+        cls = classes.pop()
+        classes.extend(cls.__subclasses__())
+        if not cls.__module__.startswith("sot."):
+            continue
+        for binding in cls.__dict__.get("BINDINGS", []):
+            binding_id = binding.id if isinstance(binding, Binding) else None
+            if binding_id and binding_id.startswith("sot."):
+                found.setdefault(binding_id, binding)
+    return dict(sorted(found.items()))

@@ -8,11 +8,12 @@ from textual.app import App
 from textual.command import CommandPalette
 from textual.theme import Theme, ThemeProvider
 
-from .._process_utils import format_process_details, run_process_action
+from .._config import remember_theme
+from .._process_utils import ProcessActionResult, run_process_action
 from .._theme import THEMES, set_theme, theme
 from ..widgets.confirmation_modal import ConfirmModal
 from . import keymap
-from .messages import ProcessAction, ProcessSelected
+from .messages import ProcessAction
 
 
 class SotThemeProvider(ThemeProvider):
@@ -35,6 +36,7 @@ class SotBaseApp(App):
             if t.textual is not None:
                 self.register_theme(t.textual)
         name = set_theme(theme_name or theme().name).name
+        self._chosen_theme = name
         if name in self.available_themes:
             self.theme = name
 
@@ -49,8 +51,12 @@ class SotBaseApp(App):
         )
 
     def _theme_changed(self, new: Theme) -> None:
-        if new.name in THEMES:
-            set_theme(new.name)
+        if new.name not in THEMES:
+            return
+        set_theme(new.name)
+        if new.name != self._chosen_theme:
+            self._chosen_theme = new.name
+            remember_theme(new.name)
 
     def action_toggle_help(self) -> None:
         if self.screen.query("HelpPanel"):
@@ -58,8 +64,8 @@ class SotBaseApp(App):
         else:
             self.action_show_help_panel()
 
-    def on_process_selected(self, message: ProcessSelected) -> None:
-        self.notify("\n".join(format_process_details(message.process_info)))
+    def notify_result(self, result: ProcessActionResult) -> None:
+        self.notify(result.message, severity=result.severity, timeout=4)
 
     def on_process_action(self, message: ProcessAction) -> None:
         info = message.process_info
@@ -67,7 +73,9 @@ class SotBaseApp(App):
         name = info.get("name") or "Unknown"
         action = message.action
         if not isinstance(pid, int):
-            self.notify("No process to act on", severity="error")
+            self.notify_result(
+                ProcessActionResult(False, "No process to act on", "error")
+            )
             return
 
         signal = "SIGKILL" if action == "kill" else "SIGTERM"
@@ -77,7 +85,7 @@ class SotBaseApp(App):
                 return
             result = run_process_action(action, pid, name)
             self.log(f"{action} {name} ({pid}): {result.message}")
-            self.notify(result.message, severity=result.severity)
+            self.notify_result(result)
 
         self.push_screen(
             ConfirmModal(

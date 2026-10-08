@@ -13,7 +13,7 @@ from ..._helpers import sizeof_fmt
 from ..._theme import Colors, theme
 from ...widgets.process_sorter import SortManager
 from .. import keymap, refresh
-from ..messages import ProcessAction, ProcessSelected
+from ..messages import ProcessAction, Reveal
 from .table import SotTable, cell
 
 
@@ -64,19 +64,42 @@ COMPACT = ("pid", "name", "threads", "memory", "io", "conn", "cpu")
 FULL = ("pid", "name", "user", "status", "threads", "memory", "io", "conn", "cpu")
 NETWORK = {"io", "conn"}
 # Dropped in this order when the table is too narrow for a readable name.
-NARROW_DROP = ("io", "conn", "user", "threads", "status")
+NARROW_DROP = ("io", "conn", "user", "threads", "status", "memory")
 MIN_NAME_WIDTH = 14
 SORTING = {"sort_prev", "sort_next", "sort_toggle", "sort_done"}
+# Table column -> SortManager column, for header clicks.
+SORT_KEYS = {
+    "pid": "pid",
+    "name": "name",
+    "threads": "num_threads",
+    "memory": "memory_rss",
+    "io": "total_io_rate",
+    "conn": "num_connections",
+    "cpu": "cpu_percent",
+}
+
+
+def _matches(proc: dict, text: str) -> bool:
+    haystack = " ".join(
+        [
+            str(proc["pid"]),
+            proc.get("name") or "",
+            proc.get("username") or "",
+            " ".join(proc.get("cmdline") or []),
+        ]
+    )
+    return text.lower() in haystack.lower()
 
 
 class ProcessTable(SotTable):
+    DETAIL_KIND = "process"
     BINDINGS = [
         *keymap.LIST,
         *keymap.PROCESS,
         *keymap.SORT_MODE,
         keymap.NETWORK_COLUMNS,
     ]
-    STATE = ("sort_manager", "show_network", "selected_row")
+    STATE = ("sort_manager", "show_network", "selected_row", "filter_text")
 
     def __init__(self, columns: tuple[str, ...] = COMPACT, **kwargs):
         super().__init__("Processes", **kwargs)
@@ -129,7 +152,10 @@ class ProcessTable(SotTable):
         return True
 
     def reload(self) -> None:
-        self.processes = self.sort_manager.apply_sort(process_sampler.sample())
+        processes = process_sampler.sample()
+        if self.filter_text:
+            processes = [p for p in processes if _matches(p, self.filter_text)]
+        self.processes = self.sort_manager.apply_sort(processes)
         self._by_pid = {str(p["pid"]): p for p in self.processes}
         self._fill()
 
@@ -176,10 +202,6 @@ class ProcessTable(SotTable):
     def selected_process(self) -> dict | None:
         return self._by_pid.get(self.selected_row or "")
 
-    def action_details(self) -> None:
-        if (proc := self.selected_process()) is not None:
-            self.post_message(ProcessSelected(proc))
-
     def action_kill(self) -> None:
         if (proc := self.selected_process()) is not None:
             self.post_message(ProcessAction("kill", proc))
@@ -214,3 +236,28 @@ class ProcessTable(SotTable):
     def action_sort_done(self) -> None:
         self.sort_manager.exit_sort_mode()
         self._update_title()
+
+    def sort_by_column(self, key: str) -> None:
+        keys = [column.key for column in self.sort_manager.COLUMNS]
+        if SORT_KEYS.get(key) in keys:
+            self.sort_manager.toggle_column(keys.index(SORT_KEYS[key]))
+            self.reload()
+
+
+class OverviewProcessTable(ProcessTable):
+    """The overview's list: `enter` opens the process in the processes view."""
+
+    BINDINGS = [
+        *keymap.LIST,
+        keymap.OPEN,
+        *keymap.PROCESS[1:],
+        *keymap.SORT_MODE,
+        keymap.NETWORK_COLUMNS,
+    ]
+
+    def action_open(self) -> None:
+        if self.selected_row is not None:
+            self.post_message(Reveal("processes", "proc-table", self.selected_row))
+
+    def action_details(self) -> None:
+        self.action_open()
