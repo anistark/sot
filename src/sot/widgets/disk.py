@@ -11,10 +11,12 @@ import psutil
 from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
+from textual import events
 
 from .._helpers import sizeof_fmt
 from .._theme import ThemedStream, theme
-from ..tui import refresh
+from ..tui import keymap, refresh
+from ..tui.messages import Reveal
 from .base_widget import BaseWidget
 
 
@@ -45,6 +47,9 @@ def _autoselect_mountpoint():
 
 class DiskWidget(BaseWidget):
     """Disk widget displaying usage and I/O statistics."""
+
+    can_focus = True
+    BINDINGS = [keymap.OPEN]
 
     STATE = (
         "read_stream",
@@ -133,6 +138,14 @@ class DiskWidget(BaseWidget):
         self.refresh_panel()
 
         self.every(refresh.DISK, self.refresh_panel)
+
+    def action_open(self) -> None:
+        key = self.mountpoints[0] if self.mountpoints else None
+        self.post_message(Reveal("disks", "volume-list", key))
+
+    def on_click(self, event: events.Click) -> None:
+        if event.chain == 2:
+            self.action_open()
 
     def refresh_panel(self):
         if self.has_io_counters:

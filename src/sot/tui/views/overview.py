@@ -16,7 +16,7 @@ from ...widgets import (
     NetworkWidget,
     SotLogoWidget,
 )
-from ..components.process_table import COMPACT, ProcessTable
+from ..components.process_table import COMPACT, OverviewProcessTable
 from ..screen import SotScreen
 
 
@@ -24,7 +24,7 @@ class OverviewScreen(SotScreen):
     MODE = "overview"
 
     DEFAULT_CSS = """
-    OverviewScreen {
+    OverviewScreen #body {
         layout: grid;
         grid-size: 3;
         grid-columns: 35fr 20fr 45fr;
@@ -45,7 +45,7 @@ class OverviewScreen(SotScreen):
         yield InfoWidget(id="info-line")
         yield CPUWidget(id="cpu-widget")
         yield HealthScoreWidget(id="health-widget")
-        yield ProcessTable(COMPACT, id="procs-list")
+        yield OverviewProcessTable(COMPACT, id="procs-list")
         yield MemoryWidget(id="mem-widget")
         # Live GPU stats when a GPU is detected, otherwise the SOT animation.
         yield (
@@ -68,4 +68,5 @@ class OverviewScreen(SotScreen):
     def size_memory_row(self) -> None:
         # Memory graphs have a fixed height; size their grid row to match.
         mem = self.query_one("#mem-widget", MemoryWidget)
-        self.styles.grid_rows = f"1 1fr {mem.panel_height} 1.1fr"
+        body = self.query_one("#body")
+        body.styles.grid_rows = f"1 1fr {mem.panel_height} 1.1fr"

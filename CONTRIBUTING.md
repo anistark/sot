@@ -240,23 +240,26 @@ The project uses:
 
 ### Testing
 
-Run the basic functionality test:
-
 ```sh
-just dev
-# Verify all widgets load and display correctly
-# Test with different terminal sizes
-# Check for any error messages
+just test                                   # the whole suite
+uv run pytest tests/test_tui.py -k drawer   # one area
 ```
 
-For more comprehensive testing:
+- `tests/test_tui.py`, `tests/test_views.py` drive the app headless with Textual's pilot (`app.run_test()`): keys, view switches, theme switches, dialogs
+- `tests/test_snapshots.py` compares every view, in both themes, against SVG snapshots in `tests/__snapshots__/`. `tests/fake_system.py` pins every data source (psutil, platform, clock, process list, volumes) so snapshots match on any machine
+- After an intended visual change, update the snapshots and review the diff before committing:
 
 ```sh
-# Test with specific network interface
-python dev_runner.py --net eth0
+uv run pytest tests/test_snapshots.py --snapshot-update
+```
 
-# Test with debug logging
-python dev_runner.py --debug --log test.log
+A failing snapshot run writes `snapshot_report.html` with a side-by-side diff.
+
+For a manual look:
+
+```sh
+just dev                                    # run from source
+python src/dev/dev_runner.py --debug --log test.log
 ```
 
 ## 📦 Adding Dependencies
@@ -320,22 +323,11 @@ man ./man/sot.1
 
 ### Man Page Updates
 
-The man page is automatically generated from:
-- Command-line argument definitions in `src/sot/_app.py`
-- Additional sections defined in `scripts/build_manpage.py`
+The man page is generated from:
+- `build_parser()` in `src/sot/_app.py`, the same parser the CLI uses
+- The extra sections (examples, keys, configuration) in `scripts/build_manpage.py`
 
-**When to regenerate:**
-- After adding/modifying CLI arguments
-- After adding/removing subcommands
-- Before publishing a new release (handled automatically)
-
-**What's included:**
-- Command synopsis and all options
-- Subcommand documentation (info, bench, disk)
-- Usage examples
-- Feature descriptions
-- Interactive controls
-- See also references to similar tools
+Regenerate it after changing CLI arguments, subcommands or keys (`just build-man`; publishing does it too).
 
 The man page is packaged in:
 - **Source distribution (sdist)**: `man/sot.1`
@@ -347,57 +339,40 @@ See `HOMEBREW_MANPAGE.md` for Homebrew-specific installation details.
 ## 🏗️ Project Structure
 
 ```sh
-sot/                           # Root project directory
-├── src/
-│   ├── sot/                   # Main source code
-│   │   ├── __about__.py
-│   │   ├── __init__.py
-│   │   ├── _app.py
-│   │   ├── _cpu.py
-│   │   ├── _disk.py
-│   │   ├── _mem.py
-│   │   ├── _net.py
-│   │   ├── _procs_list.py
-│   │   ├── _info.py
-│   │   ├── _battery.py
-│   │   ├── _helpers.py
-│   │   ├── braille_stream.py
-│   │   ├── blockchar_stream.py
-│   │   └── _base_widget.py
-│   └── dev/                   # 🆕 Development tools (not packaged)
-│       ├── dev_runner.py      # 🆕 Development runner with descriptive names
-│       ├── watch_dev.py       # 🆕 File watcher with signal handling
-│       └── terminal_test.py   # 🆕 Terminal diagnostics
-├── scripts/
-│   └── build_manpage.py       # Man page generation script
-├── man/
-│   └── sot.1                  # Generated man page
-├── .vscode/                   # VS Code configuration
-│   ├──settings.json
-│   └── launch.json            # Debug configurations
-├── justfile
-├── CONTRIBUTING.md
-├── HOMEBREW_MANPAGE.md        # Homebrew man page documentation
-├── pyproject.toml
-├── .gitignore
-├── README.md
-├── LICENSE
-└── tox.ini
+src/sot/
+├── _app.py              # CLI: build_parser(), run(), routes subcommands to views
+├── _config.py           # config.toml and the remembered theme
+├── _theme.py            # SotTheme: colors, design, Textual theme, ThemedStream
+├── _collectors.py       # shared data: ProcessSampler, listening ports, dev environments
+├── styles/sot.tcss      # frames and theme-scoped CSS
+├── tui/
+│   ├── app.py           # SotApp: one mode per view, drill-down, picker, keymap
+│   ├── base.py          # SotBaseApp: themes, confirmations, process actions
+│   ├── screen.py        # SotScreen: header, footer, drawer, filter, rebuild on theme change
+│   ├── state.py         # SotWidget: kept state across rebuilds, pausable polling
+│   ├── keymap.py        # every default binding, each with an id
+│   ├── refresh.py       # refresh intervals
+│   ├── commands.py      # command palette provider
+│   ├── details.py       # what the detail drawer shows
+│   ├── components/      # header, tables, drawer, filter bar, picker
+│   └── views/           # overview, processes, disks, system, bench, clean
+├── widgets/             # overview panels (cpu, memory, disk, network, ...)
+├── bench/ clean/ disk/ info/   # the logic behind each command and its printed output
+src/dev/                 # development runner and tools (not packaged)
+tests/                   # pytest, pilot tests, snapshots
 ```
 
-### Color Scheme
+### Adding a view
 
-SOT uses a consistent color palette:
+1. Subclass `SotScreen` in `src/sot/tui/views/` with a `MODE` and `compose_view()`
+2. Add it to `VIEWS` in `tui/keymap.py` (header tab and number key) and `SotApp.MODES`
+3. Build lists on `SotTable`, panels on `BaseWidget`, and poll with `every()` so the view pauses while hidden
+4. Name every new binding with an id (`sot.<view>.<action>`) so it can be remapped
+5. Add snapshots for both themes in `tests/test_snapshots.py`
 
-| Color | Hex | Usage |
-|-------|-----|-------|
-| `sky_blue3` | `#5fafd7` | Primary highlights |
-| `aquamarine3` | `#5fd7af` | Secondary highlights |
-| `yellow` | `#808000` | Warnings/graphs |
-| `bright_black` | `#808080` | Borders |
-| `slate_blue1` | `#875fff` | Temperature data |
-| `red3` | `#d70000` | Alerts/errors |
-| `dark_orange` | `#d75f00` | High usage warnings |
+### Themes and colors
+
+Colors and component styles come from the active `SotTheme` in `_theme.py`; never hardcode a color (`tests/test_theme.py` fails if one appears). To add a theme, define a `SotTheme` with its `Colors`, `Design` and Textual theme, and add it to `THEMES`.
 
 ### Common Issues
 

@@ -14,6 +14,7 @@ dev = [
   "mypy>=2.3.1",
   "types-psutil>=7.0.0",
   "argparse-manpage>=4",
+  "pytest-textual-snapshot>=1.0.0",
 ]
 
 [tool.isort]
@@ -22,9 +23,9 @@ profile = "black"
 [tool.mypy]
 python_version = "3.10"
 
-# py-cpuinfo and distro ship no type information.
+# py-cpuinfo and distro ship no type information; tomli is only installed on 3.10.
 [[tool.mypy.overrides]]
-module = ["cpuinfo", "distro"]
+module = ["cpuinfo", "distro", "tomli"]
 ignore_missing_imports = true
 
 [project]
@@ -56,6 +57,7 @@ dependencies = [
   "psutil>=7.2.2",
   "rich>=15.0.0",
   "textual>=8.2.7",
+  "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [tool.hatch.version]

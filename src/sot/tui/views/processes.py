@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.message import Message
 
 from ..._collectors import dev_environments, listening_ports, process_sampler
 from ..._helpers import sizeof_fmt
@@ -20,7 +19,7 @@ class SortCycleTable(SotTable):
     """Table sorted by one field at a time: `o` cycles it, `s` reverses."""
 
     SORT_FIELDS: tuple[str, ...] = ()
-    STATE = ("sort_by", "sort_reverse", "selected_row")
+    STATE = ("sort_by", "sort_reverse", "selected_row", "filter_text")
 
     def __init__(self, title: str, **kwargs):
         super().__init__(title, **kwargs)
@@ -28,7 +27,14 @@ class SortCycleTable(SotTable):
         self.sort_reverse = False
         self.items: list[dict] = []
 
+    def item_text(self, item: dict) -> str:
+        return " ".join(str(value) for value in item.values())
+
     def sorted_items(self, items: list[dict]) -> list[dict]:
+        if self.filter_text:
+            text = self.filter_text.lower()
+            items = [i for i in items if text in self.item_text(i).lower()]
+
         def key(item: dict):
             value = item.get(self.sort_by)
             return (
@@ -47,10 +53,16 @@ class SortCycleTable(SotTable):
     def item_key(self, item: dict) -> str:
         raise NotImplementedError
 
-    def reload(self) -> None:
-        raise NotImplementedError
-
     def action_refresh(self) -> None:
+        self.reload()
+
+    def sort_by_column(self, key: str) -> None:
+        if key not in self.SORT_FIELDS:
+            return
+        if key == self.sort_by:
+            self.sort_reverse = not self.sort_reverse
+        else:
+            self.sort_by, self.sort_reverse = key, False
         self.reload()
 
     def action_sort_cycle(self) -> None:
@@ -69,20 +81,17 @@ class SortCycleTable(SotTable):
 
 
 class PortTable(SortCycleTable):
+    DETAIL_KIND = "port"
     BINDINGS = [*keymap.LIST, *keymap.PROCESS, *keymap.SORT_CYCLE]
     SORT_FIELDS = ("port", "address", "name", "pid")
-
-    class PortSelected(Message):
-        def __init__(self, port_info: dict) -> None:
-            self.port_info = port_info
-            super().__init__()
 
     def __init__(self, **kwargs):
         super().__init__("Listening Ports", **kwargs)
 
     def on_mount(self) -> None:
         self.restore_state()
-        self.add_columns("Port", "Address", "Process", "PID")
+        for key, label in zip(self.SORT_FIELDS, ("Port", "Address", "Process", "PID")):
+            self.add_column(label, key=key)
         self.reload()
         self.every(refresh.PORTS, self.reload)
 
@@ -111,10 +120,6 @@ class PortTable(SortCycleTable):
             detail += f" · [{c.muted}]may need sudo on macOS[/]"
         self.set_title(self.label, detail)
 
-    def action_details(self) -> None:
-        if (port := self.selected_item()) is not None:
-            self.post_message(self.PortSelected(port))
-
     def _act(self, action: str) -> None:
         port = self.selected_item()
         if port is not None and port.get("pid"):
@@ -130,20 +135,23 @@ class PortTable(SortCycleTable):
 
 
 class DevEnvTable(SortCycleTable):
+    DETAIL_KIND = "devenv"
     BINDINGS = [*keymap.LIST, keymap.DETAILS, keymap.REFRESH, *keymap.SORT_CYCLE]
     SORT_FIELDS = ("type", "count", "cpu", "memory_mb")
-
-    class DevEnvSelected(Message):
-        def __init__(self, dev_env: dict) -> None:
-            self.dev_env = dev_env
-            super().__init__()
 
     def __init__(self, **kwargs):
         super().__init__("Development Environment", **kwargs)
 
     def on_mount(self) -> None:
         self.restore_state()
-        self.add_columns("Type", "Processes", "Ports", "CPU %", "Mem")
+        for key, label in (
+            ("type", "Type"),
+            ("processes", "Processes"),
+            ("ports", "Ports"),
+            ("cpu", "CPU %"),
+            ("memory_mb", "Mem"),
+        ):
+            self.add_column(label, key=key)
         self.reload()
         self.every(refresh.DEV_ENV, self.reload)
 
@@ -173,10 +181,6 @@ class DevEnvTable(SortCycleTable):
         detail = f"{len(self.items)} types, {total} procs · {self.sort_label()}"
         self.set_title(self.label, detail)
 
-    def action_details(self) -> None:
-        if (env := self.selected_item()) is not None:
-            self.post_message(self.DevEnvSelected(env))
-
 
 class ProcessesScreen(SotScreen):
     MODE = "processes"
@@ -200,24 +204,3 @@ class ProcessesScreen(SotScreen):
 
     def on_mount(self) -> None:
         self.query_one("#proc-table").focus()
-
-    def on_port_table_port_selected(self, message: PortTable.PortSelected) -> None:
-        port = message.port_info
-        details = [f"Port {port['port']} on {port['address']}"]
-        details.append(f"Process: {port['name']}")
-        if port["pid"]:
-            details.append(f"PID: {port['pid']}")
-        self.notify("\n".join(details))
-
-    def on_dev_env_table_dev_env_selected(
-        self, message: DevEnvTable.DevEnvSelected
-    ) -> None:
-        env = message.dev_env
-        details = [f"{env['type'].upper()} environment"]
-        details.append(f"Processes: {env['count']}")
-        if env["ports"]:
-            details.append(f"Ports: {', '.join(map(str, env['ports']))}")
-        details.append(f"CPU: {env['cpu']:.1f}%")
-        memory = sizeof_fmt(env["memory_mb"] * 1024 * 1024, suffix="", sep="")
-        details.append(f"Memory: {memory}")
-        self.notify("\n".join(details))

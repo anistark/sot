@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pytest
 from textual.app import ComposeResult
@@ -150,7 +151,7 @@ def test_narrow_process_table_drops_secondary_columns_first():
 
 def test_number_keys_switch_views_and_pause_hidden_ones():
     async def scenario(app, pilot):
-        cpu = app.query_one("#cpu-widget")
+        cpu = app.screen.query_one("#cpu-widget")
         await pilot.press("2")
         await wait_for(pilot, lambda: app.current_mode == "processes")
         assert app.focused.id == "proc-table"
@@ -185,21 +186,21 @@ def test_subcommands_start_on_their_view():
 
 def test_theme_switch_rebuilds_the_overview_and_keeps_its_data():
     async def scenario(app, pilot):
-        procs = app.query_one("#procs-list")
+        procs = app.screen.query_one("#procs-list")
         await pilot.press("j", "j")
         await wait_for(pilot, lambda: procs.selected_row is not None)
         selected = procs.selected_row
-        cpu_stream = app.query_one("#cpu-widget").cpu_total_stream
+        cpu_stream = app.screen.query_one("#cpu-widget").cpu_total_stream
 
         app.theme = "cyberpunk"
-        await wait_for(pilot, lambda: app.query_one("#procs-list") is not procs)
+        await wait_for(pilot, lambda: app.screen.query_one("#procs-list") is not procs)
         await pilot.pause()
 
         assert _theme.theme() is _theme.CYBERPUNK
-        rebuilt = app.query_one("#procs-list")
+        rebuilt = app.screen.query_one("#procs-list")
         assert rebuilt.selected_row == selected
         assert app.focused is rebuilt
-        assert app.query_one("#cpu-widget").cpu_total_stream is cpu_stream
+        assert app.screen.query_one("#cpu-widget").cpu_total_stream is cpu_stream
         assert isinstance(cpu_stream._drawn(), BlockCharStream)
 
     run_app(SotApp(), scenario)
@@ -207,14 +208,14 @@ def test_theme_switch_rebuilds_the_overview_and_keeps_its_data():
 
 def test_hidden_views_rebuild_in_the_new_theme_when_shown():
     async def scenario(app, pilot):
-        cpu = app.query_one("#cpu-widget")
+        cpu = app.screen.query_one("#cpu-widget")
         await pilot.press("2")
         await wait_for(pilot, lambda: app.current_mode == "processes")
         app.theme = "cyberpunk"
         await pilot.pause()
 
         await pilot.press("1")
-        await wait_for(pilot, lambda: app.query_one("#cpu-widget") is not cpu)
+        await wait_for(pilot, lambda: app.screen.query_one("#cpu-widget") is not cpu)
         assert app.screen._built_with == "cyberpunk"
 
     run_app(SotApp(), scenario)
@@ -234,3 +235,95 @@ def test_theme_switch_keeps_the_selected_volume():
         await wait_for(pilot, lambda: screen.query_one("#volume-list").index == 1)
 
     run_app(SotApp(start_mode="disks"), scenario)
+
+
+def test_enter_opens_a_drawer_that_follows_the_cursor():
+    async def scenario(app, pilot):
+        table = app.screen.query_one("#proc-table")
+        drawer = app.screen.drawer
+        await pilot.press("enter")
+        assert drawer.subject == ("process", table.selected_row)
+        await pilot.press("j")
+        await wait_for(pilot, lambda: drawer.subject[1] == table.selected_row)
+        await pilot.press("escape")
+        assert not drawer.is_open
+
+    run_app(SotApp(start_mode="processes"), scenario)
+
+
+def test_overview_drills_down_and_escape_goes_back():
+    async def scenario(app, pilot):
+        procs = app.screen.query_one("#procs-list")
+        await pilot.press("j")
+        await wait_for(pilot, lambda: procs.selected_row is not None)
+        pid = procs.selected_row
+        await pilot.press("enter")
+        await wait_for(pilot, lambda: app.screen.MODE == "processes")
+        assert app.screen.query_one("#proc-table").selected_row == pid
+        assert app.back_mode == "overview"
+
+        await pilot.press("escape")
+        await wait_for(pilot, lambda: app.current_mode == "overview")
+        assert app.back_mode is None
+
+    run_app(SotApp(), scenario)
+
+
+def test_disk_panel_drills_into_the_disks_view():
+    async def scenario(app, pilot):
+        app.screen.query_one("#disk-widget").focus()
+        await pilot.press("enter")
+        await wait_for(pilot, lambda: app.current_mode == "disks")
+        assert app.focused.id == "volume-list"
+
+    run_app(SotApp(), scenario)
+
+
+def test_slash_filters_the_focused_list_and_escape_clears_it():
+    async def scenario(app, pilot):
+        table = app.screen.query_one("#proc-table")
+        total = table.row_count
+        await pilot.press("slash", *str(os.getpid()))
+        await wait_for(pilot, lambda: table.row_count < total)
+        assert str(os.getpid()) in table.rows
+        await pilot.press("escape")
+        await wait_for(pilot, lambda: table.filter_text == "")
+        assert app.focused is table
+
+    run_app(SotApp(start_mode="processes"), scenario)
+
+
+def test_palette_finds_a_process_and_shows_it():
+    from sot.tui.commands import SotCommands
+
+    pid = str(os.getpid())
+
+    async def scenario(app, pilot):
+        provider = SotCommands(app.screen)
+        hits = [hit async for hit in provider.search(pid)]
+        target = next(h for h in hits if h.help == "Show in Processes")
+        target.command()
+        await wait_for(pilot, lambda: app.screen.MODE == "processes")
+        await wait_for(
+            pilot, lambda: app.screen.query_one("#proc-table").selected_row == pid
+        )
+
+    run_app(SotApp(), scenario)
+
+
+def test_header_click_sorts_by_that_column():
+    table = ProcessTable(id="list")
+
+    async def scenario(app, pilot):
+        table.sort_by_column("memory")
+        assert table.sort_manager.current_column().key == "memory_rss"
+
+    run_app(Host(table), scenario)
+
+
+def test_details_describe_a_live_process():
+    from sot.tui.details import details
+
+    title, rows = details("process", str(os.getpid()))
+    assert dict(rows)["PID"] == str(os.getpid())
+    assert details("process", "999999999") is None

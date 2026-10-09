@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Build script to generate man page for sot using argparse-manpage."""
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -14,127 +13,9 @@ def build_manpage():
 
     from argparse_manpage.manpage import Manpage
 
-    # Get the parser by creating a custom version that doesn't execute
-    parser = argparse.ArgumentParser(
-        prog="sot",
-        description="Command-line System Observation Tool ≈",
-        formatter_class=argparse.RawTextHelpFormatter,
-        add_help=False,
-    )
+    from sot._app import build_parser
 
-    parser.add_argument(
-        "--help",
-        "-H",
-        action="help",
-        default=argparse.SUPPRESS,
-        help="Show this help message and exit.",
-    )
-
-    parser.add_argument(
-        "--version",
-        "-V",
-        action="store_true",
-        help="Display version information with styling",
-    )
-
-    parser.add_argument(
-        "--log",
-        "-L",
-        type=str,
-        default=None,
-        help="Debug log file path (enables debug logging)",
-    )
-
-    parser.add_argument(
-        "--net",
-        "-N",
-        type=str,
-        default=None,
-        help="Network interface to display (default: auto-detect best interface)",
-    )
-
-    parser.add_argument(
-        "--disk",
-        "-D",
-        type=str,
-        nargs="?",
-        const="__select__",
-        default=None,
-        help="Disk mountpoint to display (use without value for interactive selection)",
-    )
-
-    parser.add_argument(
-        "--theme",
-        "-T",
-        metavar="THEME",
-        default="classic",
-        help="Color theme: classic, cyberpunk (default: $SOT_THEME or classic)",
-    )
-
-    # Create subparsers for subcommands
-    subparsers = parser.add_subparsers(
-        dest="command", metavar="{info,bench,disk,clean,ps}"
-    )
-
-    # Add info subcommand
-    subparsers.add_parser(
-        "info",
-        help="Display system information",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-
-    # Add bench subcommand
-    bench_parser = subparsers.add_parser(
-        "bench",
-        help="Disk benchmarking",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    bench_parser.add_argument(
-        "--output",
-        "-o",
-        type=str,
-        default=None,
-        help="Output file for benchmark results (JSON format)",
-    )
-    bench_parser.add_argument(
-        "--duration",
-        "-d",
-        type=float,
-        default=10.0,
-        help="Duration for each benchmark test in seconds (default: 10s)",
-    )
-
-    # Add disk subcommand
-    disk_parser = subparsers.add_parser(
-        "disk",
-        help="Interactive disk information viewer",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    disk_parser.add_argument(
-        "--list",
-        "-l",
-        action="store_true",
-        help="Print disks and partitions as a plain list instead of the TUI",
-    )
-
-    # Add clean subcommand
-    clean_parser = subparsers.add_parser(
-        "clean",
-        help="Deep clean system caches, logs, and temp files",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    clean_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Show what would be cleaned without actually deleting",
-    )
-
-    # Add ps subcommand
-    subparsers.add_parser(
-        "ps",
-        help="Interactive process viewer",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
+    parser = build_parser()
 
     # Get version
     from sot.__about__ import __current_year__, __version__
@@ -150,15 +31,16 @@ def build_manpage():
     )
     manpage.long_description = (  # type: ignore[attr-defined]
         "sot provides real-time monitoring of system resources including CPU usage, "
-        "memory, disk I/O, and network statistics. It features an interactive TUI "
-        "(Terminal User Interface) for monitoring processes and system performance.\n\n"
-        "When run without arguments, sot launches the interactive monitoring interface. "
-        "Additional subcommands are available for specific tasks:\n\n"
-        "  info   - Display detailed system information with OS-specific ASCII logo\n"
-        "  bench  - Run comprehensive disk benchmarking tests\n"
-        "  disk   - Launch interactive disk information viewer\n"
-        "  clean  - Deep clean system caches, logs, and temp files\n"
-        "  ps     - Launch interactive process viewer with port and dev environment panels"
+        "memory, disk I/O, and network statistics in one interactive TUI with six "
+        "views: Overview, Processes, Disks, System, Bench and Clean. Press 1 to 6 or "
+        "click the header tabs to switch; each view keeps its state.\n\n"
+        "Without a subcommand sot opens the Overview. Subcommands open their view, "
+        "or print and exit when given flags or when not run in a terminal:\n\n"
+        "  info   - Print system information with an OS-specific ASCII logo\n"
+        "  bench  - Bench view; --disk or --output run it without the TUI\n"
+        "  disk   - Disks view; --list prints a table\n"
+        "  clean  - Clean view; --dry-run prints what would be cleaned\n"
+        "  ps     - Processes view with listening ports and dev environments"
     )
     manpage.project = "sot"  # type: ignore[attr-defined]
     manpage.version = __version__  # type: ignore[attr-defined]
@@ -181,7 +63,7 @@ Launch the interactive system monitoring TUI
 Monitor system with specific network interface
 .TP
 .B sot --disk
-Interactive disk mountpoint selection
+Pick the disk to monitor from a list
 .TP
 .B sot --disk /
 Monitor system with root disk
@@ -193,13 +75,13 @@ Launch the TUI with the Cyberpunk 2077 inspired theme
 Display comprehensive system information
 .TP
 .B sot bench
-Run interactive disk benchmark
+Open the Bench view: pick a disk, press Enter, export with e
 .TP
-.B sot bench --duration 30 --output results.json
-Run 30-second benchmarks and save results to JSON
+.B sot bench --disk disk3 --duration 30 --output results.json
+Run 30-second benchmarks without the TUI and save results to JSON
 .TP
 .B sot disk
-View interactive disk information
+Open the Disks view
 .TP
 .B sot disk --list
 Print disks and partitions as a plain table and exit
@@ -208,10 +90,16 @@ Print disks and partitions as a plain table and exit
 Preview what would be cleaned without deleting
 .TP
 .B sot clean
-Deep clean system caches and temp files
+Open the Clean view: pick targets, then c to clean after confirming
 .TP
 .B sot ps
-Launch interactive process viewer with ports and dev environments
+Open the Processes view with ports and dev environments
+.TP
+.B sot --keys
+List every key binding id for the [keymap] config table
+.TP
+.B sot --config-path
+Show where the config file is read from
 
 .SH FEATURES
 .SS System Monitoring
@@ -276,14 +164,20 @@ Multi-panel interface with tab navigation
 The footer lists the keys for the focused panel; press ? for all of them.
 .SS Views
 .TP
-.B 1 2 3
-Switch to Overview, Processes or Disks (the header tabs are clickable too)
+.B 1 2 3 4 5 6
+Overview, Processes, Disks, System, Bench, Clean (the header tabs are clickable too)
 .TP
 .B Tab / Shift+Tab
 Move focus between panels
 .TP
+.B Esc
+Close the detail drawer, or go back after a drill-down
+.TP
+.B /
+Filter the focused list; Enter keeps the filter, Esc clears it
+.TP
 .B Ctrl+P
-Command palette, including the theme picker
+Command palette: go to a view, find a process or volume, act on the selected process, pick a theme
 .TP
 .B ?
 Show or hide the key help
@@ -300,10 +194,17 @@ Page up and down
 .TP
 .B Home/g, End/G
 First and last row
+.TP
+.B Click a column header
+Sort by that column
+.SS Overview
+.TP
+.B Enter
+On the process list, open the process in the Processes view; on the disk panel, open the Disks view; on the connections panel, open the listening ports
 .SS Process tables
 .TP
 .B Enter
-Show detailed information
+Show live details in the side drawer (double-click works too)
 .TP
 .B x
 Kill selected process (requires confirmation)
@@ -326,9 +227,54 @@ Change sort column (cycles through available columns)
 .TP
 .B s
 Toggle sort direction (ascending/descending)
+.SS Bench
+.TP
+.B Enter
+Benchmark the selected disk
+.TP
+.B + / -
+Change the duration of each test
+.TP
+.B e
+Export the results to a JSON file in the current directory
+.TP
+.B Esc
+Cancel a running benchmark after the current test
+.SS Clean
+.TP
+.B Space
+Select or unselect a target
+.TP
+.B a
+Select all cleanable targets, or none
+.TP
+.B d
+Toggle dry run
+.TP
+.B c
+Clean the selected targets after confirming
+.TP
+.B r
+Scan again
 
 .SH CONFIGURATION
-sot does not require configuration files. All options are provided via command-line arguments.
+sot reads an optional TOML file at $XDG_CONFIG_HOME/sot/config.toml (default ~/.config/sot/config.toml). Every key is optional:
+.PP
+.nf
+theme = "cyberpunk"
+default_view = "processes"
+net = "en0"
+disk = "/"
+
+[refresh]
+cpu = 1.0
+processes = 2.0
+
+[keymap]
+"sot.process.kill" = "ctrl+k"
+.fi
+.PP
+Command-line flags win over SOT_THEME, which wins over the config. A theme picked from the command palette is remembered in $XDG_STATE_HOME/sot/state.toml and used when nothing else sets one. Invalid values are reported and ignored.
 
 .SH EXIT STATUS
 .TP

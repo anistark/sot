@@ -356,6 +356,20 @@ def _get_targets() -> list[CleanTarget]:
         return []
 
 
+def target_paths(target: CleanTarget) -> list[Path]:
+    return target.path if isinstance(target.path, list) else [target.path]
+
+
+def scan_target(target: CleanTarget) -> dict:
+    """Whether a target exists and how much it holds."""
+    paths = [path for path in target_paths(target) if path.exists()]
+    return {
+        "target": target,
+        "size": sum(_get_size(path) for path in paths),
+        "exists": bool(paths),
+    }
+
+
 def _scan_targets(targets: list[CleanTarget], console: Console) -> dict:
     """Scan targets and calculate sizes."""
     results = {}
@@ -370,41 +384,19 @@ def _scan_targets(targets: list[CleanTarget], console: Console) -> dict:
 
         for target in targets:
             progress.update(task, description=f"Scanning {target.name}...")
-
-            size = 0
-            exists = False
-
-            if isinstance(target.path, list):
-                for path in target.path:
-                    if path.exists():
-                        exists = True
-                        size += _get_size(path)
-            else:
-                # Type narrowing: target.path is Path here
-                path = target.path
-                if path.exists():
-                    exists = True
-                    size = _get_size(path)
-
-            results[target.name] = {
-                "target": target,
-                "size": size,
-                "exists": exists,
-            }
-
+            results[target.name] = scan_target(target)
             progress.advance(task)
 
     return results
 
 
-def _clean_path(path: Path, console: Console) -> int:
-    """Clean a single path and return bytes freed."""
+def clean_path_quietly(path: Path) -> tuple[int, list[str]]:
+    """Empty a path; returns bytes freed and a warning per item that failed."""
     if not path.exists():
-        return 0
+        return 0, []
 
     size = _get_size(path)
-    c = theme().colors
-
+    warnings = []
     try:
         if path.is_file():
             path.unlink()
@@ -417,11 +409,34 @@ def _clean_path(path: Path, console: Console) -> int:
                     elif item.is_dir():
                         shutil.rmtree(item)
                 except (PermissionError, OSError) as e:
-                    console.print(f"  [{c.warn}]⚠[/]  Skipped {item.name}: {e}")
-        return size
+                    warnings.append(f"Skipped {item.name}: {e}")
+        return size, warnings
     except (PermissionError, OSError) as e:
-        console.print(f"  [{c.danger}]✗[/] Failed to clean {path.name}: {e}")
-        return 0
+        return 0, [f"Failed to clean {path.name}: {e}"]
+
+
+def _clean_path(path: Path, console: Console) -> int:
+    """Clean a single path and return bytes freed."""
+    freed, warnings = clean_path_quietly(path)
+    c = theme().colors
+    for warning in warnings:
+        marker = (
+            f"[{c.danger}]✗[/]" if warning.startswith("Failed") else f"[{c.warn}]⚠[/] "
+        )
+        console.print(f"  {marker} {warning}")
+    return freed
+
+
+def clean_target(target: CleanTarget, elevated: bool) -> tuple[int, list[str]]:
+    """Clean every path of a target; sudo-only targets need ``elevated``."""
+    if target.requires_sudo and not elevated:
+        return 0, [f"Skipping {target.name} (requires sudo)"]
+    freed, warnings = 0, []
+    for path in target_paths(target):
+        path_freed, path_warnings = clean_path_quietly(path)
+        freed += path_freed
+        warnings.extend(path_warnings)
+    return freed, warnings
 
 
 def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
@@ -451,13 +466,8 @@ def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
                 continue
 
             progress.update(task, description=f"Cleaning {target.name}...")
-
-            if isinstance(target.path, list):
-                for path in target.path:
-                    total_freed += _clean_path(path, console)
-            else:
-                total_freed += _clean_path(target.path, console)
-
+            for path in target_paths(target):
+                total_freed += _clean_path(path, console)
             progress.advance(task)
 
     return total_freed

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import sys
 from sys import version_info
 
 from rich.console import Console
@@ -11,6 +12,13 @@ from rich.table import Table
 from rich.text import Text
 
 from .__about__ import __current_year__, __version__
+from ._config import (
+    EXAMPLE,
+    apply_refresh,
+    config_path,
+    load_config,
+    remembered_theme,
+)
 from ._theme import DEFAULT_THEME, THEMES, set_theme, theme
 from .tui.app import SotApp
 
@@ -137,90 +145,23 @@ def _show_styled_version():
     )
 
 
-def _get_volume_display_name(mp: str) -> str:
-    """Get display name for a volume mountpoint."""
-    import psutil
+def _print_keys() -> int:
+    from .tui.keymap import all_bindings
 
-    from ._helpers import sizeof_fmt
-
-    name = "Macintosh HD" if mp == "/" else mp.split("/")[-1]
-    try:
-        usage_path = "/System/Volumes/Data" if mp == "/" else mp
-        usage = psutil.disk_usage(usage_path)
-        total = sizeof_fmt(usage.total, fmt=".1f")
-        return f"{name} ({total}, {usage.percent:.1f}% used)"
-    except (PermissionError, OSError):
-        return name
+    c = theme().colors
+    table = Table(header_style=f"bold {c.accent}", box=theme().design.app_box)
+    table.add_column("Id", style=c.label)
+    table.add_column("Keys", style=c.primary)
+    table.add_column("Action")
+    for binding_id, binding in all_bindings().items():
+        table.add_row(binding_id, binding.key, binding.description)
+    Console().print(table)
+    return 0
 
 
-def _read_arrow_key(stdin) -> str | None:
-    """Read arrow key escape sequence, return 'up', 'down', or None."""
-    ch2 = stdin.read(1)
-    if ch2 != "[":
-        return None
-    ch3 = stdin.read(1)
-    return {"A": "up", "B": "down"}.get(ch3)
-
-
-def _interactive_disk_select(volumes: list[str]) -> str | None:  # noqa: C901
-    """Interactive volume selector using arrow keys."""
-    import sys
-
-    if not sys.stdin.isatty():
-        print("💾 Available volumes:\n")
-        for i, mp in enumerate(volumes, 1):
-            print(f"  [{i}] {_get_volume_display_name(mp)}")
-        print("\n❌ Interactive selection requires a terminal.")
-        return None
-
-    import termios
-    import tty
-
-    def render(selected_idx: int):
-        sys.stdout.write("\033[?25l\033[H\033[2J\033[H")
-        sys.stdout.write(
-            "💾 Select a volume (↑/↓ to move, Enter to select, q to cancel):\r\n\r\n"
-        )
-        for i, mp in enumerate(volumes):
-            info = _get_volume_display_name(mp)
-            prefix = "  \033[1;36m❯" if i == selected_idx else "   "
-            suffix = "\033[0m" if i == selected_idx else ""
-            sys.stdout.write(f"{prefix} {info}{suffix}\r\n")
-        sys.stdout.flush()
-
-    selected_idx = 0
-    render(selected_idx)
-
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(fd)
-        while True:
-            ch = sys.stdin.read(1)
-            if ch == "\x1b":
-                arrow = _read_arrow_key(sys.stdin)
-                if arrow == "up":
-                    selected_idx = (selected_idx - 1) % len(volumes)
-                elif arrow == "down":
-                    selected_idx = (selected_idx + 1) % len(volumes)
-                render(selected_idx)
-            elif ch in ("\r", "\n"):
-                break
-            elif ch in ("q", "Q", "\x03"):
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                sys.stdout.write("\033[?25h")
-                print("\n❌ Selection cancelled.")
-                return None
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        sys.stdout.write("\033[?25h")
-
-    print()
-    return volumes[selected_idx]
-
-
-def run(argv=None):  # noqa: C901
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
+        prog="sot",
         description="Command-line System Obervation Tool ≈",
         formatter_class=CustomHelpFormatter,
         add_help=False,
@@ -268,12 +209,24 @@ def run(argv=None):  # noqa: C901
     )
 
     parser.add_argument(
+        "--config-path",
+        action="store_true",
+        help="Print where sot reads its config file from",
+    )
+
+    parser.add_argument(
+        "--keys",
+        action="store_true",
+        help="List every key binding id, for the [keymap] config table",
+    )
+
+    parser.add_argument(
         "--theme",
         "-T",
         choices=list(THEMES),
         metavar="THEME",
-        default=os.environ.get("SOT_THEME", DEFAULT_THEME),
-        help=f"Color theme: {', '.join(THEMES)} (default: $SOT_THEME or classic)",
+        default=None,
+        help=f"Color theme: {', '.join(THEMES)} (default: $SOT_THEME, config, or classic)",
     )
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
@@ -284,14 +237,14 @@ def run(argv=None):  # noqa: C901
     # Add info subcommand
     subparsers.add_parser(
         "info",
-        help="Display system information",
+        help="Print system information (the System view is key 4)",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
     # Add bench subcommand
     bench_parser = subparsers.add_parser(
         "bench",
-        help="Disk benchmarking",
+        help="Disk benchmarking view; flags run it without the TUI",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     bench_parser.add_argument(
@@ -300,6 +253,14 @@ def run(argv=None):  # noqa: C901
         type=str,
         default=None,
         help="Output file for benchmark results (JSON format)",
+    )
+    bench_parser.add_argument(
+        "--disk",
+        dest="bench_disk",
+        metavar="DISK",
+        type=str,
+        default=None,
+        help="Disk to benchmark, by id (disk3, /dev/sda) or mountpoint; skips the prompt",
     )
     bench_parser.add_argument(
         "--duration",
@@ -312,7 +273,7 @@ def run(argv=None):  # noqa: C901
     # Add disk subcommand
     disk_parser = subparsers.add_parser(
         "disk",
-        help="Interactive disk information viewer",
+        help="Disks view; --list prints a table instead",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     disk_parser.add_argument(
@@ -325,7 +286,7 @@ def run(argv=None):  # noqa: C901
     # Add clean subcommand
     clean_parser = subparsers.add_parser(
         "clean",
-        help="Deep clean system caches, logs, and temp files",
+        help="Clean caches, logs and temp files; --dry-run only reports",
         formatter_class=argparse.RawTextHelpFormatter,
     )
     clean_parser.add_argument(
@@ -337,16 +298,39 @@ def run(argv=None):  # noqa: C901
     # Add ps subcommand
     subparsers.add_parser(
         "ps",
-        help="Interactive process viewer",
+        help="Processes view: processes, listening ports, dev environments",
         formatter_class=argparse.RawTextHelpFormatter,
     )
+    return parser
 
+
+def run(argv=None):  # noqa: C901
+    parser = build_parser()
     args = parser.parse_args(argv)
 
+    if args.config_path:
+        path = config_path()
+        print(path if path.exists() else f"{path} (not created yet)\n\n{EXAMPLE}")
+        return 0
+
+    config = load_config()
+    for warning in config.warnings:
+        print(f"⚠️  {warning}", file=sys.stderr)
+    apply_refresh(config)
+
+    env_theme = os.environ.get("SOT_THEME")
+    args.theme = (
+        args.theme or env_theme or config.theme or remembered_theme() or DEFAULT_THEME
+    )
     if args.theme not in THEMES:
         print(f"❌ Unknown theme '{args.theme}'. Available: {', '.join(THEMES)}")
         return 1
     set_theme(args.theme)
+    args.net = args.net or config.net
+    args.disk = args.disk or config.disk
+
+    if args.keys:
+        return _print_keys()
 
     # Handle info subcommand
     if args.command == "info":
@@ -354,14 +338,18 @@ def run(argv=None):  # noqa: C901
 
         return info_command(args)
 
-    # Handle bench subcommand
-    if args.command == "bench":
-        from .bench.cli import benchmark_command
+    interactive = sys.stdin.isatty() and sys.stdout.isatty()
+    start_mode = config.default_view or "overview"
 
-        return benchmark_command(args)
+    # bench and clean open their view in a terminal; flags keep the printed flow.
+    if args.command == "bench":
+        if args.output or args.bench_disk or not interactive:
+            from .bench.cli import benchmark_command
+
+            return benchmark_command(args)
+        start_mode = "bench"
 
     # Handle disk subcommand
-    start_mode = "overview"
     if args.command == "disk":
         if args.list:
             from .disk.listing import print_disk_list
@@ -369,11 +357,12 @@ def run(argv=None):  # noqa: C901
             return print_disk_list()
         start_mode = "disks"
 
-    # Handle clean subcommand
     if args.command == "clean":
-        from .clean.cli import clean_command
+        if args.dry_run or not interactive:
+            from .clean.cli import clean_command
 
-        return clean_command(args)
+            return clean_command(args)
+        start_mode = "clean"
 
     if args.command == "ps":
         start_mode = "processes"
@@ -393,30 +382,17 @@ def run(argv=None):  # noqa: C901
             print(f"📡 Available interfaces: {', '.join(available_interfaces)}")
             return 1
 
-    # Validate disk mountpoint if specified
+    # A missing or unknown --disk opens a picker inside the app.
+    pick_disk = False
     if args.disk:
         import psutil
 
-        partitions = psutil.disk_partitions()
-        all_mountpoints = [p.mountpoint for p in partitions]
-
-        # Filter to show only user-relevant volumes (root + /Volumes/*)
-        volumes = [
-            mp for mp in all_mountpoints if mp == "/" or mp.startswith("/Volumes/")
-        ]
-
-        if args.disk == "__select__" or args.disk not in all_mountpoints:
+        mountpoints = [p.mountpoint for p in psutil.disk_partitions()]
+        if args.disk == "__select__" or args.disk not in mountpoints:
             if args.disk != "__select__":
-                print(f"❌ Disk mountpoint '{args.disk}' not found.\n")
-
-            if not volumes:
-                print("❌ No volumes found.")
-                return 1
-
-            selected = _interactive_disk_select(volumes)
-            if selected is None:
-                return 1
-            args.disk = selected
+                print(f"❌ Disk mountpoint '{args.disk}' not found.")
+            pick_disk = True
+            args.disk = None
 
     # Set up logging before using SotApp (Textual reads TEXTUAL_LOG at module import time)
     if args.log:
@@ -436,6 +412,9 @@ def run(argv=None):  # noqa: C901
         disk_mountpoint=args.disk,
         log_file=args.log,
         theme_name=args.theme,
+        pick_disk=pick_disk,
+        keymap=config.keymap,
+        bench_duration=getattr(args, "duration", 10.0),
     )
 
     if args.net:

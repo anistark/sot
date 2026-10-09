@@ -8,10 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- **One app, three views** - Overview (`1`), Processes (`2`) and Disks (`3`) live in one app; `sot ps` and `sot disk` open it on their view
+- **One app, six views** - Overview (`1`), Processes (`2`), Disks (`3`), System (`4`), Bench (`5`) and Clean (`6`) live in one app; `sot ps`, `sot disk`, `sot bench` and `sot clean` open it on their view
   - Switch with the number keys or by clicking the header tabs; each view keeps its selection, sort and scroll while hidden, and stops polling until you come back
   - Same header, footer and frames on every view; `?` shows every key for the focused panel
-  - Process, port and dev environment lists are scrollable tables with mouse support
+  - Process, port and dev environment lists are scrollable tables with mouse support; click a column header to sort
+- **Drill down** - `Enter` on the overview's process list, disk panel or connections panel opens that process, volume or the ports list in its view; `Esc` goes back
+- **Detail drawer** - `Enter` or a double-click in a list opens live details for the process, port or dev environment, following the cursor
+- **Filter** - `/` filters the focused list (name, PID, user, command); `Esc` clears it
+- **Command palette** - `Ctrl+P` jumps to a view, a process or a volume, and kills, terminates or copies the PID of the selected process
+- **Bench view** - Pick a disk, watch each test finish, change the duration with `+`/`-`, export JSON with `e`, cancel with `Esc`
+  - `sot bench --disk <id or mountpoint>` runs without any prompt
+- **Clean view** - Scan, tick targets with `space` (`a` for all), dry run with `d`, clean with `c` after a confirmation
+- **System view** - What `sot info` prints, as panels, with uptime, memory and battery kept live
+- **Config file** - `~/.config/sot/config.toml` sets the theme, default view, `--net`/`--disk` defaults, refresh rates and key bindings; `sot --config-path` shows the path, `sot --keys` lists every binding id
+  - A theme picked with `Ctrl+P` is remembered for the next start
 - **Live theme switching** - Change the theme while `sot`, `sot ps` or `sot disk` is running: `Ctrl+P` → Theme
   - Graphs keep their history and lists keep their selection, sort and scroll position
   - The theme picker only lists SOT themes
@@ -23,10 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The dashboard's `i` (interactive mode) toggle is gone: the process list responds to keys whenever it has focus
 - **Classic follows your terminal** - The `classic` theme now uses the terminal's own palette and background inside the TUI, matching the printed commands
 - **Confirmation dialog** - Kill and terminate both ask first in a dialog (`y` to confirm, `n` or `Esc` to cancel) instead of a notification
+- **`sot --disk` without a value** - The volume picker opens inside sot instead of a separate prompt
+- **`sot bench` and `sot clean`** - Open their view in a terminal; flags and non-terminal runs keep the printed flow
 - **Printed output follows `--theme`** - `sot --version`, `sot info`, `sot bench`, `sot clean` and `sot disk --list` use the theme's colours and frames
 
 ### Fixed
 - Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval
+- Volume picker for `--disk` now lists every mountpoint on Linux, where there are no `/Volumes/*` mounts
 
 ## [6.3.0](https://github.com/anistark/sot/releases/tag/v6.3.0) - 2026-10-06
 
