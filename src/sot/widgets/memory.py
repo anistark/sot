@@ -9,11 +9,8 @@ from rich.console import Group
 
 from .._helpers import sizeof_fmt
 from .._theme import ThemedStream, theme
-from ..tui import refresh
+from ..tui import refresh, zoom
 from .base_widget import BaseWidget
-
-# Rows per memory graph, regardless of panel height.
-_GRAPH_HEIGHT = 2
 
 
 class MemoryWidget(BaseWidget):
@@ -49,7 +46,8 @@ class MemoryWidget(BaseWidget):
         if not restored:
             for attr in self.attrs:
                 total = swap.total if attr == "swap" else self.mem_total_bytes
-                self.mem_streams.append(ThemedStream(40, _GRAPH_HEIGHT, 0.0, total))
+                self.mem_streams.append(ThemedStream(40, 1, 0.0, total))
+        self.fit_zoom()
 
         self.group = Group("", "", "", "", "")
 
@@ -91,10 +89,15 @@ class MemoryWidget(BaseWidget):
 
         self.update_panel_content(self.group)
 
+    def fit_zoom(self):
+        """Size each graph for the current zoom level."""
+        for stream in self.mem_streams:
+            stream.reset_height(zoom.memory_rows())
+
     @property
     def panel_height(self) -> int:
         """Rows the panel needs: one graph per series plus the borders."""
-        return len(self.attrs) * _GRAPH_HEIGHT + 2
+        return len(self.attrs) * zoom.memory_rows() + 2
 
     async def on_resize(self, event):
         for ms in self.mem_streams:

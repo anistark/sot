@@ -1,6 +1,7 @@
 import asyncio
 import os
 
+import fake_system
 import pytest
 from textual.app import ComposeResult
 
@@ -184,7 +185,10 @@ def test_subcommands_start_on_their_view():
     run_app(SotApp(start_mode="processes"), scenario)
 
 
-def test_theme_switch_rebuilds_the_overview_and_keeps_its_data():
+def test_theme_switch_rebuilds_the_overview_and_keeps_its_data(monkeypatch):
+    # Real processes can exit mid-test and take the selected row with them.
+    fake_system.install(monkeypatch)
+
     async def scenario(app, pilot):
         procs = app.screen.query_one("#procs-list")
         await pilot.press("j", "j")

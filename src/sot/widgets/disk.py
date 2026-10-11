@@ -19,6 +19,9 @@ from ..tui import keymap, refresh
 from ..tui.messages import Reveal
 from .base_widget import BaseWidget
 
+# Rows of the read and write boxes beside the graphs.
+_BOX_HEIGHT = 6
+
 
 def _validate_mountpoint(mountpoint):
     try:
@@ -276,9 +279,18 @@ class DiskWidget(BaseWidget):
             else:
                 self.group.renderables.append(table)
 
+    def _fit_graph_height(self):
+        # Borders and the usage table; the two graphs share the rest, and
+        # never get shorter than the boxes beside them.
+        extra = self.lines_needed(*self.group.renderables[1:])
+        rows = max(_BOX_HEIGHT, (self.size.height - 2 - extra) // 2)
+        self.read_stream.reset_height(rows)
+        self.write_stream.reset_height(rows)
+
     async def on_resize(self, event):
         if self.has_io_counters:
             width = self.size.width - 25
             self.read_stream.reset_width(width)
             self.write_stream.reset_width(width)
+            self._fit_graph_height()
             self.refresh_graphs()

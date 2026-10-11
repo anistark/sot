@@ -18,8 +18,10 @@ from ._config import (
     config_path,
     load_config,
     remembered_theme,
+    remembered_zoom,
 )
 from ._theme import DEFAULT_THEME, THEMES, set_theme, theme
+from .tui import zoom
 from .tui.app import SotApp
 
 __all__ = ["SotApp", "run"]
@@ -317,6 +319,7 @@ def run(argv=None):  # noqa: C901
     for warning in config.warnings:
         print(f"⚠️  {warning}", file=sys.stderr)
     apply_refresh(config)
+    zoom.set_level(remembered_zoom())
 
     env_theme = os.environ.get("SOT_THEME")
     args.theme = (

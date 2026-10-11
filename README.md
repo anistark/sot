@@ -551,6 +551,7 @@ The footer lists the keys for the focused panel; press `?` for all of them.
 | `x` / `t` | Kill / terminate (asks first) |
 | `o` | Sort: process tables open a column picker (`←` `→`, `Enter`, `Esc`); ports and dev environments cycle the column, `s` flips direction |
 | `n` | Show or hide the I/O and connection columns |
+| `+` / `-` | Overview zoom: taller graphs, or more process rows (remembered) |
 | `r` | Refresh |
 | Click a column header | Sort by it |
 | `Ctrl+P` | Command palette (views, processes, volumes, actions, themes) |

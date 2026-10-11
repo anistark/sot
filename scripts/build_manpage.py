@@ -201,6 +201,9 @@ Sort by that column
 .TP
 .B Enter
 On the process list, open the process in the Processes view; on the disk panel, open the Disks view; on the connections panel, open the listening ports
+.TP
+.B + / \\-
+Zoom: + gives the graphs more rows, \\- gives them to the process list; remembered for the next start
 .SS Process tables
 .TP
 .B Enter

@@ -18,6 +18,9 @@ from .._theme import ThemedStream, theme
 from ..tui import refresh
 from .base_widget import BaseWidget
 
+# Rows of the down and up boxes beside the graphs.
+_BOX_HEIGHT = 5
+
 
 def _autoselect_interface():
     """
@@ -193,6 +196,7 @@ class NetworkWidget(BaseWidget):
                     f"[{theme().colors.label}]IPv4:[/] Error: {str(e)}"
                 )
                 self.group.renderables[2] = f"[{theme().colors.label}]IPv6:[/] ---"
+        self._fit_graph_height()
 
     def refresh_panel(self):
         try:
@@ -274,8 +278,17 @@ class NetworkWidget(BaseWidget):
             if len(self.group.renderables) > 0:
                 self.group.renderables[0] = self.table
 
+    def _fit_graph_height(self):
+        # Borders and the address lines; the two graphs share the rest, and
+        # never get shorter than the boxes beside them.
+        extra = self.lines_needed(*self.group.renderables[1:])
+        rows = max(_BOX_HEIGHT, (self.size.height - 2 - extra) // 2)
+        self.recv_stream.reset_height(rows)
+        self.sent_stream.reset_height(rows)
+
     async def on_resize(self, event):
         width = self.size.width - 25
         self.sent_stream.reset_width(width)
         self.recv_stream.reset_width(width)
+        self._fit_graph_height()
         self.refresh_graphs()

@@ -49,6 +49,11 @@ SORT_CYCLE = [
     Binding("s", "sort_reverse", "Direction", id="sot.sort.reverse"),
 ]
 
+ZOOM = [
+    Binding("plus,equals_sign", "zoom(1)", "Zoom in", show=False, id="sot.zoom.in"),
+    Binding("minus", "zoom(-1)", "Zoom out", show=False, id="sot.zoom.out"),
+]
+
 CONFIRM = [
     Binding("y", "confirm", "Confirm", id="sot.confirm.yes"),
     Binding("n,escape", "cancel", "Cancel", id="sot.confirm.no"),
