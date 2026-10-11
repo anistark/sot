@@ -109,15 +109,38 @@ def apply_refresh(config: Config) -> None:
         setattr(refresh, name, seconds)
 
 
+def _remembered() -> dict:
+    return _read(state_path(), [])
+
+
+def _remember(key: str, value: str | int) -> None:
+    state = {**_remembered(), key: value}
+    lines = [
+        f'{k} = "{v}"' if isinstance(v, str) else f"{k} = {v}"
+        for k, v in state.items()
+        if isinstance(v, (str, int))
+    ]
+    path = state_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(lines) + "\n")
+    except OSError:
+        pass
+
+
 def remembered_theme() -> str | None:
-    value = _read(state_path(), []).get("theme")
+    value = _remembered().get("theme")
     return value if isinstance(value, str) else None
 
 
 def remember_theme(name: str) -> None:
-    path = state_path()
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f'theme = "{name}"\n')
-    except OSError:
-        pass
+    _remember("theme", name)
+
+
+def remembered_zoom() -> int:
+    value = _remembered().get("zoom")
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def remember_zoom(level: int) -> None:
+    _remember("zoom", level)

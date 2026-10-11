@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Command palette** - `Ctrl+P` jumps to a view, a process or a volume, and kills, terminates or copies the PID of the selected process
 - **Bench view** - Pick a disk, watch each test finish, change the duration with `+`/`-`, export JSON with `e`, cancel with `Esc`
   - `sot bench --disk <id or mountpoint>` runs without any prompt
+- **Overview zoom** - `+` makes the memory, disk and network graphs taller, `-` shortens them and gives the rows to the process list; the level is remembered for the next start
 - **Clean view** - Scan, tick targets with `space` (`a` for all), dry run with `d`, clean with `c` after a confirmation
 - **System view** - What `sot info` prints, as panels, with uptime, memory and battery kept live
 - **Config file** - `~/.config/sot/config.toml` sets the theme, default view, `--net`/`--disk` defaults, refresh rates and key bindings; `sot --config-path` shows the path, `sot --keys` lists every binding id

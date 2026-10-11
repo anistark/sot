@@ -31,6 +31,14 @@ class BaseWidget(SotWidget):
     def render(self):
         return self.content
 
+    def lines_needed(self, *renderables) -> int:
+        """Rows ``renderables`` take inside the panel, wrapping included."""
+        console = self.app.console
+        options = console.options.update_width(max(1, self.size.width - 2))
+        return sum(
+            len(console.render_lines(r, options, pad=False)) for r in renderables
+        )
+
     def update_panel_content(self, content):
         """Update the panel content with new data."""
         self.content = content

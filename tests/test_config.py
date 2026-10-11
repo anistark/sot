@@ -90,6 +90,18 @@ def test_picking_a_theme_is_remembered():
     assert _config.remembered_theme() == "cyberpunk"
 
 
+def test_zoom_is_remembered_next_to_the_theme():
+    from sot.tui import zoom
+
+    _config.remember_theme("cyberpunk")
+    _config.remember_zoom(-2)
+    assert _config.remembered_theme() == "cyberpunk"
+    assert _config.remembered_zoom() == -2
+
+    assert run(["--keys"]) == 0
+    assert zoom.level == -2
+
+
 def test_config_keymap_remaps_and_reports_unknown_ids():
     from sot.tui.app import SotApp
 

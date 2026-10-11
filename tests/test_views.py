@@ -1,14 +1,17 @@
 import asyncio
 import time
 
+import fake_system
 import pytest
 
-from sot import _theme
+from sot import _config, _theme
 from sot.bench.core import BenchmarkResult, DiskBenchmark
 from sot.clean.cli import CleanTarget
+from sot.tui import zoom
 from sot.tui.app import SotApp
 from sot.tui.components.picker import PickerScreen
 from sot.widgets.confirmation_modal import ConfirmModal
+from sot.widgets.memory import MemoryWidget
 
 
 @pytest.fixture(autouse=True)
@@ -208,3 +211,39 @@ def test_bench_and_clean_open_their_view_only_in_a_terminal(
     )
     assert _app.run(argv) == 0
     assert seen == [expected]
+
+
+def test_plus_and_minus_zoom_the_overview(monkeypatch):
+    fake_system.install(monkeypatch)
+
+    async def scenario(app, pilot):
+        await pilot.pause()
+        mem = app.query_one(MemoryWidget)
+        body = app.query_one("#body")
+        normal = mem.panel_height
+
+        await pilot.press("minus")
+        assert zoom.level == -1
+        assert mem.panel_height < normal
+        assert body.styles.grid_rows[2].value == mem.panel_height
+
+        await pilot.press("plus", "plus")
+        assert zoom.level == 1
+        assert mem.panel_height > normal
+        assert all(len(s.graph) == zoom.memory_rows() for s in mem.mem_streams)
+        assert _config.remembered_zoom() == 1
+
+    run_app(SotApp(), scenario, size=(130, 60))
+
+
+def test_zoom_in_stops_when_the_window_is_too_short(monkeypatch):
+    fake_system.install(monkeypatch)
+
+    async def scenario(app, pilot):
+        await pilot.pause()
+        await pilot.press("plus")
+        assert zoom.level == 0
+        await pilot.press("minus", "minus", "minus")
+        assert zoom.level == zoom.MIN
+
+    run_app(SotApp(), scenario)
