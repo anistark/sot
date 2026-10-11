@@ -1,34 +1,67 @@
 """
 Network Connections Widget
 
-Displays network connection monitoring with cyberpunk styling and animated access denied.
+Sockets by state, a graph of active connections over time, and the processes
+holding the most sockets.
 """
 
-import psutil
+from collections import Counter
+
 from rich.console import Group
 from rich.text import Text
 from textual import events
 
-from .._theme import theme
+from .._collectors import inet_connections
+from .._theme import ThemedStream, theme
 from ..tui import keymap, refresh
 from ..tui.messages import Reveal
 from .base_widget import BaseWidget
 
+GRAPH_HEIGHT = 2
+# Room for the legend, bar, graph and its caption before any process rows.
+GRAPH_MIN_HEIGHT = 9
+
+
+def _state(status: str) -> str:
+    if status == "ESTABLISHED":
+        return "active"
+    if status == "LISTEN":
+        return "listen"
+    if status == "NONE":
+        return "udp"
+    return "other"
+
+
+def _split(counts: list[int], width: int) -> list[int]:
+    """Bar cells per count, giving every non-zero count at least one."""
+    total = sum(counts)
+    if not total:
+        return [0] * len(counts)
+    cells = [max(1, n * width // total) if n else 0 for n in counts]
+    cells[cells.index(max(cells))] += width - sum(cells)
+    return cells
+
 
 class NetworkConnectionsWidget(BaseWidget):
-    """Network Connection Monitoring widget showing active connections."""
+    """Network connections: how many, in which state, and whose."""
 
     can_focus = True
     BINDINGS = [keymap.OPEN]
+    STATE = ("history", "peak")
 
     def __init__(self, **kwargs):
-        super().__init__(title="Network Connections", **kwargs)
-        self.animation_frame = 0
+        super().__init__(title="Connections", **kwargs)
+        self.counts: Counter[str] = Counter()
+        self.by_process: Counter[str] = Counter()
+        self.complete = True
+        self.error: str | None = None
 
     def on_mount(self):
+        if not self.restore_state():
+            self.history = ThemedStream(20, GRAPH_HEIGHT, 0.0, 8.0)
+            self.peak = 0
         self.update_content()
         self.every(refresh.CONNECTIONS, self.update_content)
-        self.every(refresh.LOCK_ANIMATION, self.animate_frame)
 
     def action_open(self) -> None:
         self.post_message(Reveal("processes", "port-table"))
@@ -37,137 +70,113 @@ class NetworkConnectionsWidget(BaseWidget):
         if event.chain == 2:
             self.action_open()
 
-    def animate_frame(self):
-        """Update animation frame counter"""
-        self.animation_frame = (self.animation_frame + 1) % 8
-
-    def get_animated_lock(self):
-        """Get sick animated lock ASCII art for access denied"""
-        frame = self.animation_frame
-
-        glitch_chars = ["█", "▓", "▒", "░", "▄", "▀", "▌", "▐"]
-        glitch = glitch_chars[frame % len(glitch_chars)]
-
-        scan_patterns = [
-            "╔═══════════════╗",
-            "╔▓══════════════╗",
-            "╔═▓═════════════╗",
-            "╔══▓════════════╗",
-            "╔═══▓═══════════╗",
-            "╔════▓══════════╗",
-            "╔═════▓═════════╗",
-            "╔══════▓════════╗",
-        ]
-        top_border = scan_patterns[frame % len(scan_patterns)]
-
-        if frame % 4 < 2:
-            lock_body = "▐█▌"
-            lock_hook = "╭─╮"
-        else:
-            lock_body = "▐▓▌"
-            lock_hook = "╭▒╮"
-
-        if frame % 6 < 3:
-            warning = "░ACCESS░"
-            warning2 = "░DENIED░"
-        else:
-            warning = "▓ACCESS▓"
-            warning2 = "▓DENIED▓"
-
-        static_line = glitch * 15
-
-        lock_art = f"""{top_border}
-{warning}
-{lock_hook}
-{lock_body}
-{warning2}
-{static_line[:13]}
-UNAUTHORIZED
-{glitch}{glitch} ZONE {glitch}{glitch}
-╚═══════════════╝"""
-
-        return lock_art
+    def on_resize(self, event: events.Resize) -> None:
+        self.history.reset_width(max(1, self.content_size.width))
 
     def update_content(self):
-        """Update the network connections content with cyberpunk styling."""
         try:
-            # Get network connections
-            connections = psutil.net_connections(kind="inet")
-
-            # Count by status
-            status_counts = {}
-            local_ports = set()
-            remote_hosts = set()
-
-            for conn in connections:
-                status = conn.status if conn.status else "UNKNOWN"
-                status_counts[status] = status_counts.get(status, 0) + 1
-
-                if conn.laddr:
-                    local_ports.add(conn.laddr.port)
-                if conn.raddr:
-                    remote_hosts.add(conn.raddr.ip)
-
-            t = theme()
-            c = t.colors
-            good, ok, warn, _ = c.health
-            matrix_lines = []
-
-            established = status_counts.get("ESTABLISHED", 0)
-            listening = status_counts.get("LISTEN", 0)
-            time_wait = status_counts.get("TIME_WAIT", 0)
-
-            status_line1 = Text()
-            status_line1.append("▲ ACTIVE: ", style=good)
-            status_line1.append(f"{established:>3}", style=f"bold {c.text}")
-
-            status_line2 = Text()
-            status_line2.append("◆ LISTEN: ", style=ok)
-            status_line2.append(f"{listening:>3}", style=f"bold {c.text}")
-
-            status_line3 = Text()
-            status_line3.append("○ WAIT  : ", style=warn)
-            status_line3.append(f"{time_wait:>3}", style=f"bold {c.text}")
-
-            matrix_lines.extend([status_line1, status_line2, status_line3])
-
-            matrix_lines.append(Text(""))
-
-            flow_line = Text()
-            flow_line.append(f"PORTS:{len(local_ports):>2} ", style=ok)
-            flow_line.append("◄─►", style=c.text)
-            flow_line.append(f" HOSTS:{len(remote_hosts):>2}", style=good)
-            matrix_lines.append(flow_line)
-
-            matrix_lines.append(Text(""))
-            matrix_lines.append(Text("DATA STREAMS:", style=f"dim {c.text}"))
-
-            conn_count = 0
-            for conn in connections[:3]:
-                if conn.raddr and conn.status == "ESTABLISHED":
-                    stream_line = Text()
-                    stream_line.append("▸ ", style=ok)
-                    stream_line.append(f"{conn.raddr.ip}", style=good)
-                    stream_line.append(f":{conn.raddr.port}", style=warn)
-                    matrix_lines.append(stream_line)
-                    conn_count += 1
-                if conn_count >= 3:
-                    break
-
-            if conn_count == 0:
-                matrix_lines.append(Text("▸ NO ACTIVE STREAMS", style=c.muted))
-
-            content = Group(*matrix_lines)
-
-        except (psutil.AccessDenied, psutil.NoSuchProcess):
-            lock_art = self.get_animated_lock()
-            content = Text(lock_art, style=theme().colors.health[3], justify="center")
-
+            conns, self.complete = inet_connections()
         except Exception as e:
-            content = Text(
-                f"ERROR: {str(e)[:15]}...",
-                style=theme().colors.health[3],
-                justify="center",
-            )
+            self.error = str(e)
+            self.refresh()
+            return
 
-        self.update_panel_content(content)
+        self.error = None
+        self.counts = Counter(_state(c["status"]) for c in conns)
+        self.by_process = Counter(c["name"] for c in conns)
+
+        active = self.counts["active"]
+        self.peak = max(self.peak, active)
+        # Headroom so a steady count sits mid-graph and changes show.
+        if active > self.history.maxval * 0.75:
+            self.history.maxval = active * 1.5
+        self.history.add_value(active)
+
+        total = len(conns)
+        self.set_title(
+            "Connections", f"{total} yours" if not self.complete else str(total)
+        )
+        self.border_subtitle = (
+            None if self.complete else Text("sudo for all", style=theme().colors.muted)
+        )
+        self.refresh()
+
+    def render(self):
+        t = theme()
+        c = t.colors
+        width = max(1, self.content_size.width)
+        height = self.content_size.height
+
+        if self.error:
+            return Text(self.error, style=c.danger, overflow="ellipsis")
+
+        fill = t.design.meter.fill
+        states = [
+            ("active", c.ok),
+            ("listen", c.accent),
+            ("udp", c.primary),
+            ("other", c.warm),
+        ]
+        half = width // 2
+        digits = len(str(max(self.counts.values(), default=0)))
+        # Drop the gap after the swatch when two cells barely fit.
+        gap = " " if 2 * (digits + 9) + 1 <= width else ""
+        lines = []
+        for row in (states[:2], states[2:]):
+            line = Text(no_wrap=True, overflow="crop")
+            for state, color in row:
+                cell = Text()
+                cell.append(fill, style=color)
+                cell.append(
+                    f"{gap}{self.counts[state]:>{digits}} ", style=f"bold {c.text}"
+                )
+                cell.append(state, style=c.muted)
+                cell.pad_right(half - cell.cell_len)
+                line.append_text(cell)
+            lines.append(line)
+
+        bar = Text(no_wrap=True)
+        cells = _split([self.counts[s] for s, _ in states], width)
+        for (_, color), n in zip(states, cells):
+            bar.append(fill * n, style=color)
+        if not sum(cells):
+            bar.append(t.design.meter.empty * width, style=c.muted)
+        lines.append(bar)
+
+        if height >= GRAPH_MIN_HEIGHT:
+            lines.append(Text())
+            lines.append(t.graph(self.history.graph, c.ok))
+            caption = Text("active", style=c.ok, no_wrap=True, overflow="crop")
+            detail = f" over time · peak {self.peak}"
+            if caption.cell_len + len(detail) > width:
+                detail = f" · peak {self.peak}"
+            caption.append(detail, style=c.muted)
+            lines.append(caption)
+
+        rows = height - len(lines) - 1
+        top = self.by_process.most_common(max(0, rows))
+        if top:
+            lines.append(Text())
+            most = top[0][1]
+            meter_width = 6 if width >= 26 else 0
+            name_width = max(1, width - meter_width - 5)
+            for name, count in top:
+                row = Text(no_wrap=True, overflow="crop")
+                label = (
+                    name if len(name) <= name_width else name[: name_width - 1] + "…"
+                )
+                row.append(label.ljust(name_width) + " ", style=c.text)
+                if meter_width:
+                    row.append_text(
+                        t.meter(
+                            count / most, meter_width - 1, c.info, empty_style=c.muted
+                        )
+                    )
+                    row.append(" ")
+                row.append(f"{count:>4}", style=f"bold {c.text}")
+                lines.append(row)
+        elif not self.by_process and rows > 0:
+            lines.append(Text())
+            lines.append(Text("No open sockets", style=c.muted))
+
+        return Group(*lines)

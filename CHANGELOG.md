@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`sot --disk` without a value** - The volume picker opens inside sot instead of a separate prompt
 - **`sot bench` and `sot clean`** - Open their view in a terminal; flags and non-terminal runs keep the printed flow
 - **Printed output follows `--theme`** - `sot --version`, `sot info`, `sot bench`, `sot clean` and `sot disk --list` use the theme's colours and frames
+- **Connections panel** - Shows sockets by state (active, listen, UDP, other) with a stacked bar, a graph of active connections over time and the processes holding the most sockets
+  - On macOS without `sudo` it lists your own processes' sockets instead of an "access denied" lock, and says so in the panel
 
 ### Fixed
 - Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from typing import Any
 
 import psutil
 
@@ -111,6 +112,49 @@ def listening_ports() -> list[dict]:
             "address": conn.laddr.ip,
         }
     return list(ports.values())
+
+
+def inet_connections() -> tuple[list[dict], bool]:
+    """Every inet socket with the name of its process, and whether the list
+    covers every user's sockets.
+
+    macOS needs root to list sockets system-wide; without it, fall back to
+    asking each process we can access, which covers our own.
+    """
+    names: dict[int, str] = {}
+
+    def name_of(pid: int | None) -> str:
+        if not pid:
+            return "system"
+        if pid not in names:
+            try:
+                names[pid] = psutil.Process(pid).name()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                names[pid] = "system"
+        return names[pid]
+
+    conns: list[tuple[Any, str]]
+    try:
+        conns = [(c, name_of(c.pid)) for c in psutil.net_connections(kind="inet")]
+        complete = True
+    except (psutil.AccessDenied, PermissionError):
+        conns = []
+        complete = False
+        for proc in psutil.process_iter(["name"]):
+            try:
+                own = proc.net_connections(kind="inet")
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+            conns.extend((c, proc.info["name"] or "?") for c in own)
+
+    return [
+        {
+            "status": c.status or "NONE",
+            "name": name,
+            "remote": c.raddr.ip if c.raddr else None,
+        }
+        for c, name in conns
+    ], complete
 
 
 DEV_PATTERNS = {
