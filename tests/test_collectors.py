@@ -45,3 +45,53 @@ def test_sampler_reuses_recent_samples_and_computes_io_rates(monkeypatch):
 
     second = sampler.sample()
     assert second[0]["io_read_rate"] == 2000.0
+
+
+def _conn(status, pid=None, raddr=None):
+    return SimpleNamespace(status=status, pid=pid, raddr=raddr)
+
+
+def test_inet_connections_falls_back_to_own_processes(monkeypatch):
+    def denied(kind="inet"):
+        raise _collectors.psutil.AccessDenied()
+
+    class Proc:
+        def __init__(self, name, conns):
+            self.info = {"name": name}
+            self._conns = conns
+
+        def net_connections(self, kind="inet"):
+            if self._conns is None:
+                raise _collectors.psutil.AccessDenied()
+            return self._conns
+
+    procs = [
+        Proc("node", [_conn("ESTABLISHED", raddr=SimpleNamespace(ip="1.2.3.4"))]),
+        Proc("launchd", None),
+        Proc("mDNSResponder", [_conn("")]),
+    ]
+    monkeypatch.setattr(_collectors.psutil, "net_connections", denied)
+    monkeypatch.setattr(_collectors.psutil, "process_iter", lambda attrs: procs)
+
+    conns, complete = _collectors.inet_connections()
+    assert not complete
+    assert conns == [
+        {"status": "ESTABLISHED", "name": "node", "remote": "1.2.3.4"},
+        {"status": "NONE", "name": "mDNSResponder", "remote": None},
+    ]
+
+
+def test_inet_connections_names_system_wide_sockets(monkeypatch):
+    monkeypatch.setattr(
+        _collectors.psutil,
+        "net_connections",
+        lambda kind="inet": [_conn("LISTEN", pid=7), _conn("LISTEN")],
+    )
+    monkeypatch.setattr(
+        _collectors.psutil,
+        "Process",
+        lambda pid: SimpleNamespace(name=lambda: "sshd"),
+    )
+    conns, complete = _collectors.inet_connections()
+    assert complete
+    assert [c["name"] for c in conns] == ["sshd", "system"]

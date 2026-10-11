@@ -59,6 +59,16 @@ PORTS = [
 ]
 
 
+CONNECTIONS = (
+    [{"status": "ESTABLISHED", "name": "node", "remote": "10.0.0.5"}] * 6
+    + [{"status": "ESTABLISHED", "name": "postgres", "remote": "127.0.0.1"}] * 3
+    + [{"status": "LISTEN", "name": "postgres", "remote": None}]
+    + [{"status": "LISTEN", "name": "node", "remote": None}]
+    + [{"status": "NONE", "name": "mDNSResponder", "remote": None}] * 2
+    + [{"status": "TIME_WAIT", "name": "python3", "remote": "10.0.0.9"}]
+)
+
+
 def _volume(disk_id, name, mount, total, used):
     usage = _usage(total, used)
     return {
@@ -197,6 +207,10 @@ def install(monkeypatch) -> None:
     ):
         monkeypatch.setattr(f"{module}.process_sampler", _collectors.process_sampler)
     monkeypatch.setattr("sot.tui.views.processes.listening_ports", lambda: PORTS)
+    monkeypatch.setattr(
+        "sot.widgets.network_connections.inet_connections",
+        lambda: (CONNECTIONS, False),
+    )
     monkeypatch.setattr("sot.tui.views.disks.get_volume_info", lambda: VOLUMES)
     monkeypatch.setattr("sot.tui.views.system.collect_system_info", lambda: SYSTEM_INFO)
     monkeypatch.setattr("sot.tui.views.system.system_logo", lambda: ["  /\\", " /  \\"])
