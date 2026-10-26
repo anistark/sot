@@ -42,6 +42,7 @@ class SotApp(SotBaseApp):
         pick_disk: bool = False,
         bench_duration: float = 10.0,
         keymap: dict[str, str] | None = None,
+        clean_force: bool = False,
     ):
         # Textual reads the starting mode while initialising the app.
         self.DEFAULT_MODE = start_mode  # type: ignore[misc]
@@ -53,6 +54,7 @@ class SotApp(SotBaseApp):
         self.pick_disk = pick_disk
         self.user_keymap = keymap or {}
         self.bench_duration = bench_duration
+        self.clean_force = clean_force
         # Where `esc` returns to after a drill-down.
         self.back_mode: str | None = None
 

@@ -143,20 +143,27 @@ CODING_AGENTS: tuple[AgentCache, ...] = (
 )
 
 
-def agent_paths(
-    agent: AgentCache, roots: Mapping[str, Path] | None = None
+def expand_paths(
+    templates: tuple[str, ...], roots: Mapping[str, Path] | None = None
 ) -> list[Path]:
-    """Expand an agent's templates against the resolved roots.
+    """Expand path templates against the resolved roots.
 
     Paths anchored to a root that isn't available are skipped.
     """
     resolved = resolve_roots() if roots is None else roots
     paths = []
 
-    for template in agent.paths:
+    for template in templates:
         try:
             paths.append(Path(template.format(**resolved)))
         except KeyError:
             continue
 
     return paths
+
+
+def agent_paths(
+    agent: AgentCache, roots: Mapping[str, Path] | None = None
+) -> list[Path]:
+    """Expand an agent's templates against the resolved roots."""
+    return expand_paths(agent.paths, roots)
