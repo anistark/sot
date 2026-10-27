@@ -3,7 +3,6 @@ import time
 from pathlib import Path
 
 import fake_system
-
 import pytest
 
 from sot import _config, _theme
