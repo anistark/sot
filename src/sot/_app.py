@@ -296,6 +296,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show what would be cleaned without actually deleting",
     )
+    clean_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Also clean data still in use, like the browser sessions that restore open tabs",
+    )
 
     # Add ps subcommand
     subparsers.add_parser(
@@ -418,6 +423,7 @@ def run(argv=None):  # noqa: C901
         pick_disk=pick_disk,
         keymap=config.keymap,
         bench_duration=getattr(args, "duration", 10.0),
+        clean_force=getattr(args, "force", False),
     )
 
     if args.net:

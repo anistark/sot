@@ -39,7 +39,8 @@ def build_manpage():
         "  info   - Print system information with an OS-specific ASCII logo\n"
         "  bench  - Bench view; --disk or --output run it without the TUI\n"
         "  disk   - Disks view; --list prints a table\n"
-        "  clean  - Clean view; --dry-run prints what would be cleaned\n"
+        "  clean  - Clean view; --dry-run prints what would be cleaned, --force adds\n"
+        "           in-use browser sessions\n"
         "  ps     - Processes view with listening ports and dev environments"
     )
     manpage.project = "sot"  # type: ignore[attr-defined]
@@ -92,6 +93,9 @@ Preview what would be cleaned without deleting
 .B sot clean
 Open the Clean view: pick targets, then c to clean after confirming
 .TP
+.B sot clean --force
+Also clean the browser sessions that restore open tabs
+.TP
 .B sot ps
 Open the Processes view with ports and dev environments
 .TP
@@ -143,6 +147,8 @@ Clean system caches (user, system, font caches)
 Remove temporary files
 .IP \\(bu 2
 Clear application logs and crash reports
+.IP \\(bu 2
+Remove old browser session snapshots; --force removes the current ones too
 .IP \\(bu 2
 Dry-run mode to preview changes
 .IP \\(bu 2
@@ -253,6 +259,9 @@ Select all cleanable targets, or none
 .TP
 .B d
 Toggle dry run
+.TP
+.B f
+Toggle force: include the browser sessions that restore open tabs, and scan again
 .TP
 .B c
 Clean the selected targets after confirming

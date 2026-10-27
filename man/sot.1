@@ -53,12 +53,16 @@ usage: sot disk [\-h] [\-\-list]
 Print disks and partitions as a plain list instead of the TUI
 
 .SH COMMAND \fI\,'sot clean'\/\fR
-usage: sot clean [\-h] [\-\-dry\-run]
+usage: sot clean [\-h] [\-\-dry\-run] [\-\-force]
 
 .SH OPTIONS \fI\,'sot clean'\/\fR
 .TP
 \fB\-\-dry\-run\fR
 Show what would be cleaned without actually deleting
+
+.TP
+\fB\-\-force\fR
+Also clean data still in use, like the browser sessions that restore open tabs
 
 .SH COMMAND \fI\,'sot ps'\/\fR
 usage: sot ps [\-h]
@@ -129,6 +133,9 @@ Preview what would be cleaned without deleting
 .B sot clean
 Open the Clean view: pick targets, then c to clean after confirming
 .TP
+.B sot clean --force
+Also clean the browser sessions that restore open tabs
+.TP
 .B sot ps
 Open the Processes view with ports and dev environments
 .TP
@@ -180,6 +187,8 @@ Clean system caches (user, system, font caches)
 Remove temporary files
 .IP \(bu 2
 Clear application logs and crash reports
+.IP \(bu 2
+Remove old browser session snapshots; --force removes the current ones too
 .IP \(bu 2
 Dry-run mode to preview changes
 .IP \(bu 2
@@ -290,6 +299,9 @@ Select all cleanable targets, or none
 .TP
 .B d
 Toggle dry run
+.TP
+.B f
+Toggle force: include the browser sessions that restore open tabs, and scan again
 .TP
 .B c
 Clean the selected targets after confirming

@@ -40,7 +40,7 @@ def test_number_keys_reach_the_new_views(monkeypatch):
     monkeypatch.setattr(
         "sot.tui.views.system.collect_system_info", lambda: [("System", [])]
     )
-    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda: [])
+    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda force=False: [])
 
     async def scenario(app, pilot):
         for key, mode in (("4", "system"), ("5", "bench"), ("6", "clean")):
@@ -125,7 +125,9 @@ def cache(monkeypatch, tmp_path):
     folder.mkdir()
     (folder / "blob").write_bytes(b"x" * 2048)
     target = CleanTarget("Test Cache", folder, "test files")
-    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda: [target])
+    monkeypatch.setattr(
+        "sot.tui.views.clean._get_targets", lambda force=False: [target]
+    )
     return folder
 
 
@@ -152,6 +154,43 @@ def test_clean_dry_run_deletes_nothing(cache):
         assert any(cache.iterdir())
 
     run_app(SotApp(start_mode="clean"), scenario)
+
+
+def test_clean_force_rescans_with_current_sessions(monkeypatch, tmp_path):
+    folder = tmp_path / "sessions"
+    folder.mkdir()
+    (folder / "Session_1").write_bytes(b"x" * 2048)
+    target = CleanTarget("Chrome Sessions", folder, "test sessions")
+    calls = []
+
+    def targets(force=False):
+        calls.append(force)
+        return [target] if force else []
+
+    monkeypatch.setattr("sot.tui.views.clean._get_targets", targets)
+
+    async def scenario(app, pilot):
+        screen = app.screen
+        await wait_for(pilot, lambda: calls == [False] and not screen.busy)
+        assert screen.selected == set()
+        await pilot.press("f")
+        await wait_for(pilot, lambda: screen.selected == {"Chrome Sessions"})
+        assert screen.force and calls == [False, True]
+
+    run_app(SotApp(start_mode="clean"), scenario)
+
+
+def test_clean_view_starts_forced_from_the_flag(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "sot.tui.views.clean._get_targets",
+        lambda force=False: calls.append(force) or [],
+    )
+
+    async def scenario(app, pilot):
+        await wait_for(pilot, lambda: calls == [True])
+
+    run_app(SotApp(start_mode="clean", clean_force=True), scenario)
 
 
 def test_disk_picker_sets_the_monitored_disk(monkeypatch):
@@ -185,6 +224,8 @@ def test_find_disk_matches_ids_and_mountpoints():
     [
         (["clean"], True, "view:clean"),
         (["clean", "--dry-run"], True, "printed:clean"),
+        (["clean", "--force"], True, "view:clean"),
+        (["clean", "--force", "--dry-run"], True, "printed:clean"),
         (["clean"], False, "printed:clean"),
         (["bench"], True, "view:bench"),
         (["bench", "--disk", "disk3"], True, "printed:bench"),

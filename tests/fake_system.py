@@ -216,7 +216,9 @@ def install(monkeypatch) -> None:
     monkeypatch.setattr("sot.tui.views.system.system_logo", lambda: ["  /\\", " /  \\"])
     monkeypatch.setattr("sot.tui.views.system.status_section", lambda: SYSTEM_INFO[-1])
     monkeypatch.setattr("sot.tui.views.bench.get_physical_disks", lambda: BENCH_DISKS)
-    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda: CLEAN_TARGETS)
+    monkeypatch.setattr(
+        "sot.tui.views.clean._get_targets", lambda force=False: CLEAN_TARGETS
+    )
     monkeypatch.setattr("sot.tui.views.clean._is_elevated", lambda: False)
     monkeypatch.setattr(
         "sot.tui.views.clean.scan_target",

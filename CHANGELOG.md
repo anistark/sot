@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `sot bench --disk <id or mountpoint>` runs without any prompt
 - **Overview zoom** - `+` makes the memory, disk and network graphs taller, `-` shortens them and gives the rows to the process list; the level is remembered for the next start
 - **Clean view** - Scan, tick targets with `space` (`a` for all), dry run with `d`, clean with `c` after a confirmation
+- **Browser session cleanup** - `sot clean` removes the old session snapshots Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc, Firefox, LibreWolf and Zen leave in every profile, keeping the newest so your tabs still come back
+  - `sot clean --force`, or `f` in the Clean view, removes the newest ones too
 - **System view** - What `sot info` prints, as panels, with uptime, memory and battery kept live
 - **Config file** - `~/.config/sot/config.toml` sets the theme, default view, `--net`/`--disk` defaults, refresh rates and key bindings; `sot --config-path` shows the path, `sot --keys` lists every binding id
   - A theme picked with `Ctrl+P` is remembered for the next start

@@ -16,6 +16,7 @@ from rich.text import Text
 
 from .._theme import theme
 from .agents import CODING_AGENTS, agent_paths, resolve_roots
+from .browsers import BROWSERS, browser_sessions
 
 
 class CleanTarget(NamedTuple):
@@ -98,7 +99,37 @@ def _get_coding_agent_targets() -> list[CleanTarget]:
     return targets
 
 
-def _get_macos_targets() -> list[CleanTarget]:
+def _get_browser_session_targets(force: bool = False) -> list[CleanTarget]:
+    """Get cleaning targets for browser session restore files.
+
+    Only snapshots the browser won't read again are included, unless
+    ``force`` is set: then the current ones go too, and with them the tabs
+    the browser would restore. Browsers with nothing to clean are left out.
+    See ``browsers.py`` for the paths and how files are told apart.
+    """
+    roots = resolve_roots()
+    targets = []
+
+    for browser in BROWSERS:
+        sessions = browser_sessions(browser, roots)
+        files = sessions.stale + sessions.current if force else sessions.stale
+        if files:
+            targets.append(
+                CleanTarget(
+                    name=f"{browser.name} Sessions",
+                    path=files,
+                    description=(
+                        "Sessions, incl. current tabs"
+                        if force
+                        else "Old session snapshots"
+                    ),
+                )
+            )
+
+    return targets
+
+
+def _get_macos_targets(force: bool = False) -> list[CleanTarget]:
     """Get cleaning targets for macOS."""
     home = Path.home()
     targets = [
@@ -184,12 +215,13 @@ def _get_macos_targets() -> list[CleanTarget]:
     for name, path, desc in browser_paths:
         targets.append(CleanTarget(name=name, path=path, description=desc))
 
+    targets.extend(_get_browser_session_targets(force))
     targets.extend(_get_coding_agent_targets())
 
     return targets
 
 
-def _get_linux_targets() -> list[CleanTarget]:
+def _get_linux_targets(force: bool = False) -> list[CleanTarget]:
     """Get cleaning targets for Linux."""
     home = Path.home()
     targets = [
@@ -272,12 +304,13 @@ def _get_linux_targets() -> list[CleanTarget]:
     for name, path, desc in browser_paths:
         targets.append(CleanTarget(name=name, path=path, description=desc))
 
+    targets.extend(_get_browser_session_targets(force))
     targets.extend(_get_coding_agent_targets())
 
     return targets
 
 
-def _get_windows_targets() -> list[CleanTarget]:
+def _get_windows_targets(force: bool = False) -> list[CleanTarget]:
     """Get cleaning targets for Windows."""
     home = Path.home()
     temp_env = os.environ.get("TEMP", "")
@@ -337,21 +370,26 @@ def _get_windows_targets() -> list[CleanTarget]:
     for name, path, desc in browser_paths:
         targets.append(CleanTarget(name=name, path=path, description=desc))
 
+    targets.extend(_get_browser_session_targets(force))
     targets.extend(_get_coding_agent_targets())
 
     return targets
 
 
-def _get_targets() -> list[CleanTarget]:
-    """Get cleaning targets based on current OS."""
+def _get_targets(force: bool = False) -> list[CleanTarget]:
+    """Get cleaning targets based on current OS.
+
+    ``force`` also includes data still in use, like the browser sessions
+    that restore open tabs.
+    """
     system = platform.system()
 
     if system == "Darwin":
-        return _get_macos_targets()
+        return _get_macos_targets(force)
     elif system == "Linux":
-        return _get_linux_targets()
+        return _get_linux_targets(force)
     elif system == "Windows":
-        return _get_windows_targets()
+        return _get_windows_targets(force)
     else:
         return []
 
@@ -499,10 +537,13 @@ def clean_command(args) -> int:
     elevated = _is_elevated()
     if elevated:
         console.print(f"🔑 Running elevated: [{c.ok}]sudo targets included[/]")
+    force = getattr(args, "force", False)
+    if force:
+        console.print(f"💪 Forced: [{c.warn}]current browser sessions included[/]")
     console.print()
 
     # Get targets
-    targets = _get_targets()
+    targets = _get_targets(force)
 
     if not targets:
         console.print(f"[{c.danger}]No cleaning targets available for this OS[/]")

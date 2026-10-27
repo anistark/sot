@@ -416,6 +416,9 @@ sot clean
 
 # Dry run - print what would be cleaned without deleting
 sot clean --dry-run
+
+# Also clean the browser sessions that restore your open tabs
+sot clean --force
 ```
 
 ### What Gets Cleaned
@@ -428,6 +431,7 @@ The clean command intelligently detects your operating system and cleans platfor
 - Homebrew package cache
 - System temporary files (`/tmp`)
 - Browser caches (Chrome, Safari, Firefox)
+- Old browser session snapshots
 - Python pip cache
 - npm cache
 - Trash bin
@@ -439,6 +443,7 @@ The clean command intelligently detects your operating system and cleans platfor
 - System temporary files (`/tmp`, `/var/tmp`)
 - Package manager caches (APT, DNF, Yum)
 - Browser caches
+- Old browser session snapshots
 - Python pip cache
 - npm cache
 - Coding agent caches (Claude Code, pi, opencode, Kilo Code)
@@ -448,9 +453,23 @@ The clean command intelligently detects your operating system and cleans platfor
 - Windows temporary files
 - Prefetch files
 - Browser caches
+- Old browser session snapshots
 - Python pip cache
 - npm cache
 - Coding agent caches (Claude Code, pi, opencode, Kilo Code)
+
+### Browser Sessions
+
+Browsers save your open windows and tabs to disk so they can bring them back after a restart or a crash. Only the newest save is ever read; the older ones pile up in every profile, often a few MB each. `sot clean` removes those and leaves the newest alone, so your tabs still come back.
+
+`sot clean --force` (or `f` in the Clean view) removes the newest ones too. The browser starts with no tabs to restore and loses its recently closed windows. Quit the browser first: while it runs it holds the current session in memory and may write it straight back.
+
+| Browser | Old snapshots | Also removed with `--force` |
+| ------- | ------------- | --------------------------- |
+| Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc | All but the newest `Session_*`, `Tabs_*` and `Apps_*` in each profile's `Sessions` folder | The newest of each |
+| Firefox, LibreWolf, Zen | `sessionstore-backups/upgrade.jsonlz4-*`, the copies taken on each upgrade | `sessionstore.jsonlz4` and the `recovery` and `previous` files in `sessionstore-backups` |
+
+Browsers are only listed when there's something to clean. Safari keeps a single session file, so there's nothing old to remove.
 
 ### Coding Agent Caches
 
@@ -493,6 +512,7 @@ sudo sot clean
 ### Safety Features
 
 - **Dry run mode**: Preview what will be cleaned without making changes
+- **In-use data needs `--force`**: Browser sessions that restore open tabs are only removed when asked for
 - **Interactive confirmation**: Always asks before deleting files (in the Clean view and the printed flow)
 - **Sudo-aware**: Targets that need root are skipped unless sot runs with sudo
 - **Clear reporting**: Shows exactly what will be cleaned and how much space will be freed
@@ -692,11 +712,12 @@ sot clean -h
 <!--pytest-codeblocks: expected-output-->
 
 ```
-usage: sot clean [-h] [--dry-run]
+usage: sot clean [-h] [--dry-run] [--force]
 
 options:
   -h, --help  show this help message and exit
   --dry-run   Show what would be cleaned without actually deleting
+  --force     Also clean data still in use, like the browser sessions that restore open tabs
 ```
 
 Main Theme:

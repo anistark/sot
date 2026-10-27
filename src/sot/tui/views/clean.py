@@ -24,6 +24,7 @@ class TargetTable(SotTable):
         Binding("space", "toggle_target", "Toggle", id="sot.clean.toggle"),
         Binding("a", "toggle_all", "All/none", id="sot.clean.all"),
         Binding("d", "dry_run", "Dry run", id="sot.clean.dry_run"),
+        Binding("f", "force", "Force", id="sot.clean.force"),
         Binding("c", "clean", "Clean", id="sot.clean.run"),
         Binding("r", "rescan", "Rescan", id="sot.clean.rescan"),
     ]
@@ -91,6 +92,11 @@ class TargetTable(SotTable):
         self.view.report = ""
         self.view.changed()
 
+    def action_force(self) -> None:
+        self.view.force = not self.view.force
+        self.view.report = ""
+        self.view.scan()
+
     def action_clean(self) -> None:
         self.view.clean()
 
@@ -123,13 +129,18 @@ class CleanSummary(BaseWidget):
             text.append("dry run (nothing is deleted)\n", style=c.warn)
         else:
             text.append("clean\n", style=c.text)
+        if view.force:
+            text.append("Forced    ", style=c.label)
+            text.append("current browser sessions included\n", style=c.warn)
         if not view.elevated:
             text.append("\nsudo targets are skipped; run with sudo to include them\n")
         if view.report:
             text.append(f"\n{view.report}\n", style=c.ok)
         for warning in view.warnings[-5:]:
             text.append(f"⚠ {warning}\n", style=c.warn)
-        text.append("\nspace toggle · a all · d dry run · c clean", style=c.muted)
+        text.append(
+            "\nspace toggle · a all · d dry run · f force · c clean", style=c.muted
+        )
         self.update_panel_content(text)
 
 
@@ -147,6 +158,7 @@ class CleanScreen(SotScreen):
         self.results: dict[str, dict] = {}
         self.selected: set[str] = set()
         self.dry_run = False
+        self.force = False
         self.elevated = _is_elevated()
         self.busy = ""
         self.report = ""
@@ -158,6 +170,7 @@ class CleanScreen(SotScreen):
             yield CleanSummary(id="clean-summary")
 
     def on_mount(self) -> None:
+        self.force = getattr(self.app, "clean_force", False)
         self.query_one("#target-table").focus()
         if not self.results:
             self.scan()
@@ -193,7 +206,7 @@ class CleanScreen(SotScreen):
     def scan(self) -> None:
         self.app.call_from_thread(self._set_busy, "Scanning")
         results = {}
-        for target in _get_targets():
+        for target in _get_targets(self.force):
             results[target.name] = scan_target(target)
         self.app.call_from_thread(self._scanned, results)
 
