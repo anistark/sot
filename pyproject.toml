@@ -6,14 +6,14 @@ build-backend = "hatchling.build"
 dev = [
   "watchdog>=6.0.0",
   "textual-dev>=1.8.0",
-  "black>=26.5.1",
-  "isort>=9.0.1",
-  "flake8>=7.3.0",
+  "black>=26.10.1",
+  "isort>=9.0.2",
+  "flake8>=7.4.1",
   "blacken-docs>=1.20.0",
-  "pytest>=8.0.0",
-  "mypy>=2.3.1",
-  "types-psutil>=7.0.0",
-  "argparse-manpage>=4",
+  "pytest>=9.1.1",
+  "mypy>=2.4.0",
+  "types-psutil>=7.2.2",
+  "argparse-manpage>=4.8",
   "pytest-textual-snapshot>=1.0.0",
 ]
 
@@ -56,8 +56,8 @@ dependencies = [
   "distro>=1.9.0",
   "psutil>=7.2.2",
   "rich>=15.0.0",
-  "textual>=8.2.7",
-  "tomli>=2.0.0; python_version < '3.11'",
+  "textual>=8.2.8",
+  "tomli>=2.5.0; python_version < '3.11'",
 ]
 
 [tool.hatch.version]
