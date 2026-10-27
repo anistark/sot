@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from rich.console import JustifyMethod
 from rich.text import Text
+from textual import events
 from textual.widgets import DataTable
 
 from ..._theme import theme
@@ -63,6 +64,15 @@ class SotTable(DataTable, SotWidget, inherit_bindings=False):
             filtered = f"[{theme().colors.warn}]/{self.filter_text}[/]"
             detail = f"{detail} · {filtered}" if detail else filtered
         self.border_title = panel_title(label, detail)
+
+    async def _on_idle(self, event: events.Idle) -> None:
+        # DataTable fits columns to new rows on idle, but keeps lines it already
+        # painted at the old widths cached, so a busy terminal shows them cut.
+        widths = [column.get_render_width(self) for column in self.columns.values()]
+        await super()._on_idle(event)
+        if widths != [c.get_render_width(self) for c in self.columns.values()]:
+            self._clear_caches()
+            self.refresh()
 
     def reload(self) -> None:
         raise NotImplementedError

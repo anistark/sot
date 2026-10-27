@@ -1,5 +1,6 @@
 import fake_system
 import pytest
+from textual.widgets import DataTable
 
 from sot import _theme
 from sot.tui.app import SotApp
@@ -14,8 +15,22 @@ def _fake_machine(monkeypatch):
     _theme.set_theme(_theme.DEFAULT_THEME)
 
 
+def _resizing(app) -> bool:
+    return any(
+        table._require_update_dimensions or table._updated_cells
+        for table in app.screen.query(DataTable)
+    )
+
+
 async def settle(pilot):
     await pilot.app.workers.wait_for_complete()
+    await pilot.pause()
+    # DataTable fits its columns to new rows on idle, which a busy CI runner
+    # may not reach before the screenshot.
+    for _ in range(100):
+        if not _resizing(pilot.app):
+            break
+        await pilot.pause(0.01)
     await pilot.pause()
 
 
@@ -42,7 +57,12 @@ def test_view(snap_compare, mode, theme):
     ],
 )
 def test_interaction(snap_compare, name, mode, keys):
-    assert snap_compare(app(mode), press=keys, terminal_size=SIZE, run_before=settle)
+    async def press(pilot):
+        await settle(pilot)
+        await pilot.press(*keys)
+        await settle(pilot)
+
+    assert snap_compare(app(mode), terminal_size=SIZE, run_before=press)
 
 
 def test_disk_picker(snap_compare, monkeypatch):
