@@ -46,7 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval
 - Volume picker for `--disk` now lists every mountpoint on Linux, where there are no `/Volumes/*` mounts
 
-## [6.3.0](https://github.com/anistark/sot/releases/tag/v6.3.0) - 2026-10-06
+## [6.3.0](https://github.com/anistark/sot/releases/tag/v6.3.0) - 2026-10-07
+
+Also ships `sot disk --list`, which was prepared as 6.2.0 but never tagged or published.
 
 ### Added
 - **Themes** - Pick a colour theme with `--theme` / `-T` or the `SOT_THEME` environment variable
@@ -54,21 +56,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `cyberpunk` preset inspired by Cyberpunk 2077: neon yellow, cyan, pink and terminal green on near-black
   - Themes restyle components, not just colours: tag-style panel titles, block bar graphs that fade toward pink, segmented meters, striped tables and a glitching logo
   - Applies to the main dashboard, `sot ps` and `sot disk`
-
-### Changed
-- **Memory panel** - Each memory graph is now a fixed 2 rows and the panel's row shrinks to fit, giving the spare rows to the CPU, disk and network panels
-  - The GPU graph and the SOT animation shrink to fit the shorter row instead of being cut off
-
-## [6.2.0](https://github.com/anistark/sot/releases/tag/v6.2.0) - 2026-09-17
-
-### Added
 - **`sot disk --list`** - Print all disks and partitions as a plain, non-interactive table
   - One row per physical disk with its partitions nested underneath
   - Device, mountpoint, filesystem, size, used, free, colour-coded usage bar and percentage
   - Totals across all disks; compact layout on narrow terminals
   - `-l` short form
 
-## [6.1.0](https://github.com/anistark/sot/releases/tag/v6.1.0) - 2026-08-05
+### Changed
+- **Memory panel** - Each memory graph is now a fixed 2 rows and the panel's row shrinks to fit, giving the spare rows to the CPU, disk and network panels
+  - The GPU graph and the SOT animation shrink to fit the shorter row instead of being cut off
+
+## [6.1.0](https://github.com/anistark/sot/releases/tag/v6.1.0) - 2026-08-06
 
 ### Added
 - **GPU Monitoring Widget** - Live GPU statistics now appear in the main `sot` dashboard:
@@ -79,6 +77,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cross-platform detection: Apple Silicon via `ioreg` (no sudo required), NVIDIA via `nvidia-smi`, AMD via `rocm-smi` (best effort)
   - Falls back to the decorative animation when no GPU is detected
   - No new runtime dependencies
+- **Coding agent caches** - `sot clean` now finds the caches, debug logs and scratch directories of Claude Code, pi, opencode and Kilo Code
+  - Only agents installed on the machine show up
+  - Conversation history, sessions, credentials and config are left alone
+  - Relocated directories are found through `CLAUDE_CONFIG_DIR`, the XDG variables, `APPDATA`/`LOCALAPPDATA` and `VSCODE_PORTABLE`
 - **macOS Install Data cleaning** - `sot clean` now reports the leftover macOS installer payload, routinely 10GB+ on machines that have taken a system update
   - Covers both the data volume path and the pre-Catalina root path
   - Marked as requiring sudo; the SIP protected `Locked Files` stub inside is skipped with a warning
@@ -130,15 +132,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **System Deep Cleaning** - New `sot clean` command for removing system caches, logs, and temporary files:
   - Interactive mode with confirmation prompt before deletion
   - Dry run mode with `--dry-run` flag to preview what will be deleted without actually removing files
-  - Cross-platform support (macOS, Linux)
+  - Cross-platform support (macOS, Linux, Windows)
   - Cleans multiple target types:
-    - User and system caches
-    - Application and system logs
-    - Temporary files
-    - Package manager caches (Homebrew, pip, npm, yarn, cargo, etc.)
-    - Browser caches
-    - Docker build cache and unused volumes
-    - Trash/Recycle Bin
+    - User caches and logs
+    - System logs (macOS)
+    - Temporary files (`/tmp`, `/var/tmp`, Windows temp and Prefetch)
+    - Package manager caches (Homebrew, pip, npm, APT, DNF, Yum)
+    - Browser caches (Chrome, Safari, Firefox)
+    - Thumbnails (Linux)
+    - Trash (macOS)
   - Visual preview showing size of items to be cleaned
   - Privileged cleaning with sudo for system-level items (requires elevated permissions)
   - Safe deletion with proper error handling and permission checks
@@ -194,6 +196,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 1GB test files for proper disk performance characterization
 
 - **Installation Script** - Bash installation script for easier source installation
+- **Homebrew** - Install with `brew tap anistark/tools && brew install sot`
 
 ### Changed
 - **Help Output Formatting** - Improved command-line help display:
@@ -210,7 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release binary format issues
 - Formatting improvements
 
-## [4.4.2](https://github.com/anistark/sot/releases/tag/v4.4.2) - 2024-11-25
+## [4.4.2](https://github.com/anistark/sot/releases/tag/v4.4.2) - 2025-11-25
 
 ### Added
 - Interactive Order By feature for Processes widget
@@ -219,18 +222,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Toggle sort direction with Enter: DESC (↓) → ASC (↑) → OFF → cycle
   - Press `O` or `Esc` to exit order by mode
   - Robust sorting with proper handling of all data types and edge cases
+- Kill the selected process with `k`, after a confirmation dialog
 
 ### Changed
 - Improved processes widget UI with color-coded sort indicators
 
-## [4.4.1](https://github.com/anistark/sot/releases/tag/v4.4.1) - 2024-11-20
+### Fixed
+- Release binaries
+
+## [4.4.1](https://github.com/anistark/sot/releases/tag/v4.4.1) - 2025-11-20
 
 ### Added
-- Debug and fix DEB/RPM package generation workflows with proper error handling
-- GitHub Actions improvements for reliable package distribution
+- DEB packages with GPG signing and RPM packages, built by GitHub Actions
+- GPG fingerprint in the README for package verification
+- Badges in README for project visibility
 - Comprehensive CHANGELOG following best practices
 
 ### Changed
+- Upgraded to Textual v5 framework
+- Type checking moved from `pyright` to `ty`
+- Refactored GitHub Actions pipeline for better maintainability
+- Improved README installation instructions
 - Dependency version updates for security and compatibility:
   - `psutil`: 7.0.0 → 7.1.3 (bug fixes and enhancements)
   - `rich`: 14.1.0 → 14.2.0 (minor updates)
@@ -240,125 +252,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `build`: 1.0.0 → 1.3.0 (build system enhancements)
 
 ### Fixed
+- CPU widget on Windows systems where the core and thread counts don't divide evenly
+- `--log` debug logging, which Textual ignored because it reads the setting at import time
 - DEB/RPM workflow triggers to use release published event instead of manual dispatch
 - Graceful error handling when distribution artifacts are missing
 - Release automation to publish PyPI immediately without waiting for DEB/RPM builds
+- Typing and formatting issues
 
-## [4.4.0](https://github.com/anistark/sot/releases/tag/vdev) - 2024-08-28
+## [4.4.0](https://github.com/anistark/sot/releases/tag/vdev) - 2025-08-24
+
+Released under the `vdev` tag.
 
 ### Added
 - Type checking using `pyright` with comprehensive type annotations
-- RPM package distribution via GitHub Actions
-- DEB package distribution with GPG signing support
-- GitHub Actions automation for package releases
-- Network information display in process widget
-- Health status monitoring
-- 3-column layout redesign
-- Interactive scrolling for process lists
-- Badges in README for project visibility
 
 ### Changed
-- Major build system refactor: switched from `setuptools` to `uv` package manager
-- Build backend migration from `setuptools` to `hatchling`
-- Refactored GitHub Actions pipeline for better maintainability
-- Improved README installation instructions
-- Complete widget restructuring for better UX
-- Upgraded to Textual v5 framework
+- Development tooling switched to the `uv` package manager
+
+## [4.3.2](https://github.com/anistark/sot/releases/tag/v4.3.2) - 2025-07-19
 
 ### Fixed
-- Fixed `setuptools` package discovery issues
-- Network discovery edge cases
-- Typing and formatting issues resolved
-- Various compatibility fixes
+- Completes 4.3.1, which was published without part of its network discovery and flake8 cleanup
 
-## [4.3.2](https://github.com/anistark/sot/releases/tag/v4.3.2) - 2024-07-19
+## [4.3.1](https://github.com/anistark/sot/releases/tag/v4.3.1) - 2025-07-19
 
 ### Added
-- GPG fingerprint documentation for package verification
+- Per-process network usage in the process widget
+- `--net` option to pick the network interface to display, shown in the title
 
 ### Changed
 - Build backend migration from `setuptools` to `hatchling`
-- Refactored GitHub Actions pipeline for better maintainability
-- Improved README installation instructions
 
 ### Fixed
-- Fixed `setuptools` package discovery issues
-- Network discovery edge cases
-- Typing and formatting issues resolved
+- `setuptools` package discovery issues
+- Process widget key bindings
+- Layout of the network connections panel when its data needs elevated permissions
 
-## [4.3.1](https://github.com/anistark/sot/releases/tag/v4.3.1) - 2024-06-18
-
-### Added
-- Network information in process widget
-- Health status monitoring
-
-### Changed
-- Improved network discovery module
-
-### Fixed
-- Various network detection issues
-
-## [4.1.0](https://github.com/anistark/sot/releases/tag/v4.1.0) - 2024-06-18
+## [4.1.0](https://github.com/anistark/sot/releases/tag/v4.1.0) - 2025-06-18
 
 ### Added
 - Health monitoring features
 - Network connection details in system view
 - 3-column layout redesign
-- Interactive scrolling for process lists
+- Animated SOT widget
 
 ### Changed
 - Complete widget restructuring for better UX
 - Improved information density in display
 
-## [3.2.1](https://github.com/anistark/sot/releases/tag/v3.2.1) - 2024-06-15
+## [3.2.1](https://github.com/anistark/sot/releases/tag/v3.2.1) - 2025-06-15
 
 ### Added
+- Interactive scrolling for process lists
 - Development/watch modes for easier development
-- Interactive scrolling capabilities
+
+## [3.0.0](https://github.com/anistark/sot/releases/tag/v3.0.0) - 2025-06-15
 
 ### Changed
-- Upgraded to Textual v3 framework
-- Improved terminal compatibility
+- Upgraded to Textual v3.4.0 and other packages
 
-## [3.0.0](https://github.com/anistark/sot/releases/tag/v3.0.0) - 2024-06-15
+## [2.1.1](https://github.com/anistark/sot/releases/tag/v2.1.1) - 2025-04-04
 
-### Added
-- Pre-release upgrade to Textual v3.4.0
+### Changed
+- More room for the process list in the grid
+- Setup details in the README
 
-## [2.1.1](https://github.com/anistark/sot/releases/tag/v2.1.1) - 2024-01-19
+## [2.1.0](https://github.com/anistark/sot/releases/tag/v2.1.0) - 2025-01-19
 
-### Added
-- Upgrade to Textual v1.0.0
+### Changed
+- Upgraded to Textual v1.0.0
 
-## [2.1.0](https://github.com/anistark/sot/releases/tag/v2.1.0) - 2024-01-19
-
-### Added
-- Textual v1.0.0 support
-
-## [2.0.3](https://github.com/anistark/sot/releases/tag/v2.0.3) - 2024-01-11
+## [2.0.3](https://github.com/anistark/sot/releases/tag/v2.0.3) - 2025-01-12
 
 ### Added
 - Battery value warnings
 
-## [2.0.2](https://github.com/anistark/sot/releases/tag/v2.0.2) - 2023-12-13
+### Changed
+- Updated `psutil`
+
+### Fixed
+- Syntax error from nested double quotes in the disk widget
+
+## [2.0.2](https://github.com/anistark/sot/releases/tag/v2.0.2) - 2024-12-13
+
+### Fixed
+- Disk view
+
+## [2.0.1](https://github.com/anistark/sot/releases/tag/v2.0.1) - 2024-11-28
+
+First 2.x release on PyPI.
+
+### Fixed
+- Formatting fixes
+
+## [2.0.0](https://github.com/anistark/sot/releases/tag/v2.0.0) - 2024-11-28
+
+Tagged, but never published to PyPI.
+
+### Changed
+- Upgraded Textual and other packages
+
+## [1.1.0](https://github.com/anistark/sot/releases/tag/v1.1.0) - 2024-11-22
+
+### Changed
+- Packaging moved off `setup.py`
+- Updated install instructions
+
+## 1.0.0 - 2024-11-22
 
 ### Added
-- First public-ready release with working components
-
-## [2.0.1](https://github.com/anistark/sot/releases/tag/v2.0.1) - 2023-11-28
-
-### Added
-- Initial formatting fixes for public release
-
-## [2.0.0](https://github.com/anistark/sot/releases/tag/v2.0.0) - 2023-01-11
-
-### Added
-- Foundation release with core system monitoring features
-
-## [1.1.0] - Early Release
-
-### Added
-- Initial features and system monitoring capabilities
+- First release on PyPI, with core system monitoring features
 
 ---
 
