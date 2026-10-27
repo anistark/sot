@@ -15,14 +15,19 @@ agent needs to keep running:
 * ``~/.claude/projects`` holds the session transcripts ``claude --resume``
   reads.
 * ``~/.local/share/claude/versions`` holds the installed binaries, including
-  the one currently executing.
+  the one currently executing. Only versions nothing runs or links to go, see
+  ``stale_versions``.
+* ``~/.gemini/tmp`` holds gemini-cli checkpoints and history, despite its name.
 """
 
 from __future__ import annotations
 
+import glob
 import os
 from pathlib import Path
 from typing import Mapping, NamedTuple
+
+import psutil
 
 
 class CacheRoot(NamedTuple):
@@ -54,12 +59,27 @@ CACHE_ROOTS: dict[str, CacheRoot] = {
     "xdg_config": CacheRoot("XDG_CONFIG_HOME", ".config"),
     # Claude Code relocates its whole state directory with this.
     "claude_config": CacheRoot("CLAUDE_CONFIG_DIR", ".claude"),
+    # Developer tools.
+    "cargo_home": CacheRoot("CARGO_HOME", ".cargo"),
+    "rustup_home": CacheRoot("RUSTUP_HOME", ".rustup"),
+    "gopath": CacheRoot("GOPATH", "go"),
+    "gomodcache": CacheRoot("GOMODCACHE", None),
+    "gocache": CacheRoot("GOCACHE", None),
+    "gradle_home": CacheRoot("GRADLE_USER_HOME", ".gradle"),
+    "bun_cache": CacheRoot("BUN_INSTALL_CACHE_DIR", None),
+    "uv_cache": CacheRoot("UV_CACHE_DIR", None),
+    "nvm_dir": CacheRoot("NVM_DIR", ".nvm"),
+    "hf_home": CacheRoot("HF_HOME", None),
+    "ollama_models": CacheRoot("OLLAMA_MODELS", None),
     # macOS.
     "mac_caches": CacheRoot(None, "Library/Caches"),
     "mac_app_support": CacheRoot(None, "Library/Application Support"),
     # Windows.
     "appdata": CacheRoot("APPDATA", "AppData/Roaming"),
     "localappdata": CacheRoot("LOCALAPPDATA", "AppData/Local"),
+    "programdata": CacheRoot("PROGRAMDATA", None),
+    "windir": CacheRoot("WINDIR", None),
+    "systemdrive": CacheRoot("SYSTEMDRIVE", None),
     # VS Code portable mode keeps user data alongside the app instead.
     "vscode_portable": CacheRoot("VSCODE_PORTABLE", None),
 }
@@ -136,6 +156,15 @@ CODING_AGENTS: tuple[AgentCache, ...] = (
         ),
     ),
     AgentCache(
+        name="Codex Cache",
+        description="Codex staging files, runtimes and logs",
+        paths=(
+            "{home}/.codex/.tmp",
+            "{home}/.codex/log",
+            "{xdg_cache}/codex-runtimes",
+        ),
+    ),
+    AgentCache(
         name="Kilo Cache",
         description="Kilo Code cache and checkpoints",
         paths=_KILO_PATHS,
@@ -148,14 +177,20 @@ def expand_paths(
 ) -> list[Path]:
     """Expand path templates against the resolved roots.
 
-    Paths anchored to a root that isn't available are skipped.
+    Paths anchored to a root that isn't available are skipped. Templates
+    holding glob wildcards expand to the paths they match.
     """
     resolved = resolve_roots() if roots is None else roots
-    paths = []
+    escaped = {name: glob.escape(str(path)) for name, path in resolved.items()}
+    paths: list[Path] = []
 
     for template in templates:
         try:
-            paths.append(Path(template.format(**resolved)))
+            if any(char in template for char in "*?["):
+                pattern = template.format(**escaped)
+                paths.extend(Path(match) for match in sorted(glob.glob(pattern)))
+            else:
+                paths.append(Path(template.format(**resolved)))
         except KeyError:
             continue
 
@@ -167,3 +202,59 @@ def agent_paths(
 ) -> list[Path]:
     """Expand an agent's templates against the resolved roots."""
     return expand_paths(agent.paths, roots)
+
+
+class AgentVersions(NamedTuple):
+    """An agent that keeps every binary it updated to, and its launcher."""
+
+    name: str
+    versions: tuple[str, ...]
+    launcher: str
+
+
+AGENT_VERSIONS: tuple[AgentVersions, ...] = (
+    AgentVersions(
+        "Claude Versions",
+        ("{home}/.local/share/claude/versions", "{xdg_data}/claude/versions"),
+        "{home}/.local/bin/claude",
+    ),
+    AgentVersions(
+        "Cursor Agent Versions",
+        ("{home}/.local/share/cursor-agent/versions",),
+        "{home}/.local/bin/cursor-agent",
+    ),
+)
+
+
+def _running_executables() -> set[Path]:
+    found = set()
+    for proc in psutil.process_iter(["exe"]):
+        exe = proc.info.get("exe")
+        if exe:
+            found.add(Path(exe))
+    return found
+
+
+def stale_versions(
+    agent: AgentVersions, roots: Mapping[str, Path] | None = None
+) -> list[Path]:
+    """Installed versions other than the newest, the linked and the running."""
+    resolved = resolve_roots() if roots is None else roots
+    launchers = expand_paths((agent.launcher,), resolved)
+    linked = {path.resolve() for path in launchers if path.exists()}
+    in_use = linked | _running_executables()
+    stale: list[Path] = []
+
+    for directory in dict.fromkeys(expand_paths(agent.versions, resolved)):
+        try:
+            versions = sorted(directory.iterdir(), key=lambda p: p.stat().st_mtime)
+        except OSError:
+            continue
+        stale.extend(
+            path
+            for path in versions[:-1]
+            if path.resolve() not in in_use
+            and not any(exe.is_relative_to(path.resolve()) for exe in in_use)
+        )
+
+    return stale

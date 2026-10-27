@@ -22,6 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clean view** - Scan, tick targets with `space` (`a` for all), dry run with `d`, clean with `c` after a confirmation
 - **Browser session cleanup** - `sot clean` removes the old session snapshots Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc, Firefox, LibreWolf and Zen leave in every profile, keeping the newest so your tabs still come back
   - `sot clean --force`, or `f` in the Clean view, removes the newest ones too
+- **More to clean** - `sot clean` now finds:
+  - Copies of Chrome-based browsers leaked under `/var/folders`, often tens of GB, keeping the ones a running browser holds open
+  - `~/.cache` on macOS, `$TMPDIR`, and Metal shader, clang and app helper caches
+  - GPU, shader, code and on-device AI model caches of every browser, and free space in browser databases
+  - Caches of Electron apps such as Slack, Discord, VS Code, Cursor and Claude
+  - Go, pnpm, uv, Bun, Yarn, Cargo, Gradle, Android and Composer caches; Homebrew, Go, pnpm and uv are cleaned by their own command
+  - Xcode DerivedData, simulator caches, simulators for removed runtimes and old device support files
+  - Old Claude Code and Cursor agent binaries, and Codex caches
+  - The systemd journal, disabled snap revisions, core dumps and Trash on Linux
+  - Crash dumps, shader caches, thumbnails and downloaded updates on Windows
+- **Review table** - Models, VM disks, simulators, toolchains and backups are measured and shown but never deleted
+- **`sot clean --privacy`** - Adds browser cookies, history and site data, and recent items; `p` in the Clean view
+- **`sot clean --projects DIR`** - Adds `node_modules`, `target`, `.venv` and other build output in projects idle for 14 days; `--force` includes active ones
 - **System view** - What `sot info` prints, as panels, with uptime, memory and battery kept live
 - **Config file** - `~/.config/sot/config.toml` sets the theme, default view, `--net`/`--disk` defaults, refresh rates and key bindings; `sot --config-path` shows the path, `sot --keys` lists every binding id
   - A theme picked with `Ctrl+P` is remembered for the next start
@@ -43,6 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - On macOS without `sudo` it lists your own processes' sockets instead of an "access denied" lock, and says so in the panel
 
 ### Fixed
+- **`sot clean` counted caches twice** - `~/Library/Caches` and `~/.cache` included the Homebrew, pip and browser caches listed on their own rows; each byte is now counted and removed once, and unticking a row leaves it alone
+- **`sot clean` removed live data** - Fonts, Spotlight and iCloud state, Poetry virtualenvs and Playwright browsers inside the cache folders are now kept
+- **`sudo sot clean` emptied `/tmp` and `/var/log`** - Only files older than a few days go now, and folders stay, so running programs keep their sockets and services their log directories
+- **`sot clean` missed most Chrome profiles on Windows** - Every profile's cache is cleaned, not just `Default`
 - Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval
 - Volume picker for `--disk` now lists every mountpoint on Linux, where there are no `/Volumes/*` mounts
 

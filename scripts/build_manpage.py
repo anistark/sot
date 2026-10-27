@@ -40,7 +40,8 @@ def build_manpage():
         "  bench  - Bench view; --disk or --output run it without the TUI\n"
         "  disk   - Disks view; --list prints a table\n"
         "  clean  - Clean view; --dry-run prints what would be cleaned, --force adds\n"
-        "           in-use browser sessions\n"
+        "           data still in use, --privacy cookies and history, --projects\n"
+        "           build output of idle projects\n"
         "  ps     - Processes view with listening ports and dev environments"
     )
     manpage.project = "sot"  # type: ignore[attr-defined]
@@ -94,7 +95,13 @@ Preview what would be cleaned without deleting
 Open the Clean view: pick targets, then c to clean after confirming
 .TP
 .B sot clean --force
-Also clean the browser sessions that restore open tabs
+Also clean data still in use, like the browser sessions that restore open tabs
+.TP
+.B sot clean --privacy
+Also clear browser cookies, history and site data, and recent items
+.TP
+.B sot clean --projects ~/code
+Also clear build output and dependencies of projects idle for 14 days
 .TP
 .B sot ps
 Open the Processes view with ports and dev environments
@@ -142,17 +149,21 @@ JSON export for results
 
 .SS System Cleaning (sot clean)
 .IP \\(bu 2
-Clean system caches (user, system, font caches)
+Clean user, browser, Electron app and developer tool caches
 .IP \\(bu 2
-Remove temporary files
+Remove old temp files and logs, crash reports and leaked browser clones
 .IP \\(bu 2
-Clear application logs and crash reports
+Clean Go, pnpm, uv and Homebrew with their own commands
 .IP \\(bu 2
 Remove old browser session snapshots; --force removes the current ones too
 .IP \\(bu 2
-Dry-run mode to preview changes
+Report models, VM disks, toolchains and backups without deleting them
 .IP \\(bu 2
-macOS-specific cleaning (Xcode, Homebrew, etc.)
+Clear cookies, history and site data with --privacy
+.IP \\(bu 2
+Clear build output of idle projects with --projects
+.IP \\(bu 2
+Dry-run mode to preview changes
 
 .SS Process Viewer (sot ps)
 .IP \\(bu 2
@@ -261,7 +272,10 @@ Select all cleanable targets, or none
 Toggle dry run
 .TP
 .B f
-Toggle force: include the browser sessions that restore open tabs, and scan again
+Toggle force: include data still in use, like the browser sessions that restore open tabs, and scan again
+.TP
+.B p
+Toggle privacy: include cookies, history and site data, and scan again
 .TP
 .B c
 Clean the selected targets after confirming

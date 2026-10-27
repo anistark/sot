@@ -417,46 +417,59 @@ sot clean
 # Dry run - print what would be cleaned without deleting
 sot clean --dry-run
 
-# Also clean the browser sessions that restore your open tabs
+# Also clean data still in use, like the browser sessions that restore your open tabs
 sot clean --force
+
+# Also clear browser cookies, history and site data, and recent items
+sot clean --privacy
+
+# Also clear build output and dependencies of projects under a folder
+sot clean --projects ~/code
 ```
 
 ### What Gets Cleaned
 
-The clean command intelligently detects your operating system and cleans platform-specific locations:
+The clean command detects your operating system and lists only what exists on your machine. A folder that holds another target's folder leaves it to that row, so every byte is counted and removed once.
+
+**Everywhere:**
+- Browser caches for Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc, Firefox, LibreWolf and Zen, including GPU, shader, code and on-device AI model caches
+- Free space inside browser databases, given back with `VACUUM` (quit the browser first)
+- Old browser session snapshots
+- Electron and other Chromium-based app caches (Slack, Discord, VS Code, Cursor, Claude, Obsidian…), found by their `Code Cache` or `GPUCache` folder
+- Developer tool caches: Homebrew, Go, pnpm, uv, Bun, Yarn, Cargo, Gradle, Android, Composer, pip, npm. Homebrew, Go, pnpm and uv are cleaned by their own command when installed
+- Coding agent caches (Claude Code, Codex, pi, opencode, Kilo Code) and old Claude Code and Cursor agent binaries that nothing runs
 
 **macOS:**
-- Application caches (`~/Library/Caches`)
-- Application logs (`~/Library/Logs`)
-- Homebrew package cache
-- System temporary files (`/tmp`)
-- Browser caches (Chrome, Safari, Firefox)
-- Old browser session snapshots
-- Python pip cache
-- npm cache
-- Trash bin
-- Coding agent caches (Claude Code, pi, opencode, Kilo Code)
+- Application caches (`~/Library/Caches`) and command line tool caches (`~/.cache`), keeping fonts, Spotlight, iCloud, Poetry virtualenvs, Playwright and Puppeteer browsers, JetBrains and LM Studio
+- Application logs (`~/Library/Logs`), and with sudo system logs over 7 days old and crash reports over 30 days old
+- Temp files over 3 days old (`$TMPDIR`, and `/tmp` with sudo)
+- Metal shader, clang module and app helper caches under `/var/folders`
+- Copies of Chrome-based browsers leaked under `/var/folders/*/X/*.code_sign_clone`, often tens of GB. The ones a running browser holds open are kept unless you pass `--force`
+- Xcode DerivedData, simulator caches, simulators for removed runtimes (`xcrun simctl delete unavailable`) and device support files beyond the newest two per platform
+- Mail downloads and Messages previews
+- Leftover macOS installer payload, Safari cache and Trash
 
 **Linux:**
-- User cache (`~/.cache`)
-- Thumbnails cache
-- System temporary files (`/tmp`, `/var/tmp`)
-- Package manager caches (APT, DNF, Yum)
-- Browser caches
-- Old browser session snapshots
-- Python pip cache
-- npm cache
-- Coding agent caches (Claude Code, pi, opencode, Kilo Code)
+- User cache (`~/.cache`) with the same exceptions, and thumbnails
+- Temp files (`/tmp` over 3 days, `/var/tmp` over 7), system logs over 7 days, the systemd journal (`journalctl --vacuum-time=7d`), disabled snap revisions and core dumps, with sudo
+- Package manager caches (APT, DNF, Yum) and Trash
 
 **Windows:**
-- User temporary files (`%TEMP%`)
-- Windows temporary files
-- Prefetch files
-- Browser caches
-- Old browser session snapshots
-- Python pip cache
-- npm cache
-- Coding agent caches (Claude Code, pi, opencode, Kilo Code)
+- Temp files over 3 days old (`%TEMP%`, and `C:\Windows\Temp` as administrator)
+- Crash dumps and error reports, DirectX and GPU driver shader caches, Explorer thumbnails
+- As administrator: Prefetch, system crash dumps, downloaded Windows updates and the Delivery Optimization cache
+
+### Review Only
+
+Some stores are big but expensive to get back or hold real work. They're measured and shown in their own table, and never deleted: Docker, OrbStack and Colima VM disks, iOS Simulator devices, Xcode archives, iOS backups, Claude desktop VM images, Ollama, LM Studio and Hugging Face models, the Maven repository, Android emulators, rustup toolchains, Node versions (nvm, fnm, Volta), Python versions (pyenv, uv) and `Windows.old`.
+
+### Privacy
+
+`sot clean --privacy` (or `p` in the Clean view) adds rows per browser for cookies, history and site data (IndexedDB, local storage, service workers), plus recent items lists and macOS window state over 30 days old. Clearing cookies signs you out of every site. Quit the browser first, or it writes them straight back. Firefox keeps history and bookmarks in one database, so its history is left alone.
+
+### Projects
+
+`sot clean --projects DIR` searches `DIR` for build output and dependencies: `node_modules`, `.next`, `target`, `.venv`, `__pycache__`, `Pods`, `.build`, Gradle `build` and more. A folder only counts when the file that rebuilds it sits beside it (`target` next to `Cargo.toml`, `node_modules` next to `package.json`), so a folder that happens to be called `target` is left alone. Projects touched in the last 14 days are skipped unless you add `--force`.
 
 ### Browser Sessions
 
@@ -480,9 +493,10 @@ Agents are only listed when they're actually installed, so the table stays limit
 | Claude Code | `~/.claude/{cache,paste-cache,debug,shell-snapshots,session-env,statsig}`, `~/.cache/claude`, `~/Library/Caches/claude-cli-nodejs` |
 | pi | `~/.pi/{cache,logs}`, `~/.cache/pi` |
 | opencode | `~/.cache/opencode`, `~/.local/share/opencode/{cache,log}` |
+| Codex | `~/.codex/{.tmp,log}`, `~/.cache/codex-runtimes` |
 | Kilo Code | `~/.kilocode/cache`, plus `kilocode.kilo-code/{cache,checkpoints}` under the VS Code, Cursor and VSCodium global storage directories |
 
-Notably left alone: `~/.claude/projects` (session transcripts that `claude --resume` reads) and `~/.local/share/claude/versions` (the installed binaries).
+Notably left alone: `~/.claude/projects` (session transcripts that `claude --resume` reads) and `~/.gemini/tmp` (gemini-cli checkpoints and history). From `~/.local/share/claude/versions` only binaries other than the newest, the one `~/.local/bin/claude` links to and any that are running are removed.
 
 If you've relocated a cache directory, `sot` picks it up from the environment rather than assuming the default. Exported variables are read from the shell you run `sot` in:
 
@@ -494,6 +508,8 @@ If you've relocated a cache directory, `sot` picks it up from the environment ra
 | `XDG_CONFIG_HOME` | `~/.config` |
 | `APPDATA` / `LOCALAPPDATA` | `~/AppData/Roaming`, `~/AppData/Local` |
 | `VSCODE_PORTABLE` | VS Code portable-mode user data (no default; paths are skipped when unset) |
+| `CARGO_HOME`, `RUSTUP_HOME`, `GOPATH`, `GOMODCACHE`, `GOCACHE`, `GRADLE_USER_HOME`, `NVM_DIR` | Their tools' default homes |
+| `UV_CACHE_DIR`, `BUN_INSTALL_CACHE_DIR`, `HF_HOME`, `OLLAMA_MODELS` | Their caches and model stores |
 
 Use `sot clean --dry-run` to confirm the resolved locations before deleting anything.
 
@@ -512,7 +528,11 @@ sudo sot clean
 ### Safety Features
 
 - **Dry run mode**: Preview what will be cleaned without making changes
-- **In-use data needs `--force`**: Browser sessions that restore open tabs are only removed when asked for
+- **In-use data needs `--force`**: Browser sessions that restore open tabs, browser clones still open, the newest device support files and active projects are only removed when asked for
+- **Age limits**: Temp folders and logs only lose files older than a few days, and keep every folder, so running programs keep their sockets and log directories
+- **Live data stays**: Fonts, Spotlight, iCloud state, virtualenvs and downloaded browsers inside the cache folders are never touched
+- **Review only**: Models, VM disks, toolchains and backups are reported, never deleted
+- **Symlinks aren't followed**: A link inside a cache is removed, never what it points to
 - **Interactive confirmation**: Always asks before deleting files (in the Clean view and the printed flow)
 - **Sudo-aware**: Targets that need root are skipped unless sot runs with sudo
 - **Clear reporting**: Shows exactly what will be cleaned and how much space will be freed

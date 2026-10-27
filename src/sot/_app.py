@@ -301,6 +301,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Also clean data still in use, like the browser sessions that restore open tabs",
     )
+    clean_parser.add_argument(
+        "--privacy",
+        action="store_true",
+        help="Also clear browser cookies, history and site data, and recent items",
+    )
+    clean_parser.add_argument(
+        "--projects",
+        nargs="?",
+        const=".",
+        metavar="DIR",
+        help="Also clear build output and dependencies of projects under DIR",
+    )
 
     # Add ps subcommand
     subparsers.add_parser(
@@ -424,6 +436,8 @@ def run(argv=None):  # noqa: C901
         keymap=config.keymap,
         bench_duration=getattr(args, "duration", 10.0),
         clean_force=getattr(args, "force", False),
+        clean_privacy=getattr(args, "privacy", False),
+        clean_projects=getattr(args, "projects", None),
     )
 
     if args.net:

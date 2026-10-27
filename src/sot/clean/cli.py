@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import bisect
 import os
 import platform
 import shutil
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable
 
 from rich.console import Console
 from rich.panel import Panel
@@ -15,18 +18,73 @@ from rich.table import Table
 from rich.text import Text
 
 from .._theme import theme
-from .agents import CODING_AGENTS, agent_paths, resolve_roots
-from .browsers import BROWSERS, browser_sessions
+from .agents import (
+    AGENT_VERSIONS,
+    CODING_AGENTS,
+    agent_paths,
+    expand_paths,
+    resolve_roots,
+    stale_versions,
+)
+from .apps import app_caches
+from .browsers import (
+    BROWSERS,
+    browser_caches,
+    browser_databases,
+    browser_privacy,
+    browser_sessions,
+    free_space,
+    vacuum,
+)
+from .devtools import DEV_CACHES, REVIEW
+from .projects import ACTIVE_DAYS, project_artifacts
+from .system import (
+    code_sign_clones,
+    darwin_targets,
+    darwin_user_dir,
+    device_support,
+    journal_target,
+    simulator_target,
+    snap_target,
+    system_targets,
+)
+from .targets import (
+    CleanTarget,
+    empty_path,
+    keep_exactly,
+    measure_target,
+    run,
+    target_paths,
+)
 
+__all__ = ["CleanTarget", "clean_command", "clean_target", "scan_target"]
 
-class CleanTarget(NamedTuple):
-    """Represents a cleaning target with metadata."""
+SCAN_WORKERS = 8
 
-    name: str
-    path: Path | list[Path]
-    description: str
-    requires_sudo: bool = False
-    recursive: bool = True
+# Live data under the cache folders that is costly or harmful to lose:
+# fonts, search and iCloud state, interpreters, downloaded browsers and models.
+CACHE_KEEP = (
+    "com.apple.FontRegistry*",
+    "com.apple.Spotlight*",
+    "Spotlight*",
+    "CloudKit*",
+    "com.apple.finder",
+    "kitty",
+    "pypoetry/virtualenvs",
+    "ms-playwright*",
+    "puppeteer",
+    "JetBrains*",
+    "com.jetbrains.toolbox*",
+    "lm-studio",
+    "tealdeer",
+    "org.R-project.R/R/renv",
+)
+
+PRIVACY_DESCRIPTIONS = {
+    "Cookies": "Signs you out of every site",
+    "History": "Browsing history and top sites",
+    "Site Data": "Site storage and offline data",
+}
 
 
 def _is_elevated() -> bool:
@@ -47,25 +105,6 @@ def _is_elevated() -> bool:
         return False
 
 
-def _get_size(path: Path) -> int:
-    """Calculate total size of a path (file or directory)."""
-    try:
-        if path.is_file():
-            return path.stat().st_size
-        elif path.is_dir():
-            total = 0
-            for entry in path.rglob("*"):
-                try:
-                    if entry.is_file():
-                        total += entry.stat().st_size
-                except (PermissionError, OSError):
-                    continue
-            return total
-    except (PermissionError, OSError, FileNotFoundError):
-        pass
-    return 0
-
-
 def _sizeof_fmt(num: int | float, suffix: str = "B") -> str:
     """Format bytes to human readable format."""
     for unit in ["", "K", "M", "G", "T"]:
@@ -73,6 +112,20 @@ def _sizeof_fmt(num: int | float, suffix: str = "B") -> str:
             return f"{num:3.1f}{unit}{suffix}"
         num /= 1024.0
     return f"{num:.1f}P{suffix}"
+
+
+def _unique(paths: list[Path]) -> list[Path]:
+    return list(dict.fromkeys(paths))
+
+
+def _cache_keep(root: Path) -> tuple[str, ...]:
+    return tuple(
+        keep_exactly(root) + os.sep + name.replace("/", os.sep) for name in CACHE_KEEP
+    )
+
+
+def _cache_dir(name: str, path: Path, description: str) -> CleanTarget:
+    return CleanTarget(name, path, description, keep=_cache_keep(path))
 
 
 def _get_coding_agent_targets() -> list[CleanTarget]:
@@ -94,6 +147,13 @@ def _get_coding_agent_targets() -> list[CleanTarget]:
                     path=found,
                     description=agent.description,
                 )
+            )
+
+    for versions in AGENT_VERSIONS:
+        stale = stale_versions(versions, roots)
+        if stale:
+            targets.append(
+                CleanTarget(versions.name, stale, "Old binaries nothing runs")
             )
 
     return targets
@@ -129,36 +189,138 @@ def _get_browser_session_targets(force: bool = False) -> list[CleanTarget]:
     return targets
 
 
-def _get_macos_targets(force: bool = False) -> list[CleanTarget]:
+def _get_browser_targets(privacy: bool = False) -> list[CleanTarget]:
+    """Caches and database free space of every browser, and with ``privacy``
+    its cookies, history and site data."""
+    roots = resolve_roots()
+    targets = []
+
+    for browser in BROWSERS:
+        caches = browser_caches(browser, roots)
+        if caches:
+            targets.append(
+                CleanTarget(
+                    f"{browser.name} Cache", caches, "Page, GPU, code and model caches"
+                )
+            )
+
+        databases = browser_databases(browser, roots)
+        if free_space(databases):
+            targets.append(
+                CleanTarget(
+                    f"{browser.name} Databases",
+                    databases,
+                    "Free space in its databases",
+                    action=partial(vacuum, databases),
+                    measure=partial(free_space, databases),
+                )
+            )
+
+        if privacy:
+            for kind, paths in browser_privacy(browser, roots).items():
+                targets.append(
+                    CleanTarget(
+                        f"{browser.name} {kind}", paths, PRIVACY_DESCRIPTIONS[kind]
+                    )
+                )
+
+    return targets
+
+
+def _get_app_targets() -> list[CleanTarget]:
+    return [
+        CleanTarget(f"{app.name} App Cache", app.paths, "Electron app caches and logs")
+        for app in app_caches(resolve_roots())
+    ]
+
+
+def _get_dev_targets(elevated: bool = False) -> list[CleanTarget]:
+    """Developer tool caches, cleaned by the tool itself when it's installed.
+
+    Under sudo the tools would clean root's caches, so the paths are deleted.
+    """
+    roots = resolve_roots()
+    targets = []
+
+    for cache in DEV_CACHES:
+        found = _unique([p for p in expand_paths(cache.paths, roots) if p.exists()])
+        if not found:
+            continue
+        action = None
+        if cache.command and not elevated and shutil.which(cache.command[0]):
+            action = partial(run, cache.command, env=cache.env)
+        targets.append(CleanTarget(cache.name, found, cache.description, action=action))
+
+    return targets
+
+
+def _get_review_targets() -> list[CleanTarget]:
+    roots = resolve_roots()
+    targets = []
+
+    for review in REVIEW:
+        found = _unique([p for p in expand_paths(review.paths, roots) if p.exists()])
+        if found:
+            targets.append(
+                CleanTarget(review.name, found, review.description, review=True)
+            )
+
+    return targets
+
+
+def _get_project_targets(root: Path, force: bool = False) -> list[CleanTarget]:
+    """Build output and dependencies in projects under ``root``."""
+    targets = []
+
+    for name, found in sorted(project_artifacts(root).items()):
+        paths = found.stale + found.current if force else found.stale
+        if paths:
+            when = "any project" if force else f"projects idle {ACTIVE_DAYS}+ days"
+            targets.append(CleanTarget(f"{name}/", paths, f"{len(paths)} in {when}"))
+
+    return targets
+
+
+def _get_common_targets(
+    force: bool = False, privacy: bool = False
+) -> list[CleanTarget]:
+    return [
+        *_get_browser_targets(privacy),
+        *_get_browser_session_targets(force),
+        *_get_app_targets(),
+        *_get_dev_targets(_is_elevated()),
+        *_get_coding_agent_targets(),
+        *system_targets(privacy, resolve_roots()),
+        *_get_review_targets(),
+    ]
+
+
+def _get_macos_targets(force: bool = False, privacy: bool = False) -> list[CleanTarget]:
     """Get cleaning targets for macOS."""
     home = Path.home()
     targets = [
-        CleanTarget(
-            name="User Caches",
-            path=home / "Library" / "Caches",
-            description="Application cache files",
+        _cache_dir(
+            "User Caches", home / "Library" / "Caches", "Application cache files"
         ),
+        _cache_dir("XDG Cache", home / ".cache", "Command line tool caches"),
         CleanTarget(
             name="User Logs",
             path=home / "Library" / "Logs",
             description="Application log files",
         ),
         CleanTarget(
-            name="Homebrew Cache",
-            path=home / "Library" / "Caches" / "Homebrew",
-            description="Homebrew package cache",
-        ),
-        CleanTarget(
             name="Temp Files",
             path=Path("/tmp"),
-            description="Temporary files",
+            description="Temp files over 3 days old",
             requires_sudo=True,
+            older_than=3,
         ),
         CleanTarget(
             name="System Logs",
             path=Path("/var/log"),
-            description="System log files",
+            description="System logs over 7 days old",
             requires_sudo=True,
+            older_than=7,
         ),
         # Leftover macOS update payload, routinely 10GB+. The data volume path
         # is the modern layout; the root one covers pre-Catalina installs.
@@ -191,45 +353,44 @@ def _get_macos_targets(force: bool = False) -> list[CleanTarget]:
             path=home / ".Trash",
             description="Trash bin contents",
         ),
-    ]
-
-    # Browser caches
-    browser_paths = [
-        (
-            "Chrome Cache",
-            home / "Library" / "Caches" / "Google" / "Chrome",
-            "Google Chrome cache",
-        ),
-        (
-            "Safari Cache",
-            home / "Library" / "Caches" / "com.apple.Safari",
-            "Safari browser cache",
-        ),
-        (
-            "Firefox Cache",
-            home / "Library" / "Caches" / "Firefox",
-            "Firefox browser cache",
+        CleanTarget(
+            name="Safari Cache",
+            path=home / "Library" / "Caches" / "com.apple.Safari",
+            description="Safari browser cache",
         ),
     ]
 
-    for name, path, desc in browser_paths:
-        targets.append(CleanTarget(name=name, path=path, description=desc))
+    darwin = darwin_user_dir()
+    if darwin:
+        targets.extend(darwin_targets(darwin))
+        clones = code_sign_clones(darwin)
+        paths = clones.stale + clones.current if force else clones.stale
+        if paths:
+            targets.append(
+                CleanTarget(
+                    "Browser Clones",
+                    paths,
+                    "Copies Chrome-based browsers leaked",
+                )
+            )
 
-    targets.extend(_get_browser_session_targets(force))
-    targets.extend(_get_coding_agent_targets())
+    symbols = device_support()
+    paths = symbols.stale + symbols.current if force else symbols.stale
+    if paths:
+        targets.append(
+            CleanTarget("Device Support", paths, "Old iOS symbols; keeps newest two")
+        )
+    targets.extend(simulator_target())
+    targets.extend(_get_common_targets(force, privacy))
 
     return targets
 
 
-def _get_linux_targets(force: bool = False) -> list[CleanTarget]:
+def _get_linux_targets(force: bool = False, privacy: bool = False) -> list[CleanTarget]:
     """Get cleaning targets for Linux."""
     home = Path.home()
     targets = [
-        CleanTarget(
-            name="User Cache",
-            path=home / ".cache",
-            description="User application cache",
-        ),
+        _cache_dir("User Cache", home / ".cache", "User application cache"),
         CleanTarget(
             name="Thumbnails",
             path=home / ".thumbnails",
@@ -238,14 +399,23 @@ def _get_linux_targets(force: bool = False) -> list[CleanTarget]:
         CleanTarget(
             name="Temp Files",
             path=Path("/tmp"),
-            description="Temporary files",
+            description="Temp files over 3 days old",
             requires_sudo=True,
+            older_than=3,
         ),
         CleanTarget(
             name="Var Temp",
             path=Path("/var/tmp"),
-            description="Variable temporary files",
+            description="Temp files over 7 days old",
             requires_sudo=True,
+            older_than=7,
+        ),
+        CleanTarget(
+            name="System Logs",
+            path=Path("/var/log"),
+            description="System logs over 7 days old",
+            requires_sudo=True,
+            older_than=7,
         ),
         CleanTarget(
             name="Python Cache",
@@ -287,30 +457,16 @@ def _get_linux_targets(force: bool = False) -> list[CleanTarget]:
                 CleanTarget(name=name, path=path, description=desc, requires_sudo=sudo)
             )
 
-    # Browser caches
-    browser_paths = [
-        (
-            "Chrome Cache",
-            home / ".cache" / "google-chrome",
-            "Google Chrome cache",
-        ),
-        (
-            "Firefox Cache",
-            home / ".cache" / "mozilla" / "firefox",
-            "Firefox browser cache",
-        ),
-    ]
-
-    for name, path, desc in browser_paths:
-        targets.append(CleanTarget(name=name, path=path, description=desc))
-
-    targets.extend(_get_browser_session_targets(force))
-    targets.extend(_get_coding_agent_targets())
+    targets.extend(journal_target())
+    targets.extend(snap_target())
+    targets.extend(_get_common_targets(force, privacy))
 
     return targets
 
 
-def _get_windows_targets(force: bool = False) -> list[CleanTarget]:
+def _get_windows_targets(
+    force: bool = False, privacy: bool = False
+) -> list[CleanTarget]:
     """Get cleaning targets for Windows."""
     home = Path.home()
     temp_env = os.environ.get("TEMP", "")
@@ -320,13 +476,15 @@ def _get_windows_targets(force: bool = False) -> list[CleanTarget]:
         CleanTarget(
             name="User Temp",
             path=temp_path,
-            description="User temporary files",
+            description="Temp files over 3 days old",
+            older_than=3,
         ),
         CleanTarget(
             name="Windows Temp",
             path=Path("C:/Windows/Temp"),
-            description="Windows temporary files",
+            description="Temp files over 3 days old",
             requires_sudo=True,
+            older_than=3,
         ),
         CleanTarget(
             name="Prefetch",
@@ -346,72 +504,109 @@ def _get_windows_targets(force: bool = False) -> list[CleanTarget]:
         ),
     ]
 
-    # Browser caches
-    browser_paths = [
-        (
-            "Chrome Cache",
-            home
-            / "AppData"
-            / "Local"
-            / "Google"
-            / "Chrome"
-            / "User Data"
-            / "Default"
-            / "Cache",
-            "Google Chrome cache",
-        ),
-        (
-            "Firefox Cache",
-            home / "AppData" / "Local" / "Mozilla" / "Firefox" / "Profiles",
-            "Firefox browser cache",
-        ),
-    ]
-
-    for name, path, desc in browser_paths:
-        targets.append(CleanTarget(name=name, path=path, description=desc))
-
-    targets.extend(_get_browser_session_targets(force))
-    targets.extend(_get_coding_agent_targets())
+    targets.extend(_get_common_targets(force, privacy))
 
     return targets
 
 
-def _get_targets(force: bool = False) -> list[CleanTarget]:
+def _separate(targets: list[CleanTarget]) -> list[CleanTarget]:
+    """Keep a path another target covers out of every target holding it.
+
+    ``~/Library/Caches`` holds the Homebrew and browser caches listed on
+    their own rows, so it skips them: each byte is counted and removed once,
+    and unticking a row really leaves it alone.
+    """
+    owned = sorted(
+        (str(path), index)
+        for index, target in enumerate(targets)
+        for path in target_paths(target)
+    )
+    names = [name for name, _ in owned]
+    separated = []
+
+    for index, target in enumerate(targets):
+        nested = []
+        for path in target_paths(target):
+            prefix = str(path).rstrip(os.sep) + os.sep
+            start = bisect.bisect_left(names, prefix)
+            for name, owner in owned[start:]:
+                if not name.startswith(prefix):
+                    break
+                if owner != index:
+                    nested.append(keep_exactly(Path(name)))
+        separated.append(
+            target._replace(keep=target.keep + tuple(nested)) if nested else target
+        )
+
+    return separated
+
+
+def _unique_names(targets: list[CleanTarget]) -> list[CleanTarget]:
+    seen: dict[str, int] = {}
+    named = []
+    for target in targets:
+        count = seen[target.name] = seen.get(target.name, 0) + 1
+        named.append(
+            target if count == 1 else target._replace(name=f"{target.name} ({count})")
+        )
+    return named
+
+
+def _get_targets(
+    force: bool = False, privacy: bool = False, projects: Path | None = None
+) -> list[CleanTarget]:
     """Get cleaning targets based on current OS.
 
     ``force`` also includes data still in use, like the browser sessions
-    that restore open tabs.
+    that restore open tabs. ``privacy`` adds cookies, history and site data,
+    ``projects`` the build output of the projects under that folder.
     """
     system = platform.system()
 
     if system == "Darwin":
-        return _get_macos_targets(force)
+        targets = _get_macos_targets(force, privacy)
     elif system == "Linux":
-        return _get_linux_targets(force)
+        targets = _get_linux_targets(force, privacy)
     elif system == "Windows":
-        return _get_windows_targets(force)
+        targets = _get_windows_targets(force, privacy)
     else:
         return []
 
+    if projects is not None:
+        targets.extend(_get_project_targets(projects, force))
 
-def target_paths(target: CleanTarget) -> list[Path]:
-    return target.path if isinstance(target.path, list) else [target.path]
+    return _unique_names(_separate(targets))
 
 
 def scan_target(target: CleanTarget) -> dict:
     """Whether a target exists and how much it holds."""
-    paths = [path for path in target_paths(target) if path.exists()]
+    exists = any(os.path.lexists(path) for path in target_paths(target))
     return {
         "target": target,
-        "size": sum(_get_size(path) for path in paths),
-        "exists": bool(paths),
+        "size": measure_target(target) if exists else 0,
+        "exists": exists,
     }
+
+
+def scan_targets(
+    targets: list[CleanTarget],
+    scanned: Callable[[CleanTarget], None] | None = None,
+) -> dict[str, dict]:
+    """Scan targets in parallel, keyed by name in their original order.
+
+    Package stores hold millions of files and the walk is spent waiting on
+    the kernel, so threads overlap well. ``scanned`` hears of each one done.
+    """
+    with ThreadPoolExecutor(max_workers=SCAN_WORKERS) as pool:
+        futures = {pool.submit(scan_target, target): target for target in targets}
+        for future in as_completed(futures):
+            if scanned is not None:
+                scanned(futures[future])
+    return {target.name: future.result() for future, target in futures.items()}
 
 
 def _scan_targets(targets: list[CleanTarget], console: Console) -> dict:
     """Scan targets and calculate sizes."""
-    results = {}
-
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -420,61 +615,36 @@ def _scan_targets(targets: list[CleanTarget], console: Console) -> dict:
     ) as progress:
         task = progress.add_task("Scanning...", total=len(targets))
 
-        for target in targets:
-            progress.update(task, description=f"Scanning {target.name}...")
-            results[target.name] = scan_target(target)
+        def scanned(target: CleanTarget) -> None:
+            progress.update(task, description=f"Scanned {target.name}...")
             progress.advance(task)
 
-    return results
+        return scan_targets(targets, scanned)
 
 
-def clean_path_quietly(path: Path) -> tuple[int, list[str]]:
-    """Empty a path; returns bytes freed and a warning per item that failed."""
-    if not path.exists():
-        return 0, []
+def clean_target(
+    target: CleanTarget, elevated: bool, size: int | None = None
+) -> tuple[int, list[str]]:
+    """Clean every path of a target; sudo-only targets need ``elevated``.
 
-    size = _get_size(path)
-    warnings = []
-    try:
-        if path.is_file():
-            path.unlink()
-        elif path.is_dir():
-            # Remove contents but keep the directory
-            for item in path.iterdir():
-                try:
-                    if item.is_file():
-                        item.unlink()
-                    elif item.is_dir():
-                        shutil.rmtree(item)
-                except (PermissionError, OSError) as e:
-                    warnings.append(f"Skipped {item.name}: {e}")
-        return size, warnings
-    except (PermissionError, OSError) as e:
-        return 0, [f"Failed to clean {path.name}: {e}"]
-
-
-def _clean_path(path: Path, console: Console) -> int:
-    """Clean a single path and return bytes freed."""
-    freed, warnings = clean_path_quietly(path)
-    c = theme().colors
-    for warning in warnings:
-        marker = (
-            f"[{c.danger}]✗[/]" if warning.startswith("Failed") else f"[{c.warn}]⚠[/] "
-        )
-        console.print(f"  {marker} {warning}")
-    return freed
-
-
-def clean_target(target: CleanTarget, elevated: bool) -> tuple[int, list[str]]:
-    """Clean every path of a target; sudo-only targets need ``elevated``."""
+    Returns the bytes freed, measured again afterwards against ``size`` from
+    the scan, and the warnings.
+    """
+    if target.review:
+        return 0, [f"Skipping {target.name} (review only)"]
     if target.requires_sudo and not elevated:
         return 0, [f"Skipping {target.name} (requires sudo)"]
-    freed, warnings = 0, []
-    for path in target_paths(target):
-        path_freed, path_warnings = clean_path_quietly(path)
-        freed += path_freed
-        warnings.extend(path_warnings)
-    return freed, warnings
+
+    before = measure_target(target) if size is None else size
+    if target.action is not None:
+        warnings = target.action()
+    else:
+        warnings = [
+            warning
+            for path in target_paths(target)
+            for warning in empty_path(path, target.keep, target.older_than)
+        ]
+    return max(before - measure_target(target), 0), warnings
 
 
 def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
@@ -483,8 +653,13 @@ def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
     Targets flagged ``requires_sudo`` are only attempted when running with
     the privileges to do so; otherwise they are reported and left alone.
     """
+    c = theme().colors
     total_freed = 0
-    targets_to_clean = [r for r in results.values() if r["exists"] and r["size"] > 0]
+    targets_to_clean = [
+        r
+        for r in results.values()
+        if r["exists"] and r["size"] > 0 and not r["target"].review
+    ]
 
     with Progress(
         SpinnerColumn(),
@@ -495,20 +670,56 @@ def _clean_targets(results: dict, console: Console, elevated: bool) -> int:
 
         for result in targets_to_clean:
             target = result["target"]
-
-            if target.requires_sudo and not elevated:
-                console.print(
-                    f"  [{theme().colors.warn}]⚠[/]  Skipping {target.name} (requires sudo)"
-                )
-                progress.advance(task)
-                continue
-
             progress.update(task, description=f"Cleaning {target.name}...")
-            for path in target_paths(target):
-                total_freed += _clean_path(path, console)
+            freed, warnings = clean_target(target, elevated, result["size"])
+            total_freed += freed
+            for warning in warnings:
+                failed = warning.startswith("Failed")
+                marker = f"[{c.danger}]✗[/]" if failed else f"[{c.warn}]⚠[/] "
+                console.print(f"  {marker} {warning}")
             progress.advance(task)
 
     return total_freed
+
+
+def _print_options(args, console: Console) -> tuple[bool, bool, Path | None]:
+    """Announce the flags widening the scan; returns ``_get_targets`` args."""
+    c = theme().colors
+    force = getattr(args, "force", False)
+    if force:
+        console.print(f"💪 Forced: [{c.warn}]data still in use included[/]")
+    privacy = getattr(args, "privacy", False)
+    if privacy:
+        console.print(
+            f"🍪 Privacy: [{c.warn}]cookies, history and site data included[/]"
+        )
+    projects = getattr(args, "projects", None)
+    if projects:
+        projects = Path(projects).expanduser().resolve()
+        console.print(f"📁 Projects: [{c.ok}]{projects}[/]")
+    console.print()
+    return force, privacy, projects
+
+
+def _print_review(review: list[dict], console: Console) -> None:
+    if not review:
+        return
+    t = theme()
+    c = t.colors
+    table = Table(
+        title="Review (never cleaned)",
+        show_header=True,
+        header_style=f"bold {c.accent}",
+        box=t.design.app_box,
+    )
+    table.add_column("Target", style=c.text, width=20)
+    table.add_column("Size", justify="right", width=12)
+    table.add_column("Description", style=c.muted, width=40)
+    for result in review:
+        target = result["target"]
+        table.add_row(target.name, _sizeof_fmt(result["size"]), target.description)
+    console.print(table)
+    console.print()
 
 
 def clean_command(args) -> int:
@@ -537,13 +748,7 @@ def clean_command(args) -> int:
     elevated = _is_elevated()
     if elevated:
         console.print(f"🔑 Running elevated: [{c.ok}]sudo targets included[/]")
-    force = getattr(args, "force", False)
-    if force:
-        console.print(f"💪 Forced: [{c.warn}]current browser sessions included[/]")
-    console.print()
-
-    # Get targets
-    targets = _get_targets(force)
+    targets = _get_targets(*_print_options(args, console))
 
     if not targets:
         console.print(f"[{c.danger}]No cleaning targets available for this OS[/]")
@@ -570,10 +775,14 @@ def clean_command(args) -> int:
     sudo_size = 0
     cleanable_count = 0
 
+    review = [r for r in results.values() if r["target"].review and r["size"] > 0]
+
     for result in results.values():
         target = result["target"]
         size = result["size"]
         exists = result["exists"]
+        if target.review:
+            continue
 
         if exists and size > 0:
             status = f"[{c.ok}]✓[/]"
@@ -603,6 +812,7 @@ def clean_command(args) -> int:
     console.print()
     console.print(table)
     console.print()
+    _print_review(review, console)
 
     # Summary
     if cleanable_count == 0:

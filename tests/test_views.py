@@ -1,7 +1,9 @@
 import asyncio
 import time
+from pathlib import Path
 
 import fake_system
+
 import pytest
 
 from sot import _config, _theme
@@ -40,7 +42,7 @@ def test_number_keys_reach_the_new_views(monkeypatch):
     monkeypatch.setattr(
         "sot.tui.views.system.collect_system_info", lambda: [("System", [])]
     )
-    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda force=False: [])
+    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda *_: [])
 
     async def scenario(app, pilot):
         for key, mode in (("4", "system"), ("5", "bench"), ("6", "clean")):
@@ -125,9 +127,7 @@ def cache(monkeypatch, tmp_path):
     folder.mkdir()
     (folder / "blob").write_bytes(b"x" * 2048)
     target = CleanTarget("Test Cache", folder, "test files")
-    monkeypatch.setattr(
-        "sot.tui.views.clean._get_targets", lambda force=False: [target]
-    )
+    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda *_: [target])
     return folder
 
 
@@ -163,7 +163,7 @@ def test_clean_force_rescans_with_current_sessions(monkeypatch, tmp_path):
     target = CleanTarget("Chrome Sessions", folder, "test sessions")
     calls = []
 
-    def targets(force=False):
+    def targets(force=False, privacy=False, projects=None):
         calls.append(force)
         return [target] if force else []
 
@@ -184,13 +184,45 @@ def test_clean_view_starts_forced_from_the_flag(monkeypatch):
     calls = []
     monkeypatch.setattr(
         "sot.tui.views.clean._get_targets",
-        lambda force=False: calls.append(force) or [],
+        lambda *args: calls.append(args) or [],
     )
 
     async def scenario(app, pilot):
-        await wait_for(pilot, lambda: calls == [True])
+        await wait_for(pilot, lambda: calls == [(True, False, None)])
 
     run_app(SotApp(start_mode="clean", clean_force=True), scenario)
+
+
+def test_clean_privacy_rescans_with_cookies_and_history(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "sot.tui.views.clean._get_targets",
+        lambda *args: calls.append(args) or [],
+    )
+
+    async def scenario(app, pilot):
+        screen = app.screen
+        await wait_for(pilot, lambda: len(calls) == 1 and not screen.busy)
+        await pilot.press("p")
+        await wait_for(pilot, lambda: len(calls) == 2)
+        assert calls[-1] == (False, True, Path("/tmp/work").resolve())
+
+    run_app(SotApp(start_mode="clean", clean_projects="/tmp/work"), scenario)
+
+
+def test_review_targets_cannot_be_picked(monkeypatch, tmp_path):
+    (tmp_path / "model.bin").write_bytes(b"x" * 2048)
+    target = CleanTarget("Ollama Models", tmp_path, "models", review=True)
+    monkeypatch.setattr("sot.tui.views.clean._get_targets", lambda *_: [target])
+
+    async def scenario(app, pilot):
+        screen = app.screen
+        await wait_for(pilot, lambda: "Ollama Models" in screen.results)
+        screen.toggle_all()
+        screen.toggle("Ollama Models")
+        assert screen.selected == set()
+
+    run_app(SotApp(start_mode="clean"), scenario)
 
 
 def test_disk_picker_sets_the_monitored_disk(monkeypatch):

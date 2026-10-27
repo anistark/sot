@@ -177,3 +177,64 @@ def test_browsers_without_sessions_are_left_out(monkeypatch, tmp_path):
     # The one remaining snapshot is current, so only --force has anything.
     assert cli._get_browser_session_targets() == []
     assert len(cli._get_browser_session_targets(force=True)) == 1
+
+
+def test_caches_include_profile_gpu_and_model_caches(tmp_path):
+    chrome = tmp_path / "google-chrome"
+    _touch(chrome / "Default" / "Preferences")
+    _touch(chrome / "Default" / "GPUCache" / "data_0")
+    _touch(chrome / "Default" / "Cookies")
+    _touch(chrome / "OptGuideOnDeviceModel" / "weights.bin")
+    _touch(tmp_path / "cache" / "google-chrome" / "Default" / "Cache" / "f_0")
+    roots = {"xdg_config": tmp_path, "xdg_cache": tmp_path / "cache"}
+    browser = next(b for b in browsers.BROWSERS if b.name == "Chrome")
+
+    found = browsers.browser_caches(browser, roots)
+
+    assert set(found) == {
+        tmp_path / "cache" / "google-chrome",
+        chrome / "OptGuideOnDeviceModel",
+        chrome / "Default" / "GPUCache",
+    }
+
+
+def test_privacy_data_is_grouped_by_kind(tmp_path):
+    profile = tmp_path / "google-chrome" / "Profile 1"
+    _touch(profile / "Preferences")
+    _touch(profile / "Network" / "Cookies")
+    _touch(profile / "History")
+    _touch(profile / "IndexedDB" / "site.leveldb")
+    # A directory without Preferences isn't a profile.
+    _touch(tmp_path / "google-chrome" / "Crashpad" / "History")
+    browser = next(b for b in browsers.BROWSERS if b.name == "Chrome")
+
+    found = browsers.browser_privacy(browser, {"xdg_config": tmp_path})
+
+    assert found == {
+        "Cookies": [profile / "Network" / "Cookies"],
+        "History": [profile / "History"],
+        "Site Data": [profile / "IndexedDB"],
+    }
+
+
+def test_vacuum_gives_back_the_free_pages(tmp_path):
+    import sqlite3
+
+    db = tmp_path / "History"
+    with sqlite3.connect(db) as conn:
+        conn.execute("CREATE TABLE urls (url TEXT)")
+        conn.executemany("INSERT INTO urls VALUES (?)", [("x" * 500,)] * 2000)
+    with sqlite3.connect(db) as conn:
+        conn.execute("DELETE FROM urls")
+    conn.close()
+    before = db.stat().st_size
+
+    assert browsers.free_space([db]) > before // 2
+    assert browsers.vacuum([db]) == []
+    assert browsers.free_space([db]) == 0
+    assert db.stat().st_size < before
+
+
+def test_free_space_ignores_files_that_are_not_databases(tmp_path):
+    assert browsers.free_space([_touch(tmp_path / "Cookies", 200)]) == 0
+    assert browsers.free_space([tmp_path / "missing"]) == 0
