@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
@@ -10,7 +12,7 @@ from textual.containers import Horizontal
 
 from ..._helpers import sizeof_fmt
 from ..._theme import theme
-from ...clean.cli import _get_targets, _is_elevated, clean_target, scan_target
+from ...clean.cli import _get_targets, _is_elevated, clean_target, scan_targets
 from ...widgets.base_widget import BaseWidget
 from ...widgets.confirmation_modal import ConfirmModal
 from .. import keymap
@@ -25,6 +27,7 @@ class TargetTable(SotTable):
         Binding("a", "toggle_all", "All/none", id="sot.clean.all"),
         Binding("d", "dry_run", "Dry run", id="sot.clean.dry_run"),
         Binding("f", "force", "Force", id="sot.clean.force"),
+        Binding("p", "privacy", "Privacy", id="sot.clean.privacy"),
         Binding("c", "clean", "Clean", id="sot.clean.run"),
         Binding("r", "rescan", "Rescan", id="sot.clean.rescan"),
     ]
@@ -60,6 +63,10 @@ class TargetTable(SotTable):
                 continue
             target, size = result["target"], result["size"]
             picked = name in view.selected
+            if target.review:
+                pick = cell("·", c.muted)
+            else:
+                pick = cell("✓" if picked else "○", c.ok if picked else c.muted)
             if not result["exists"]:
                 size_cell = cell("n/a", c.muted, "right")
             elif size == 0:
@@ -70,7 +77,7 @@ class TargetTable(SotTable):
                 (
                     name,
                     (
-                        cell("✓" if picked else "○", c.ok if picked else c.muted),
+                        pick,
                         cell(name, c.text),
                         size_cell,
                         cell("✓" if target.requires_sudo else "-", c.warn),
@@ -94,6 +101,11 @@ class TargetTable(SotTable):
 
     def action_force(self) -> None:
         self.view.force = not self.view.force
+        self.view.report = ""
+        self.view.scan()
+
+    def action_privacy(self) -> None:
+        self.view.privacy = not self.view.privacy
         self.view.report = ""
         self.view.scan()
 
@@ -131,7 +143,13 @@ class CleanSummary(BaseWidget):
             text.append("clean\n", style=c.text)
         if view.force:
             text.append("Forced    ", style=c.label)
-            text.append("current browser sessions included\n", style=c.warn)
+            text.append("data still in use included\n", style=c.warn)
+        if view.privacy:
+            text.append("Privacy   ", style=c.label)
+            text.append("cookies, history and site data\n", style=c.warn)
+        if view.projects:
+            text.append("Projects  ", style=c.label)
+            text.append(f"{view.projects}\n", style=c.text)
         if not view.elevated:
             text.append("\nsudo targets are skipped; run with sudo to include them\n")
         if view.report:
@@ -139,7 +157,8 @@ class CleanSummary(BaseWidget):
         for warning in view.warnings[-5:]:
             text.append(f"⚠ {warning}\n", style=c.warn)
         text.append(
-            "\nspace toggle · a all · d dry run · f force · c clean", style=c.muted
+            "\nspace toggle · a all · d dry run · f force · p privacy · c clean",
+            style=c.muted,
         )
         self.update_panel_content(text)
 
@@ -159,6 +178,8 @@ class CleanScreen(SotScreen):
         self.selected: set[str] = set()
         self.dry_run = False
         self.force = False
+        self.privacy = False
+        self.projects: Path | None = None
         self.elevated = _is_elevated()
         self.busy = ""
         self.report = ""
@@ -171,6 +192,9 @@ class CleanScreen(SotScreen):
 
     def on_mount(self) -> None:
         self.force = getattr(self.app, "clean_force", False)
+        self.privacy = getattr(self.app, "clean_privacy", False)
+        projects = getattr(self.app, "clean_projects", None)
+        self.projects = Path(projects).expanduser().resolve() if projects else None
         self.query_one("#target-table").focus()
         if not self.results:
             self.scan()
@@ -185,6 +209,8 @@ class CleanScreen(SotScreen):
 
     def _cleanable(self, name: str) -> bool:
         result = self.results[name]
+        if result["target"].review:
+            return False
         sudo_ok = self.elevated or not result["target"].requires_sudo
         return result["exists"] and result["size"] > 0 and sudo_ok
 
@@ -205,10 +231,8 @@ class CleanScreen(SotScreen):
     @work(thread=True, exclusive=True, group="clean")
     def scan(self) -> None:
         self.app.call_from_thread(self._set_busy, "Scanning")
-        results = {}
-        for target in _get_targets(self.force):
-            results[target.name] = scan_target(target)
-        self.app.call_from_thread(self._scanned, results)
+        targets = _get_targets(self.force, self.privacy, self.projects)
+        self.app.call_from_thread(self._scanned, scan_targets(targets))
 
     def _set_busy(self, busy: str) -> None:
         self.busy = busy
@@ -231,7 +255,7 @@ class CleanScreen(SotScreen):
 
         def confirmed(ok: bool | None) -> None:
             if ok:
-                self._clean([self.results[n]["target"] for n in sorted(self.selected)])
+                self._clean([self.results[n] for n in sorted(self.selected)])
 
         self.app.push_screen(
             ConfirmModal(
@@ -243,11 +267,14 @@ class CleanScreen(SotScreen):
         )
 
     @work(thread=True, exclusive=True, group="clean")
-    def _clean(self, targets: list) -> None:
+    def _clean(self, results: list[dict]) -> None:
         freed, warnings = 0, []
-        for target in targets:
+        for result in results:
+            target = result["target"]
             self.app.call_from_thread(self._set_busy, f"Cleaning {target.name}")
-            target_freed, target_warnings = clean_target(target, self.elevated)
+            target_freed, target_warnings = clean_target(
+                target, self.elevated, result["size"]
+            )
             freed += target_freed
             warnings.extend(target_warnings)
         self.app.call_from_thread(self._cleaned, freed, warnings)

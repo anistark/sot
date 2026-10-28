@@ -53,3 +53,34 @@ def test_every_template_uses_a_known_root():
         # Nothing may expand to a bare root, which would wipe the directory.
         for path in agents.agent_paths(agent, roots):
             assert path not in roots.values(), f"{agent.name}: {path} is a root"
+
+
+def test_stale_versions_keep_the_newest_and_the_linked(monkeypatch, tmp_path):
+    import os
+    import time
+
+    versions = tmp_path / ".local" / "share" / "claude" / "versions"
+    for age, name in enumerate(("2.1.311", "2.1.310", "2.1.308", "2.1.300")):
+        path = versions / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"bin")
+        os.utime(path, (time.time() - age * 86400,) * 2)
+    launcher = tmp_path / ".local" / "bin" / "claude"
+    launcher.parent.mkdir(parents=True)
+    launcher.symlink_to(versions / "2.1.308")
+    monkeypatch.setattr(agents, "_running_executables", lambda: set())
+    claude = next(a for a in agents.AGENT_VERSIONS if a.name == "Claude Versions")
+
+    stale = agents.stale_versions(claude, {"home": tmp_path})
+
+    assert [p.name for p in stale] == ["2.1.300", "2.1.310"]
+
+
+def test_globs_expand_to_matches(tmp_path):
+    (tmp_path / "build-cache-1").mkdir()
+    (tmp_path / "build-cache-2").mkdir()
+    (tmp_path / "other").mkdir()
+
+    found = agents.expand_paths(("{home}/build-cache-*",), {"home": tmp_path})
+
+    assert [p.name for p in found] == ["build-cache-1", "build-cache-2"]

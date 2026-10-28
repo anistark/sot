@@ -43,6 +43,8 @@ class SotApp(SotBaseApp):
         bench_duration: float = 10.0,
         keymap: dict[str, str] | None = None,
         clean_force: bool = False,
+        clean_privacy: bool = False,
+        clean_projects: str | None = None,
     ):
         # Textual reads the starting mode while initialising the app.
         self.DEFAULT_MODE = start_mode  # type: ignore[misc]
@@ -55,6 +57,8 @@ class SotApp(SotBaseApp):
         self.user_keymap = keymap or {}
         self.bench_duration = bench_duration
         self.clean_force = clean_force
+        self.clean_privacy = clean_privacy
+        self.clean_projects = clean_projects
         # Where `esc` returns to after a drill-down.
         self.back_mode: str | None = None
 
