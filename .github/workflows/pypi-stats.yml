@@ -1,9 +1,9 @@
 name: PyPI Stats
 
 on:
-  # The 2nd, so the dataset has the whole of last month.
+  # 04:20 UTC on the 5th, well after the dataset has the whole of last month.
   schedule:
-    - cron: "17 6 2 * *"
+    - cron: "20 4 5 * *"
   workflow_dispatch:
 
 permissions: {}
