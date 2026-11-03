@@ -1,0 +1,37 @@
+name: PyPI Stats
+
+on:
+  # The 2nd, so the dataset has the whole of last month.
+  schedule:
+    - cron: "17 6 2 * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Redraw the README download stats
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Draw the charts
+        run: python3 scripts/pypi_stats.py
+
+      - name: Commit if they changed
+        run: |
+          git add images/pypi-stats-*.svg
+          if git diff --cached --quiet; then
+            echo "No change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(readme): refresh PyPI download stats"
+          git push

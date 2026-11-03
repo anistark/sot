@@ -164,7 +164,7 @@ def _print_keys() -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="sot",
-        description="Command-line System Obervation Tool ≈",
+        description="Command-line System Observation Tool ≈",
         formatter_class=CustomHelpFormatter,
         add_help=False,
     )

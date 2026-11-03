@@ -132,6 +132,8 @@ dmypy.json
 sot_debug.log
 *.svg
 *.png
+!images/*.svg
+!images/*.png
 NOTES.md
 plan/
 

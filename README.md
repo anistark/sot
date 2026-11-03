@@ -9,7 +9,7 @@
 
 CPU, memory, GPU, disks, network and processes in one live dashboard, plus tools to inspect your machine, benchmark disks and free up space. Works on macOS, Linux and Windows.
 
-[![PyPI - Version](https://img.shields.io/pypi/v/sot)](https://pypi.org/project/sot/) [![PyPI Downloads](https://static.pepy.tech/badge/sot/month)](https://pypi.org/project/sot/) ![PyPI - Status](https://img.shields.io/pypi/status/sot) [![Open Source](https://img.shields.io/badge/open-source-brightgreen)](https://github.com/anistark/sot) [![Contributors](https://img.shields.io/github/contributors/anistark/sot)](https://github.com/anistark/sot/graphs/contributors) ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![PyPI - Version](https://img.shields.io/pypi/v/sot)](https://pypi.org/project/sot/) [![PyPI Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsql-clickhouse.clickhouse.com%2F%3Fuser%3Ddemo%26query%3DSELECT%2Bconcat%2528toString%2528round%2528sum%2528count%2529%2B%252F%2B1000%252C%2B1%2529%2529%252C%2B%2527k%2527%2529%2BAS%2Bv%2BFROM%2Bpypi.pypi_downloads_per_day%2BWHERE%2Bproject%2B%253D%2B%2527sot%2527%2BFORMAT%2BJSON&query=%24.data%5B0%5D.v&label=downloads&color=blue&cacheSeconds=86400)](https://clickpy.clickhouse.com/dashboard/sot) ![PyPI - Status](https://img.shields.io/pypi/status/sot) [![Open Source](https://img.shields.io/badge/open-source-brightgreen)](https://github.com/anistark/sot) [![Contributors](https://img.shields.io/github/contributors/anistark/sot)](https://github.com/anistark/sot/graphs/contributors) ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ![sot walkthrough: overview, processes, disks, system, bench, clean, command palette and themes](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/demo.gif)
 
@@ -250,6 +250,17 @@ processes = 2.0
 ```
 
 Every key is optional and invalid values are reported and ignored. Flags win over `SOT_THEME`, which wins over the config file.
+
+## Downloads
+
+<a href="https://clickpy.clickhouse.com/dashboard/sot">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/pypi-stats-dark.svg">
+    <img alt="sot PyPI downloads per month, by platform, Python version and country" src="https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/pypi-stats-light.svg">
+  </picture>
+</a>
+
+Refreshed monthly from ClickHouse's public PyPI dataset; more on [ClickPy](https://clickpy.clickhouse.com/dashboard/sot).
 
 ---
 

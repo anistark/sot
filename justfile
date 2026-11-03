@@ -59,6 +59,11 @@ build-man:
 	uv run python scripts/build_manpage.py
 	@echo "✅ Man page built successfully!"
 
+# Redraw the README's PyPI download stats
+stats:
+	@echo "📊 Drawing PyPI download stats..."
+	uv run python scripts/pypi_stats.py
+
 # Build SOT locally
 build: build-man
 	@echo "🔨 Building SOT locally..."

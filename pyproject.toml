@@ -31,7 +31,7 @@ ignore_missing_imports = true
 [project]
 name = "sot"
 authors = [{ name = "Kumar Anirudha", email = "sot@anirudha.dev" }]
-description = "System Oberving Tool"
+description = "Command-line system observation tool"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
