@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -158,20 +159,29 @@ def inet_connections() -> tuple[list[dict], bool]:
 
 
 DEV_PATTERNS = {
-    "node": ["node", "npm", "yarn", "pnpm", "next", "vite", "webpack"],
-    "python": ["python", "uvicorn", "gunicorn", "flask", "django", "fastapi"],
-    "docker": ["docker", "containerd", "dockerd"],
-    "ruby": ["ruby", "rails", "puma"],
-    "go": ["go", "air"],
-    "rust": ["cargo"],
+    "node": {"node", "npm", "npx", "yarn", "pnpm", "next", "vite", "webpack"},
+    "python": {"python", "uvicorn", "gunicorn", "flask", "django", "fastapi"},
+    "docker": {"docker", "containerd", "dockerd"},
+    "ruby": {"ruby", "rails", "puma"},
+    "go": {"go", "air"},
+    "rust": {"cargo", "rustc"},
 }
 
 
+def _tool(word: str) -> str:
+    """``/usr/bin/Python3.12`` or ``node.exe`` as the bare tool name."""
+    word = re.split(r"[\\/]", word.lower())[-1].removesuffix(".exe")
+    return word.rstrip("0123456789.")
+
+
 def _dev_type(proc: dict) -> str | None:
-    name = (proc.get("name") or "").lower()
-    cmdline = " ".join(proc.get("cmdline") or []).lower()
-    for env, patterns in DEV_PATTERNS.items():
-        if any(p in name or p in cmdline for p in patterns):
+    # Whole words only: "go" inside "cargo" or "Google Chrome" isn't Go.
+    # The name splits on separators ("next-server", "com.docker.backend"),
+    # arguments don't, so a file like "notes-on-go.md" stays a file.
+    words = {_tool(w) for w in re.split(r"[\s._-]+", proc.get("name") or "")}
+    words.update(_tool(arg) for arg in proc.get("cmdline") or [])
+    for env, tools in DEV_PATTERNS.items():
+        if words & tools:
             return env
     return None
 

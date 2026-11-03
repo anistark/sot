@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+import pytest
+
 from sot import _collectors
 
 
@@ -30,6 +32,29 @@ def test_dev_environments_group_by_ecosystem():
     assert by_type["node"]["count"] == 2
     assert by_type["node"]["ports"] == [3000, 5173]
     assert by_type["node"]["memory_mb"] == 2.0
+
+
+@pytest.mark.parametrize(
+    "name, cmdline, env",
+    [
+        ("node", ["/opt/homebrew/bin/node", "node_modules/.bin/vite"], "node"),
+        ("next-server (v14.2.3)", None, "node"),
+        ("node.exe", ["C:\\Program Files\\nodejs\\node.exe", "server.js"], "node"),
+        ("Python", ["/usr/bin/python3.12", "-m", "uvicorn", "api:app"], "python"),
+        ("com.docker.backend", None, "docker"),
+        ("ruby", ["ruby", "bin/rails", "server"], "ruby"),
+        ("go", ["/usr/local/go/bin/go", "run", "main.go"], "go"),
+        ("air", None, "go"),
+        ("cargo", ["cargo", "build", "--release"], "rust"),
+        ("Google Chrome", None, None),
+        ("Google Chrome Helper (GPU)", None, None),
+        ("mongod", ["mongod", "--dbpath", "/data/db"], None),
+        ("vim", ["vim", "notes-on-go.md"], None),
+        ("bash", ["bash", "repair.sh", "--next-step"], None),
+    ],
+)
+def test_dev_type_matches_whole_tool_names(name, cmdline, env):
+    assert _collectors._dev_type(_proc(1, name, cmdline=cmdline)) == env
 
 
 def test_sampler_reuses_recent_samples_and_computes_io_rates(monkeypatch):

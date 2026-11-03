@@ -60,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`sot clean` removed live data** - Fonts, Spotlight and iCloud state, Poetry virtualenvs and Playwright browsers inside the cache folders are now kept
 - **`sudo sot clean` emptied `/tmp` and `/var/log`** - Only files older than a few days go now, and folders stay, so running programs keep their sockets and services their log directories
 - **`sot clean` missed most Chrome profiles on Windows** - Every profile's cache is cleaned, not just `Default`
+- **Dev environments matched parts of names** - `cargo`, Google Chrome and `mongod` showed up as Go; tools are now matched by whole name, so `cargo` counts as Rust
 - Disk, network and per-process I/O rates use the real time between samples instead of assuming a fixed interval
 - Volume picker for `--disk` now lists every mountpoint on Linux, where there are no `/Volumes/*` mounts
 

@@ -1,274 +1,238 @@
+<!--pytest-codeblocks:skipfile-->
 <p align="center" style="background-color: #ffffff;">
   <a href="https://github.com/anistark/sot"><img alt="sot" src="https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/sot.png" width="200px"/></a>
-  <p align="center">Command-line system obervation tool.</p>
+  <p align="center">Command-line system observation tool.</p>
 </p>
 
-`sot` is a Command-line System Obervation Tool in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>). It displays various interesting system stats and graphs them. Works on all operating systems.
+
+> `sot` is a system monitor for the terminal in the spirit of [top](<https://en.wikipedia.org/wiki/Top_(software)>)
+
+CPU, memory, GPU, disks, network and processes in one live dashboard, plus tools to inspect your machine, benchmark disks and free up space. Works on macOS, Linux and Windows.
 
 [![PyPI - Version](https://img.shields.io/pypi/v/sot)](https://pypi.org/project/sot/) [![PyPI Downloads](https://static.pepy.tech/badge/sot/month)](https://pypi.org/project/sot/) ![PyPI - Status](https://img.shields.io/pypi/status/sot) [![Open Source](https://img.shields.io/badge/open-source-brightgreen)](https://github.com/anistark/sot) [![Contributors](https://img.shields.io/github/contributors/anistark/sot)](https://github.com/anistark/sot/graphs/contributors) ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-## Installation
+![sot walkthrough: overview, processes, disks, system, bench, clean, command palette and themes](https://raw.githubusercontent.com/anistark/sot/refs/heads/main/images/demo.gif)
 
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+## Install
 
-### Quick Install (Recommended)
-
-**One-line installer for macOS and Linux** - Automatically detects your environment and installs all dependencies:
-
-<!--pytest-codeblocks: skip-->
+macOS and Linux, one line (installs Python 3.10+ and pipx if missing):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/anistark/sot/main/install.sh | bash
 ```
 
-This script will:
-- ✅ Detect your operating system
-- ✅ Check for Python 3.10+ (installs if missing)
-- ✅ Install pipx (if not present)
-- ✅ Install sot and configure PATH
-- ✅ Verify the installation
+Or with your package manager of choice:
 
-**Note:** This installation script does not work on Windows. Windows users should use one of the [alternative installation methods](#alternative-installation-methods) below.
+```sh
+uv tool install sot                 # uv
+pipx install sot                    # pipx
+brew install anistark/tools/sot     # Homebrew
+```
 
----
-
-### Alternative Installation Methods
+Windows: use `uv` or `pipx`; the install script doesn't run there.
 
 <details>
-<summary>Using brew</summary>
+<summary>DEB / RPM packages (experimental), source installs and release verification</summary>
 
-<!--pytest-codeblocks: skip-->
-
-```sh
-brew tap anistark/tools
-brew install sot
-```
-
-Or single line:
-
-<!--pytest-codeblocks: skip-->
+Download the package from the [releases page](https://github.com/anistark/sot/releases/latest):
 
 ```sh
-brew install anistark/tools/sot
+sudo dpkg -i sot-*.deb && sudo apt-get install -f    # Debian, Ubuntu
+sudo rpm -ivh sot-*.rpm                              # RHEL, CentOS, Fedora
 ```
 
-Update using:
-
-<!--pytest-codeblocks: skip-->
+From source:
 
 ```sh
-brew update && brew upgrade sot
+git clone https://github.com/anistark/sot.git && cd sot
+uv pip install --system .    # or: pipx install .
 ```
 
-</details>
+Upgrade with `uv tool upgrade sot`, `pipx upgrade sot` or `brew update && brew upgrade sot`.
 
-<details>
-<summary>Using uv</summary>
-
-Install and run with [`uv`](https://github.com/astral-sh/uv):
-
-<!--pytest-codeblocks: skip-->
-
-```sh
-uv tool install sot
-```
-
-</details>
-
-<details>
-<summary>Using pipx</summary>
-
-Install and run with [`pipx`](https://github.com/pypa/pipx). Setup pipx before proceeding.
-
-<!--pytest-codeblocks: skip-->
-
-```sh
-python3 -m pipx install sot
-python3 -m pipx ensurepath
-sudo pipx ensurepath --global
-```
-
-or in single line:
-
-<!--pytest-codeblocks: skip-->
-
-```sh
-python3 -m pipx install sot && python3 -m pipx ensurepath && sudo pipx ensurepath --global
-```
-</details>
-
-<details>
-<summary>Using DEB Package (Experimental - Debian/Ubuntu)</summary>
-### Using DEB Package (Experimental - Debian/Ubuntu)
-
-**⚠️ Experimental**: DEB packages are experimental. Use `uv` or `pipx` for recommended installation.
-
-Download the latest DEB package from the [releases page](https://github.com/anistark/sot/releases) and install:
-
-<!--pytest-codeblocks: skip-->
-
-```sh
-# Download latest .deb file from releases
-wget https://github.com/anistark/sot/releases/latest/download/sot-*.deb
-
-# Install the package
-sudo dpkg -i sot-*.deb
-
-# Install any missing dependencies (if needed)
-sudo apt-get install -f
-```
-</details>
-
-<details>
-<summary>Using RPM Package (Experimental - RHEL/CentOS/Fedora)</summary>
-
-**⚠️ Experimental**: RPM packages are experimental. Use `uv` or `pipx` for recommended installation.
-
-Download the latest RPM package from the [releases page](https://github.com/anistark/sot/releases) and install:
-
-<!--pytest-codeblocks: skip-->
-
-```sh
-# Download latest .rpm file from releases
-wget https://github.com/anistark/sot/releases/latest/download/sot-*.rpm
-
-# Install the package
-sudo rpm -ivh sot-*.rpm
-```
-
-### Verifying Releases
-
-PyPI releases are published from GitHub Actions with [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) and carry [PEP 740 attestations](https://docs.pypi.org/attestations/) linking each file to this repository. To verify a release file:
-
-<!--pytest-codeblocks: skip-->
+PyPI releases are published from GitHub Actions with [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) and carry [PEP 740 attestations](https://docs.pypi.org/attestations/). To verify a release file:
 
 ```sh
 uvx pypi-attestations verify pypi --repository https://github.com/anistark/sot pypi:sot-<version>-py3-none-any.whl
 ```
+
 </details>
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `sot` | Live dashboard: CPU, memory, GPU, disk, network, connections and processes |
+| `sot ps` | Processes, listening ports and running dev environments |
+| `sot disk` | Every physical disk with its partitions, usage and I/O |
+| `sot disk --list` | The same as a static table, then exits (pipe-friendly) |
+| `sot info` | System summary with an OS logo, like neofetch |
+| `sot bench` | Disk benchmark: sequential throughput, random IOPS and latency |
+| `sot clean` | Find and remove caches, logs, temp files and build output |
+| `sot --keys` | List every key binding and its id |
+| `sot --config-path` | Show where the config file lives, with a commented template |
+
+Everything that opens a screen opens the same app on a different view, so you can hop between them with the number keys.
+
+## The app
+
+| Key | View | Shows |
+| --- | --- | --- |
+| `1` | Overview | CPU per core, health score, top processes, memory, GPU, disk, network and socket graphs |
+| `2` | Processes | Process table, listening ports and dev environments (Node, Python, Docker, Ruby, Go, Rust) |
+| `3` | Disks | Physical disks and partitions, usage bars, read/write stats |
+| `4` | System | What `sot info` prints, with uptime, memory and battery kept live |
+| `5` | Bench | Pick a disk and watch each benchmark finish |
+| `6` | Clean | Scan, tick what to remove, dry run or clean |
+
+You can also click the tabs in the header. Each view keeps its selection, sort and scroll while you're elsewhere.
+
+**Highlights**
+
+- **Drill down**: `Enter` on an overview panel opens that process, disk or the ports list in its own view; `Esc` comes back
+- **Detail drawer**: `Enter` or double-click in a list opens live details that follow the cursor
+- **Filter**: `/` filters the focused list by name, PID, user or command
+- **Command palette**: `Ctrl+P` jumps to a view, process or volume, kills, terminates or copies a PID, and switches theme
+- **Sort anywhere**: click a column header, or press `o`
+- **Zoom the overview**: `+` for taller graphs, `-` for more process rows (remembered)
+- **GPU stats** on Apple Silicon (`ioreg`, no sudo), NVIDIA (`nvidia-smi`) and AMD (`rocm-smi`, best effort)
+- **Connections without root**: on macOS without `sudo` the panel shows your own processes' sockets
+
+### Keys
+
+`?` shows the keys for the focused panel. Every binding can be remapped in the [config](#configuration).
+
+| Key | Action |
+| --- | --- |
+| `1`-`6` | Switch view |
+| `Tab` / `Shift+Tab` | Next / previous panel |
+| `↑` `↓` or `k` `j` | Move |
+| `PgUp` `PgDn` (`Ctrl+U` `Ctrl+D`), `Home` `End` (`g` `G`) | Page, first, last |
+| `Enter` | Open details, or drill down from the overview |
+| `Esc` | Close, clear the filter, or go back |
+| `/` | Filter |
+| `o` | Sort: in process tables pick a column with `←` `→` and flip with `Enter`; in port and dev lists `o` cycles the column and `s` flips |
+| `x` / `t` | Kill / terminate the selected process (asks first) |
+| `n` | Show or hide the I/O and connection columns |
+| `+` / `-` | Overview zoom |
+| `r` | Refresh |
+| `Ctrl+P` | Command palette |
+| `q` | Quit |
+
+## `sot info`
+
+Prints host, model, serial, OS, kernel, firmware, desktop and window manager, shell, terminal, chip (with performance/efficiency cores), GPU, memory, displays, uptime and battery, next to an ASCII logo for macOS, Windows, Ubuntu, Debian, Fedora, RHEL, Arch, Manjaro, Pop!_OS, CentOS or a generic Tux.
+
+```
+                  ,MMMM.            Host        -  john@macbook.local
+                .MMMMMM             Model       -  MacBook Pro
+                MMMMM,              Identifier  -  MacBookPro18,1
+      .;MMMMM:' MMMMMMMMMM;.
+    MMMMMMMMMMMMNWMMMMMMMMMMM:      OS          -  macOS 14.5.0 Sonoma
+  .MMMMMMMMMMMMMMMMMMMMMMMMWM.      Kernel      -  23.5.0
+  MMMMMMMMMMMMMMMMMMMMMMMMM.        Shell       -  zsh
+ ;MMMMMMMMMMMMMMMMMMMMMMMM:         Terminal    -  iTerm.app (3.5.2)
+ :MMMMMMMMMMMMMMMMMMMMMMMM:
+ .MMMMMMMMMMMMMMMMMMMMMMMMM.        Chip        -  Apple M1 Pro (8P + 2E cores)
+  MMMMMMMMMMMMMMMMMMMMMMMMMMM.      GPU         -  Apple M1 Pro (16 cores)
+   .MMMMMMMMMMMMMMMMMMMMMMMMMM.     Memory      -  8 GiB / 32 GiB
+     MMMMMMMMMMMMMMMMMMMMMMMM
+      ;MMMMMMMMMMMMMMMMMMMM.        Uptime      -  12d 4h 23m
+        .MMMM,.    .MMMM,.          Battery     -  87% & Discharging
+```
+
+## `sot bench`
+
+Runs four tests on the disk you pick: sequential read, sequential write, random read IOPS and random write IOPS, each with min/avg/max and p50/p95/p99 latency.
+
+```sh
+sot bench                                    # pick a disk in the Bench view
+sot bench --disk disk3 --duration 5          # no prompt, 5 s per test (default 10)
+sot bench --disk / --output results.json     # save results as JSON
+```
+
+In the Bench view: `Enter` runs, `+` / `-` change the duration, `e` exports JSON, `Esc` cancels after the current test.
+
+## `sot clean`
+
+Finds caches, logs, temp files and leftovers on your machine, shows how much each one takes, and removes only what you tick.
+
+```sh
+sot clean                      # Clean view: tick rows, then clean
+sot clean --dry-run            # print what would go, delete nothing
+sot clean --force              # also remove data still in use (see below)
+sot clean --privacy            # also clear browser cookies, history and site data
+sot clean --projects ~/code    # also clear node_modules, target, .venv… in idle projects
+sudo sot clean                 # include system logs and temp files that need root
+```
+
+In the Clean view: `space` ticks a row, `a` ticks all, `d` dry runs, `c` cleans (asks first), `f` toggles force, `p` toggles privacy, `r` rescans.
+
+**What it finds**
+
+- **Browsers**: caches of Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc, Firefox, LibreWolf, Zen and Safari, free space in their databases, and old session snapshots
+- **Apps**: Electron app caches (Slack, Discord, VS Code, Cursor, Claude, Obsidian…)
+- **Dev tools**: Homebrew, pip, npm, pnpm, Yarn, Bun, uv, Go, Cargo, Gradle, Android and Composer caches; Xcode DerivedData, simulator caches and old device support
+- **Coding agents**: Claude Code, Codex, pi, opencode and Kilo Code caches, and old Claude Code and Cursor binaries
+- **System**: app and system logs, old temp files, Trash, crash dumps, thumbnails, the macOS installer leftovers, the systemd journal and old snaps on Linux, downloaded updates and Prefetch on Windows
+- **Review only**: models (Ollama, LM Studio, Hugging Face), VM disks (Docker, OrbStack, Colima), simulators, toolchains and backups are measured and shown, never deleted
+
+**Safety**
+
+- Asks before deleting, in the view and in the printed flow
+- Conversation history, sessions, credentials and config are never touched
+- Temp folders and logs only lose files older than a few days; folders and sockets stay
+- Fonts, Spotlight, iCloud state, virtualenvs and downloaded browsers inside cache folders are kept
+- Symlinks are removed, never followed
+- Root-only targets are skipped unless you run with `sudo`
+- `--force` is needed for in-use data: the newest browser session (the one that restores your tabs), browser copies still open, the newest device support files and projects touched in the last 14 days
 
 <details>
-<summary>Install from source</summary>
+<summary>Details: browser sessions, privacy, projects, agent caches and relocated directories</summary>
 
-For testing or installing the latest version from source directly on your system.
+**Browser sessions.** Browsers keep many saved copies of your open tabs and only read the newest. `sot clean` removes the old ones. `--force` removes the newest too, so the browser starts with no tabs to restore. Quit the browser first, or it writes the session straight back.
 
-**Using uv (Recommended):**
+| Browser | Old snapshots | Also with `--force` |
+| --- | --- | --- |
+| Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc | All but the newest `Session_*`, `Tabs_*` and `Apps_*` in each profile's `Sessions` folder | The newest of each |
+| Firefox, LibreWolf, Zen | `sessionstore-backups/upgrade.jsonlz4-*` | `sessionstore.jsonlz4` and the `recovery` and `previous` files |
 
-<!--pytest-codeblocks: skip-->
+**Privacy.** `--privacy` adds per-browser rows for cookies, history and site data (IndexedDB, local storage, service workers), plus recent items and macOS window state over 30 days old. Clearing cookies signs you out of every site. Firefox keeps history and bookmarks in one database, so its history is left alone.
 
-```sh
-# Clone the repository
-git clone https://github.com/anistark/sot.git
-cd sot
+**Projects.** `--projects DIR` looks for `node_modules`, `.next`, `target`, `.venv`, `__pycache__`, `Pods`, `.build`, Gradle `build` and more. A folder only counts when the file that rebuilds it sits beside it (`target` next to `Cargo.toml`, `node_modules` next to `package.json`).
 
-# Install from source (system-wide)
-uv pip install --system .
+**Coding agents.** Only installed agents are listed, and only caches, logs and scratch folders are touched.
 
-# Run from anywhere
-sot
-```
+| Agent | Cleaned |
+| --- | --- |
+| Claude Code | `~/.claude/{cache,paste-cache,debug,shell-snapshots,session-env,statsig}`, `~/.cache/claude`, `~/Library/Caches/claude-cli-nodejs`, and binaries in `~/.local/share/claude/versions` other than the newest, the linked one and any running |
+| Codex | `~/.codex/{.tmp,log}`, `~/.cache/codex-runtimes` |
+| pi | `~/.pi/{cache,logs}`, `~/.cache/pi` |
+| opencode | `~/.cache/opencode`, `~/.local/share/opencode/{cache,log}` |
+| Kilo Code | `~/.kilocode/cache`, and `kilocode.kilo-code/{cache,checkpoints}` in VS Code, Cursor and VSCodium storage |
 
-**Using pipx:**
+Left alone: `~/.claude/projects` (what `claude --resume` reads) and `~/.gemini/tmp`.
 
-<!--pytest-codeblocks: skip-->
+**Relocated directories.** Paths follow these variables from the shell you run `sot` in: `CLAUDE_CONFIG_DIR`, `XDG_CACHE_HOME`, `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `APPDATA`, `LOCALAPPDATA`, `VSCODE_PORTABLE`, `CARGO_HOME`, `RUSTUP_HOME`, `GOPATH`, `GOMODCACHE`, `GOCACHE`, `GRADLE_USER_HOME`, `NVM_DIR`, `UV_CACHE_DIR`, `BUN_INSTALL_CACHE_DIR`, `HF_HOME` and `OLLAMA_MODELS`. Run `sot clean --dry-run` to see the resolved paths.
 
-```sh
-# Clone the repository
-git clone https://github.com/anistark/sot.git
-cd sot
-
-# Install from source using pipx
-pipx install .
-
-# Run from anywhere
-sot
-```
 </details>
 
----
+## Options
 
-Run with:
+| Flag | What it does |
+| --- | --- |
+| `--theme`, `-T` | Colour theme: `classic` (follows your terminal) or `cyberpunk` (neon) |
+| `--net`, `-N` | Network interface for the overview, e.g. `sot -N en0` (default: auto-detect) |
+| `--disk`, `-D` | Volume for the overview, e.g. `sot -D /Volumes/External`; with no value, pick one in sot |
+| `--log`, `-L` | Write a debug log to this file |
+| `--version`, `-V` | Show the version |
+| `--help`, `-H` | Show help (`sot <command> -h` for a command's flags) |
 
-<!--pytest-codeblocks: skip-->
+Switch theme while running with `Ctrl+P` → Theme; graphs and selections are kept and the choice is remembered. `SOT_THEME=cyberpunk` sets the default.
 
-```sh
-sot
-```
+## Configuration
 
-![sot-demo](https://github.com/user-attachments/assets/780449fd-27e0-40ee-ae9a-7527bf99d7de)
-
----
-
-## Features
-
-### System
-
-- CPU Usage
-  - Per Core and Thread level
-- Processes with ID, threads, memory and cpu usage
-  - **Interactive Order By**: Press `o` to enter order by mode, pick a column with `←`/`→`, toggle sort direction with Enter (DESC ↓ → ASC ↑ → OFF → cycle)
-- **Views**: `1` Overview, `2` Processes, `3` Disks, `4` System, `5` Bench, `6` Clean (or click the tabs in the header); each view keeps its state while you're elsewhere
-- **Drill down**: `Enter` on an overview panel opens the matching view on that process or disk; `Esc` goes back
-- **Details**: `Enter` (or a double-click) in a list opens a live detail drawer
-- **Filter**: `/` filters the focused list by name, PID, user or command
-- **Command palette**: `Ctrl+P` jumps to any view, process or volume, acts on the selected process, and switches theme
-
-### Disk
-
-- **Interactive Disk TUI** - View all physical disks with partitions
-  - Real-time disk usage monitoring with accurate APFS container calculations
-  - Visual usage bars and percentage indicators
-  - I/O statistics (read/write counts and bytes)
-- **Plain Listing** - `sot disk --list` prints every disk and partition as a static table (like `du`, but with usage bars)
-- Disk Usage
-  - Per Read/Write
-- Capacity
-  - Free
-  - Used
-  - Total
-  - Percent
-
-### Memory
-
-- Memory Usage
-- Capacity
-  - Free
-  - Available
-  - Used
-  - Swap
-
-### GPU
-
-- **Live GPU Widget** - Real-time GPU stats in the main dashboard (shown automatically when a GPU is detected)
-  - Utilization history graph with current percentage
-  - Memory usage (used/total, or in-use/allocated on unified-memory systems)
-  - Temperature and power draw, when exposed by the platform
-- Cross-platform detection
-  - **Apple Silicon** (via `ioreg`, no sudo): utilization, memory, renderer/tiler breakdown, core count
-  - **NVIDIA** (via `nvidia-smi`): utilization, memory, temperature, power
-  - **AMD** (via `rocm-smi`): best-effort
-
-### Network
-
-- Local IP
-- Upload/Download Speed
-- Bandwidth
-- Network Usage
-- **Select Interface**: Use `--net` / `-N` to monitor a specific network interface
-
-### Options
-
-- **Disk Selection**: Use `--disk` / `-D` to monitor a specific volume
-  - `sot --disk` - Pick a volume from a list inside sot
-  - `sot --disk /Volumes/External` - Monitor specific volume
-- **Theme**: Use `--theme` / `-T` to pick a color theme (`classic` or `cyberpunk`)
-  - `sot --theme cyberpunk` - Cyberpunk 2077 inspired neon theme
-  - Set `SOT_THEME=cyberpunk` to make it the default; also applies to `sot ps` and `sot disk`
-  - Switch live with `Ctrl+P` → Theme; graphs and selections are kept, and the choice is remembered
-
-### Configuration
-
-sot reads an optional config file. `sot --config-path` shows where (by default `~/.config/sot/config.toml`, following `$XDG_CONFIG_HOME`):
+Optional, at `~/.config/sot/config.toml` (follows `$XDG_CONFIG_HOME`; `sot --config-path` prints it):
 
 ```toml
 theme = "cyberpunk"          # classic, cyberpunk
@@ -280,507 +244,17 @@ disk = "/"                   # mountpoint on the overview
 cpu = 1.0
 processes = 2.0
 
-[keymap]                     # binding id = keys
+[keymap]                     # binding id = keys, see `sot --keys`
 "sot.process.kill" = "ctrl+k"
 "sot.view.processes" = "p"
 ```
 
-- Every key is optional; invalid values are reported and ignored
-- Command-line flags win over `SOT_THEME`, which wins over the config; a theme picked with `Ctrl+P` is remembered and used when nothing else sets one
-- `sot --keys` lists every binding id with its default keys
+Every key is optional and invalid values are reported and ignored. Flags win over `SOT_THEME`, which wins over the config file.
 
 ---
 
-## System Information
+Built with [Textual](https://github.com/textualize/textual), [Rich](https://github.com/textualize/rich) and [psutil](https://github.com/giampaolo/psutil). Tested on macOS and Ubuntu; if it works (or doesn't) on your system, [open an issue](https://github.com/anistark/sot/issues). See the [changelog](https://github.com/anistark/sot/blob/main/CHANGELOG.md) for what's new and [CONTRIBUTING.md](https://github.com/anistark/sot/blob/main/CONTRIBUTING.md) to help out.
 
-The `sot info` command displays comprehensive system information with a beautiful OS-specific ASCII logo.
+Started on top of [tiptop](https://github.com/nschloe/tiptop) when it became unmaintained. Other tops worth a look: [btop](https://github.com/aristocratos/btop), [bottom](https://github.com/ClementTsang/bottom), [Glances](https://github.com/nicolargo/glances), [gtop](https://github.com/aksakalli/gtop), [htop](https://github.com/htop-dev/htop).
 
-Inside sot, the System view (key 4) shows the same facts as panels, with uptime, memory and battery kept live.
-
-### Usage
-
-```sh
-sot info
-```
-
-### Example Output
-
-```
-                  ,MMMM.            Host        -  john@macbook.local
-                .MMMMMM             Model       -  MacBook Pro
-                MMMMM,              SKU         -  MK1E3LL/A
-      .;MMMMM:' MMMMMMMMMM;.        Identifier  -  MacBookPro18,1
-    MMMMMMMMMMMMNWMMMMMMMMMMM:      Serial      -  C02YX2QZMD6R
-  .MMMMMMMMMMMMMMMMMMMMMMMMWM.
-  MMMMMMMMMMMMMMMMMMMMMMMMM.        OS          -  macOS 14.5.0 Sonoma
- ;MMMMMMMMMMMMMMMMMMMMMMMM:         Kernel      -  23.5.0
- :MMMMMMMMMMMMMMMMMMMMMMMM:         Firmware    -  10151.121.3
- .MMMMMMMMMMMMMMMMMMMMMMMMM.        DE          -  Aqua
-  MMMMMMMMMMMMMMMMMMMMMMMMMMM.      WM          -  Quartz Compositor
-   .MMMMMMMMMMMMMMMMMMMMMMMMMM.     Shell       -  zsh
-     MMMMMMMMMMMMMMMMMMMMMMMM       Terminal    -  iTerm.app (3.5.2)
-      ;MMMMMMMMMMMMMMMMMMMM.
-        .MMMM,.    .MMMM,.          Chip        -  Apple M1 Pro (8P + 2E cores)
-                                    GPU         -  Apple M1 Pro (16 cores)
-                                    Memory      -  8 GiB / 32 GiB
-
-                                    Displays    -  2560 x 1600 Retina (Color LCD)
-                                                   3840 x 2160@60.00Hz (Dell U2720Q)
-
-                                    Uptime      -  12d 4h 23m
-                                    Battery     -  87% & Discharging
-```
-
-### Features
-
-The info command displays detailed system information organized into logical sections:
-
-**System Information**
-- Host (user@hostname)
-- Model name (e.g., MacBook Pro)
-- SKU/Model number
-- Model identifier
-- Serial number
-
-**Software**
-- Operating system with version name (e.g., macOS 15.6.1 Sequoia)
-- Kernel version
-- Firmware version
-- Desktop Environment (DE)
-- Window Manager (WM)
-- Shell
-- Terminal emulator
-
-**Hardware**
-- Chip details with performance/efficiency core breakdown (e.g., Apple M1 Pro with 6P + 2E cores)
-- GPU model with core count
-- Memory (used / total)
-
-**Displays**
-- All connected displays with resolutions, refresh rates, and display names
-- Screen brightness (when available)
-
-**Status**
-- System uptime
-- Battery status (percentage and charging state)
-
-### OS-Specific Logos
-
-The command automatically detects your operating system and distribution, displaying the appropriate ASCII logo:
-
-**macOS**: Apple logo
-
-**Linux Distributions**:
-- Ubuntu
-- Debian
-- Fedora
-- Red Hat / RHEL
-- Arch Linux
-- Manjaro
-- Pop!_OS
-- CentOS
-- Generic Linux/Tux (fallback)
-
-**Windows**: Windows logo
-
----
-
-## Disk Viewer
-
-The `sot disk` command shows every physical disk with its partitions.
-
-### Usage
-
-```sh
-# Disks view (key 3 inside sot)
-sot disk
-
-# Plain listing - print once and exit, pipe-friendly
-sot disk --list
-sot disk -l
-```
-
-`--list` prints one row per disk, with its partitions nested underneath: device, mountpoint, filesystem, size, used, free, and a colour-coded usage bar (green → yellow above 80% → red above 95%), followed by a total across all disks. On narrow terminals the filesystem column is dropped and the bar shrinks so mountpoints stay readable.
-
----
-
-## System Cleanup
-
-The `sot clean` command performs a deep clean of your system by removing caches, logs, and temporary files.
-
-### Usage
-
-```sh
-# Clean view: pick targets with space, press c to clean after confirming
-sot clean
-
-# Dry run - print what would be cleaned without deleting
-sot clean --dry-run
-
-# Also clean data still in use, like the browser sessions that restore your open tabs
-sot clean --force
-
-# Also clear browser cookies, history and site data, and recent items
-sot clean --privacy
-
-# Also clear build output and dependencies of projects under a folder
-sot clean --projects ~/code
-```
-
-### What Gets Cleaned
-
-The clean command detects your operating system and lists only what exists on your machine. A folder that holds another target's folder leaves it to that row, so every byte is counted and removed once.
-
-**Everywhere:**
-- Browser caches for Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc, Firefox, LibreWolf and Zen, including GPU, shader, code and on-device AI model caches
-- Free space inside browser databases, given back with `VACUUM` (quit the browser first)
-- Old browser session snapshots
-- Electron and other Chromium-based app caches (Slack, Discord, VS Code, Cursor, Claude, Obsidian…), found by their `Code Cache` or `GPUCache` folder
-- Developer tool caches: Homebrew, Go, pnpm, uv, Bun, Yarn, Cargo, Gradle, Android, Composer, pip, npm. Homebrew, Go, pnpm and uv are cleaned by their own command when installed
-- Coding agent caches (Claude Code, Codex, pi, opencode, Kilo Code) and old Claude Code and Cursor agent binaries that nothing runs
-
-**macOS:**
-- Application caches (`~/Library/Caches`) and command line tool caches (`~/.cache`), keeping fonts, Spotlight, iCloud, Poetry virtualenvs, Playwright and Puppeteer browsers, JetBrains and LM Studio
-- Application logs (`~/Library/Logs`), and with sudo system logs over 7 days old and crash reports over 30 days old
-- Temp files over 3 days old (`$TMPDIR`, and `/tmp` with sudo)
-- Metal shader, clang module and app helper caches under `/var/folders`
-- Copies of Chrome-based browsers leaked under `/var/folders/*/X/*.code_sign_clone`, often tens of GB. The ones a running browser holds open are kept unless you pass `--force`
-- Xcode DerivedData, simulator caches, simulators for removed runtimes (`xcrun simctl delete unavailable`) and device support files beyond the newest two per platform
-- Mail downloads and Messages previews
-- Leftover macOS installer payload, Safari cache and Trash
-
-**Linux:**
-- User cache (`~/.cache`) with the same exceptions, and thumbnails
-- Temp files (`/tmp` over 3 days, `/var/tmp` over 7), system logs over 7 days, the systemd journal (`journalctl --vacuum-time=7d`), disabled snap revisions and core dumps, with sudo
-- Package manager caches (APT, DNF, Yum) and Trash
-
-**Windows:**
-- Temp files over 3 days old (`%TEMP%`, and `C:\Windows\Temp` as administrator)
-- Crash dumps and error reports, DirectX and GPU driver shader caches, Explorer thumbnails
-- As administrator: Prefetch, system crash dumps, downloaded Windows updates and the Delivery Optimization cache
-
-### Review Only
-
-Some stores are big but expensive to get back or hold real work. They're measured and shown in their own table, and never deleted: Docker, OrbStack and Colima VM disks, iOS Simulator devices, Xcode archives, iOS backups, Claude desktop VM images, Ollama, LM Studio and Hugging Face models, the Maven repository, Android emulators, rustup toolchains, Node versions (nvm, fnm, Volta), Python versions (pyenv, uv) and `Windows.old`.
-
-### Privacy
-
-`sot clean --privacy` (or `p` in the Clean view) adds rows per browser for cookies, history and site data (IndexedDB, local storage, service workers), plus recent items lists and macOS window state over 30 days old. Clearing cookies signs you out of every site. Quit the browser first, or it writes them straight back. Firefox keeps history and bookmarks in one database, so its history is left alone.
-
-### Projects
-
-`sot clean --projects DIR` searches `DIR` for build output and dependencies: `node_modules`, `.next`, `target`, `.venv`, `__pycache__`, `Pods`, `.build`, Gradle `build` and more. A folder only counts when the file that rebuilds it sits beside it (`target` next to `Cargo.toml`, `node_modules` next to `package.json`), so a folder that happens to be called `target` is left alone. Projects touched in the last 14 days are skipped unless you add `--force`.
-
-### Browser Sessions
-
-Browsers save your open windows and tabs to disk so they can bring them back after a restart or a crash. Only the newest save is ever read; the older ones pile up in every profile, often a few MB each. `sot clean` removes those and leaves the newest alone, so your tabs still come back.
-
-`sot clean --force` (or `f` in the Clean view) removes the newest ones too. The browser starts with no tabs to restore and loses its recently closed windows. Quit the browser first: while it runs it holds the current session in memory and may write it straight back.
-
-| Browser | Old snapshots | Also removed with `--force` |
-| ------- | ------------- | --------------------------- |
-| Chrome, Chromium, Edge, Brave, Vivaldi, Opera, Arc | All but the newest `Session_*`, `Tabs_*` and `Apps_*` in each profile's `Sessions` folder | The newest of each |
-| Firefox, LibreWolf, Zen | `sessionstore-backups/upgrade.jsonlz4-*`, the copies taken on each upgrade | `sessionstore.jsonlz4` and the `recovery` and `previous` files in `sessionstore-backups` |
-
-Browsers are only listed when there's something to clean. Safari keeps a single session file, so there's nothing old to remove.
-
-### Coding Agent Caches
-
-Agents are only listed when they're actually installed, so the table stays limited to what's on your machine. Only caches, logs and scratch directories are touched. Conversation history, sessions, credentials and config are left alone.
-
-| Agent | Cleaned |
-| ----- | ------- |
-| Claude Code | `~/.claude/{cache,paste-cache,debug,shell-snapshots,session-env,statsig}`, `~/.cache/claude`, `~/Library/Caches/claude-cli-nodejs` |
-| pi | `~/.pi/{cache,logs}`, `~/.cache/pi` |
-| opencode | `~/.cache/opencode`, `~/.local/share/opencode/{cache,log}` |
-| Codex | `~/.codex/{.tmp,log}`, `~/.cache/codex-runtimes` |
-| Kilo Code | `~/.kilocode/cache`, plus `kilocode.kilo-code/{cache,checkpoints}` under the VS Code, Cursor and VSCodium global storage directories |
-
-Notably left alone: `~/.claude/projects` (session transcripts that `claude --resume` reads) and `~/.gemini/tmp` (gemini-cli checkpoints and history). From `~/.local/share/claude/versions` only binaries other than the newest, the one `~/.local/bin/claude` links to and any that are running are removed.
-
-If you've relocated a cache directory, `sot` picks it up from the environment rather than assuming the default. Exported variables are read from the shell you run `sot` in:
-
-| Variable | Overrides |
-| -------- | --------- |
-| `CLAUDE_CONFIG_DIR` | `~/.claude` |
-| `XDG_CACHE_HOME` | `~/.cache` |
-| `XDG_DATA_HOME` | `~/.local/share` |
-| `XDG_CONFIG_HOME` | `~/.config` |
-| `APPDATA` / `LOCALAPPDATA` | `~/AppData/Roaming`, `~/AppData/Local` |
-| `VSCODE_PORTABLE` | VS Code portable-mode user data (no default; paths are skipped when unset) |
-| `CARGO_HOME`, `RUSTUP_HOME`, `GOPATH`, `GOMODCACHE`, `GOCACHE`, `GRADLE_USER_HOME`, `NVM_DIR` | Their tools' default homes |
-| `UV_CACHE_DIR`, `BUN_INSTALL_CACHE_DIR`, `HF_HOME`, `OLLAMA_MODELS` | Their caches and model stores |
-
-Use `sot clean --dry-run` to confirm the resolved locations before deleting anything.
-
-### Permissions
-
-Some cleaning targets require elevated privileges (sudo/administrator). The clean command will:
-- Show which items require elevated privileges in the summary
-- Skip these items during cleaning if not running with sudo
-- Provide clear notifications about what was skipped
-
-To clean items requiring sudo:
-```sh
-sudo sot clean
-```
-
-### Safety Features
-
-- **Dry run mode**: Preview what will be cleaned without making changes
-- **In-use data needs `--force`**: Browser sessions that restore open tabs, browser clones still open, the newest device support files and active projects are only removed when asked for
-- **Age limits**: Temp folders and logs only lose files older than a few days, and keep every folder, so running programs keep their sockets and log directories
-- **Live data stays**: Fonts, Spotlight, iCloud state, virtualenvs and downloaded browsers inside the cache folders are never touched
-- **Review only**: Models, VM disks, toolchains and backups are reported, never deleted
-- **Symlinks aren't followed**: A link inside a cache is removed, never what it points to
-- **Interactive confirmation**: Always asks before deleting files (in the Clean view and the printed flow)
-- **Sudo-aware**: Targets that need root are skipped unless sot runs with sudo
-- **Clear reporting**: Shows exactly what will be cleaned and how much space will be freed
-- **Graceful error handling**: Skips files that can't be accessed rather than failing
-
----
-
-## Process Viewer
-
-The `sot ps` command opens SOT on its Processes view: three synchronized panels for processes, listening ports and development environments. Press `1` to `3` to switch between views.
-
-### Usage
-
-```sh
-sot ps
-```
-
-### Features
-
-The process viewer displays three interactive panels:
-
-**Process List**:
-- All running processes with PID, name, memory usage, and CPU percentage
-- Navigate with arrow keys (↑/↓)
-- Sortable columns (same as main `sot` interface)
-- Real-time updates every 2 seconds
-- Shows up to 500 processes
-
-**Listening Ports**:
-- All open ports listening for connections
-- Shows port number, bind address, process name, and PID
-- Useful for identifying which services are running on which ports
-- Updates every 3 seconds
-- **Note**: May require sudo on macOS for full port detection
-
-**Development Environment**:
-- Automatically detects running development servers
-- Supports: Node.js, Python, Docker, Ruby, Go, Rust
-- Shows process count, listening ports, CPU and memory usage per environment type
-- Groups related processes (e.g., all Node processes together)
-- Updates every 5 seconds
-
-### Keys
-
-The footer lists the keys for the focused panel; press `?` for all of them.
-
-| Key | Action |
-|---|---|
-| `1` to `6` | Overview, Processes, Disks, System, Bench, Clean |
-| `Tab` / `Shift+Tab` | Next / previous panel |
-| `↑` `↓` or `k` `j` | Move |
-| `PgUp` `PgDn`, `Home` `End` (`g` `G`) | Page, first, last |
-| `Enter` | Details drawer (on the overview: open in the Processes or Disks view) |
-| `Esc` | Close the drawer, or go back after a drill-down |
-| `/` | Filter the focused list |
-| `x` / `t` | Kill / terminate (asks first) |
-| `o` | Sort: process tables open a column picker (`←` `→`, `Enter`, `Esc`); ports and dev environments cycle the column, `s` flips direction |
-| `n` | Show or hide the I/O and connection columns |
-| `+` / `-` | Overview zoom: taller graphs, or more process rows (remembered) |
-| `r` | Refresh |
-| Click a column header | Sort by it |
-| `Ctrl+P` | Command palette (views, processes, volumes, actions, themes) |
-| `?` / `q` | Help / quit |
-
-### Example
-
-The process viewer is particularly useful for developers who want to:
-- Monitor development server resource usage
-- Identify which process is using a specific port
-- Track multiple development environments running simultaneously
-- Debug port conflicts quickly
-
----
-
-## Disk Benchmarking
-
-The `sot bench` command allows you to measure disk performance with comprehensive benchmarks including sequential throughput, random IOPS, and latency distribution.
-
-### Interactive Mode (Default)
-
-```sh
-sot bench
-```
-
-This opens the Bench view (key 5 inside sot): pick a disk and press `Enter`. Results fill in as each test finishes; `+`/`-` change the duration, `e` exports JSON, `Esc` cancels after the current test.
-
-`--disk` or `--output`, or running outside a terminal, keeps the printed flow for scripts:
-
-```sh
-sot bench --disk disk3 --duration 5 --output results.json
-```
-
-### Benchmark Options
-
-```sh
-# Benchmark with default 10 second duration per test
-sot bench
-
-# Specify custom duration (in seconds)
-sot bench --duration 5     # Quick 5-second benchmark
-sot bench -d 30            # Longer 30-second benchmark for more stable results
-
-# Specify custom output file
-sot bench --output results.json
-
-# Combine options
-sot bench --duration 20 --output bench_results.json
-```
-
-### Benchmark Tests
-
-The benchmarking tool runs four comprehensive tests:
-
-1. **Sequential Read** - Measures sustained read throughput (MB/s)
-2. **Sequential Write** - Measures sustained write throughput (MB/s)
-3. **Random Read IOPS** - Measures random read operations per second
-4. **Random Write IOPS** - Measures random write operations per second
-
-Each test runs for the specified duration (default: 10 seconds) and provides detailed metrics:
-- Throughput/IOPS measurements
-- Min/Avg/Max latencies
-- p50, p95, p99 percentile latencies
-- Total test duration
-
-### Duration Parameter
-
-The `--duration` flag controls how long each test runs:
-- **Default: 10 seconds** - Quick, reliable measurements for most use cases
-- **Shorter durations (5s)** - Very quick benchmarks for rapid testing
-- **Longer durations (30s+)** - More stable results, accounts for system variance better
-
----
-
-For all options, see
-
-<!--pytest-codeblocks:skipif(sys.version_info < (3, 10))-->
-
-```sh
-sot -H
-```
-
-<!--pytest-codeblocks: expected-output-->
-
-```
-usage: sot [--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] [--config-path] [--keys]
-           [--theme THEME]
-           {info,bench,disk,clean,ps} ...
-
-Command-line System Obervation Tool ≈
-
-commands: {info,bench,disk,clean,ps}
-    info                Print system information (the System view is key 4)
-    bench               Disk benchmarking view; flags run it without the TUI
-    disk                Disks view; --list prints a table instead
-    clean               Clean caches, logs and temp files; --dry-run only reports
-    ps                  Processes view: processes, listening ports, dev environments
-
-options:
-  --help, -H            Show this help message and exit.
-  --version, -V         Display version information with styling
-  --log LOG, -L LOG     Debug log file path (enables debug logging)
-  --net NET, -N NET     Network interface to display (default: auto-detect best interface)
-  --disk [DISK], -D [DISK]
-                        Disk mountpoint to display (use without value for interactive selection)
-  --config-path         Print where sot reads its config file from
-  --keys                List every key binding id, for the [keymap] config table
-  --theme THEME, -T THEME
-                        Color theme: classic, cyberpunk (default: $SOT_THEME, config, or classic)
-```
-
-For benchmark-specific options:
-
-```sh
-sot bench -h
-```
-
-<!--pytest-codeblocks: expected-output-->
-
-```
-usage: sot bench [-h] [--output OUTPUT] [--disk DISK] [--duration DURATION]
-
-options:
-  -h, --help            show this help message and exit
-  --output OUTPUT, -o OUTPUT
-                        Output file for benchmark results (JSON format)
-  --disk DISK           Disk to benchmark, by id (disk3, /dev/sda) or mountpoint; skips the prompt
-  --duration DURATION, -d DURATION
-                        Duration for each benchmark test in seconds (default: 10s)
-```
-
-For clean-specific options:
-
-```sh
-sot clean -h
-```
-
-<!--pytest-codeblocks: expected-output-->
-
-```
-usage: sot clean [-h] [--dry-run] [--force]
-
-options:
-  -h, --help  show this help message and exit
-  --dry-run   Show what would be cleaned without actually deleting
-  --force     Also clean data still in use, like the browser sessions that restore open tabs
-```
-
-Main Theme:
-
-| Color | Hex | RGB |
-| --- | --- | --- |
-| sky_blue3 | `#5fafd7` | `rgb(95,175,215)` |
-| aquamarine3 | `#5fd7af` | `rgb(95,215,175)` |
-| yellow | `#808000` | `rgb(128,128,0)` |
-| bright_black | `#808080` | `rgb(128,128,128)` |
-| slate_blue1 | `#875fff` | `rgb(135,95,255)` |
-| red3 | `#d70000` | `rgb(215,0,0)` |
-| dark_orange | `#d75f00` | `rgb(215,95,0)` |
-
-All supported [colors](https://rich.readthedocs.io/en/latest/appendix/colors.html).
-
----
-
-<p align="center">
-  <p align="center">🏴 ≈ 🏴</p>
-</p>
-
----
-
-`sot` uses:
-- [Textual](https://github.com/willmcgugan/textual/) for layouting
-- [rich](https://rich.readthedocs.io/en/latest/index.html) for rich text
-- [psutil](https://github.com/giampaolo/psutil) for fetching system data.
-
-Tested Systems:
-
-![macOS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
-![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
-
-_If you use a system that's not listed above, feel free to add to the list. If you're facing any issues, would be happy to take a look._
-
----
-
-Other top alternatives in alphabetical order:
-
-- [tiptop](https://github.com/nschloe/tiptop) ✨ This project was created on top of `tiptop`, when it became unmaintained.
-- [bashtop](https://github.com/aristocratos/bashtop), [bpytop](https://github.com/aristocratos/bpytop), [btop](https://github.com/aristocratos/btop)
-- [bottom](https://github.com/ClementTsang/bottom) (one of my fav)
-- [Glances](https://github.com/nicolargo/glances)
-- [gtop](https://github.com/aksakalli/gtop)
-- [htop](https://github.com/htop-dev/htop)
+<p align="center">🏴 ≈ 🏴</p>
