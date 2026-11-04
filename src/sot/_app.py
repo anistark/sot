@@ -233,7 +233,7 @@ def build_parser() -> argparse.ArgumentParser:
     # Create subparsers for subcommands
     subparsers = parser.add_subparsers(
         dest="command",
-        metavar="{info,bench,disk,clean,ps}",
+        metavar="{info,bench,disk,clean,ps,update,upgrade}",
     )
 
     # Add info subcommand
@@ -320,6 +320,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Processes view: processes, listening ports, dev environments",
         formatter_class=argparse.RawTextHelpFormatter,
     )
+
+    # Add update and upgrade subcommands
+    for name, help_text in (
+        ("update", "Move to the newest minor or patch release of this major version"),
+        ("upgrade", "Move to the newest release, major versions included"),
+    ):
+        update_parser = subparsers.add_parser(
+            name,
+            help=help_text,
+            formatter_class=argparse.RawTextHelpFormatter,
+        )
+        update_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Show how sot is installed and what would run, without changing it",
+        )
     return parser
 
 
@@ -357,6 +373,11 @@ def run(argv=None):  # noqa: C901
         from .info.cli import info_command
 
         return info_command(args)
+
+    if args.command in ("update", "upgrade"):
+        from .update.cli import update_command
+
+        return update_command(args)
 
     interactive = sys.stdin.isatty() and sys.stdout.isatty()
     start_mode = config.default_view or "overview"
