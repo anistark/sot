@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Live theme switching** - Change the theme while `sot`, `sot ps` or `sot disk` is running: `Ctrl+P` → Theme
   - Graphs keep their history and lists keep their selection, sort and scroll position
   - The theme picker only lists SOT themes
+- **`sot update` and `sot upgrade`** - Move to a newer release however sot was installed: uv tool, pipx, Homebrew, pip, uv pip, or the deb and rpm packages
+  - `sot update` stays on your major version and says when a new one is out; `sot upgrade` goes to the newest release
+  - `--dry-run` shows how sot is installed and what would run
 
 ### Changed
 - **BREAKING: keys** - `x` kills (was `k`), `j`/`k` move in every list (vim style), `g`/`G` jump to the first/last row

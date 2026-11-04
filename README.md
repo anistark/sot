@@ -31,6 +31,8 @@ brew install anistark/tools/sot     # Homebrew
 
 Windows: use `uv` or `pipx`; the install script doesn't run there.
 
+To move to a newer release, `sot update` takes minor and patch releases and `sot upgrade` takes major ones too. Both work out how sot was installed and go through that tool; add `--dry-run` to see what would run. On Windows they print the command instead, since a running program can't replace itself.
+
 <details>
 <summary>DEB / RPM packages (experimental), source installs and release verification</summary>
 
@@ -47,8 +49,6 @@ From source:
 git clone https://github.com/anistark/sot.git && cd sot
 uv pip install --system .    # or: pipx install .
 ```
-
-Upgrade with `uv tool upgrade sot`, `pipx upgrade sot` or `brew update && brew upgrade sot`.
 
 PyPI releases are published from GitHub Actions with [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) and carry [PEP 740 attestations](https://docs.pypi.org/attestations/). To verify a release file:
 
@@ -69,6 +69,8 @@ uvx pypi-attestations verify pypi --repository https://github.com/anistark/sot p
 | `sot info` | System summary with an OS logo, like neofetch |
 | `sot bench` | Disk benchmark: sequential throughput, random IOPS and latency |
 | `sot clean` | Find and remove caches, logs, temp files and build output |
+| `sot update` | Move to the newest minor or patch release of your major version |
+| `sot upgrade` | Move to the newest release, major versions included |
 | `sot --keys` | List every key binding and its id |
 | `sot --config-path` | Show where the config file lives, with a commented template |
 

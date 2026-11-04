@@ -3,7 +3,7 @@
 sot \- sot is a Command\-line System Observation Tool in the spirit of top. It displays various interesting system stats and graphs them. Works on all operating systems.
 .SH SYNOPSIS
 .B sot
-[--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] [--config-path] [--keys] [--theme THEME] {info,bench,disk,clean,ps} ...
+[--help] [--version] [--log LOG] [--net NET] [--disk [DISK]] [--config-path] [--keys] [--theme THEME] {info,bench,disk,clean,ps,update,upgrade} ...
 .SH DESCRIPTION
 Command\-line System Observation Tool ≈
 
@@ -24,6 +24,12 @@ Clean caches, logs and temp files; \-\-dry\-run only reports
 .TP
 \fBsot\fR \fI\,ps\/\fR
 Processes view: processes, listening ports, dev environments
+.TP
+\fBsot\fR \fI\,update\/\fR
+Move to the newest minor or patch release of this major version
+.TP
+\fBsot\fR \fI\,upgrade\/\fR
+Move to the newest release, major versions included
 
 .SH COMMAND \fI\,'sot info'\/\fR
 usage: sot info [\-h]
@@ -74,6 +80,22 @@ Also clear build output and dependencies of projects under DIR
 
 .SH COMMAND \fI\,'sot ps'\/\fR
 usage: sot ps [\-h]
+
+.SH COMMAND \fI\,'sot update'\/\fR
+usage: sot update [\-h] [\-\-dry\-run]
+
+.SH OPTIONS \fI\,'sot update'\/\fR
+.TP
+\fB\-\-dry\-run\fR
+Show how sot is installed and what would run, without changing it
+
+.SH COMMAND \fI\,'sot upgrade'\/\fR
+usage: sot upgrade [\-h] [\-\-dry\-run]
+
+.SH OPTIONS \fI\,'sot upgrade'\/\fR
+.TP
+\fB\-\-dry\-run\fR
+Show how sot is installed and what would run, without changing it
 
 .SH OPTIONS
 .TP
@@ -152,6 +174,12 @@ Also clear build output and dependencies of projects idle for 14 days
 .TP
 .B sot ps
 Open the Processes view with ports and dev environments
+.TP
+.B sot update
+Move to the newest minor or patch release, however sot was installed
+.TP
+.B sot upgrade --dry-run
+Show how sot is installed and what moving to the newest release would run
 .TP
 .B sot --keys
 List every key binding id for the [keymap] config table

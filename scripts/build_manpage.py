@@ -36,13 +36,15 @@ def build_manpage():
         "click the header tabs to switch; each view keeps its state.\n\n"
         "Without a subcommand sot opens the Overview. Subcommands open their view, "
         "or print and exit when given flags or when not run in a terminal:\n\n"
-        "  info   - Print system information with an OS-specific ASCII logo\n"
-        "  bench  - Bench view; --disk or --output run it without the TUI\n"
-        "  disk   - Disks view; --list prints a table\n"
-        "  clean  - Clean view; --dry-run prints what would be cleaned, --force adds\n"
-        "           data still in use, --privacy cookies and history, --projects\n"
-        "           build output of idle projects\n"
-        "  ps     - Processes view with listening ports and dev environments"
+        "  info    - Print system information with an OS-specific ASCII logo\n"
+        "  bench   - Bench view; --disk or --output run it without the TUI\n"
+        "  disk    - Disks view; --list prints a table\n"
+        "  clean   - Clean view; --dry-run prints what would be cleaned, --force adds\n"
+        "            data still in use, --privacy cookies and history, --projects\n"
+        "            build output of idle projects\n"
+        "  ps      - Processes view with listening ports and dev environments\n"
+        "  update  - Move to the newest minor or patch release of this major version\n"
+        "  upgrade - Move to the newest release, major versions included"
     )
     manpage.project = "sot"  # type: ignore[attr-defined]
     manpage.version = __version__  # type: ignore[attr-defined]
@@ -105,6 +107,12 @@ Also clear build output and dependencies of projects idle for 14 days
 .TP
 .B sot ps
 Open the Processes view with ports and dev environments
+.TP
+.B sot update
+Move to the newest minor or patch release, however sot was installed
+.TP
+.B sot upgrade --dry-run
+Show how sot is installed and what moving to the newest release would run
 .TP
 .B sot --keys
 List every key binding id for the [keymap] config table
