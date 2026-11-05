@@ -249,7 +249,15 @@ def _get_dev_targets(elevated: bool = False) -> list[CleanTarget]:
         action = None
         if cache.command and not elevated and shutil.which(cache.command[0]):
             action = partial(run, cache.command, env=cache.env)
-        targets.append(CleanTarget(cache.name, found, cache.description, action=action))
+        targets.append(
+            CleanTarget(
+                cache.name,
+                found,
+                cache.description,
+                action=action,
+                attended=cache.attended,
+            )
+        )
 
     return targets
 
@@ -352,6 +360,7 @@ def _get_macos_targets(force: bool = False, privacy: bool = False) -> list[Clean
             name="Trash",
             path=home / ".Trash",
             description="Trash bin contents",
+            attended=True,
         ),
         CleanTarget(
             name="Safari Cache",

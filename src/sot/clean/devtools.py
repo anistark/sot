@@ -21,6 +21,7 @@ class DevCache(NamedTuple):
     paths: tuple[str, ...]
     command: tuple[str, ...] = ()
     env: dict[str, str] = {}
+    attended: bool = False
 
 
 class Review(NamedTuple):
@@ -48,6 +49,8 @@ DEV_CACHES: tuple[DevCache, ...] = (
             "{localappdata}/go-build",
         ),
         ("go", "clean", "-cache", "-modcache"),
+        # Wipes everything at once, and the module cache is read-only to anything else.
+        attended=True,
     ),
     DevCache(
         "pnpm Store",
@@ -135,14 +138,14 @@ REVIEW: tuple[Review, ...] = (
         "Docker Disk",
         "Docker VM disk; see docker system df",
         (
-            "{home}/Library/Containers/com.docker.docker/Data/vms",
+            "{mac_containers}/com.docker.docker/Data/vms",
             "{localappdata}/Docker/wsl",
         ),
     ),
     Review(
         "OrbStack Data",
         "OrbStack VM disk",
-        ("{home}/Library/Group Containers/HUAQ24HBR6.dev.orbstack/data",),
+        ("{mac_group_containers}/HUAQ24HBR6.dev.orbstack/data",),
     ),
     Review("Colima Disks", "Colima VM disks", ("{home}/.colima",)),
     Review(

@@ -166,6 +166,7 @@ sot clean --force              # also remove data still in use (see below)
 sot clean --privacy            # also clear browser cookies, history and site data
 sot clean --projects ~/code    # also clear node_modules, target, .venv… in idle projects
 sudo sot clean                 # include system logs and temp files that need root
+sot clean -d                   # clean in the background, every hour (see below)
 ```
 
 In the Clean view: `space` ticks a row, `a` ticks all, `d` dry runs, `c` cleans (asks first), `f` toggles force, `p` toggles privacy, `r` rescans.
@@ -188,6 +189,24 @@ In the Clean view: `space` ticks a row, `a` ticks all, `d` dry runs, `c` cleans 
 - Symlinks are removed, never followed
 - Root-only targets are skipped unless you run with `sudo`
 - `--force` is needed for in-use data: the newest browser session (the one that restores your tabs), browser copies still open, the newest device support files and projects touched in the last 14 days
+
+### On a schedule
+
+`sot clean -d` cleans in the background: hourly, unless you pass `daily`, `weekly` or `monthly` or set `every` under `[clean]` in the config. It registers a job with launchd on macOS and a systemd user timer on Linux, or cron where there's no user systemd, so nothing stays running between runs and the schedule survives a reboot. A run the machine slept through happens when it wakes, except under cron. Windows isn't supported yet.
+
+```sh
+sot clean -d daily                # start, or change the schedule
+sot clean --scheduled --dry-run   # what a run would remove right now
+sot clean -d status               # schedule, last run and log
+sot clean -d stop                 # turn it off
+```
+
+Nobody is there to confirm a run, so it removes less than `sot clean`:
+
+- It only clears entries nothing has touched for 3 days, so apps you're using and warm builds keep their caches. `--force` lifts this.
+- It never touches the Trash, Mail attachments, the Go cache, anything that needs root, or other apps' sandboxes in `~/Library/Containers`, where macOS would stop it to ask you.
+
+`--force`, `--privacy` and `--projects` given with `-d` apply to every run. macOS may ask once about a `--projects` folder in Documents or on an external drive, and the run waits for your answer. What each run removed goes in `~/.local/state/sot/clean.log`. A schedule changed in the config applies the next time you run `sot clean -d`. On Linux, a systemd timer only runs while you're logged in unless you run `loginctl enable-linger`.
 
 <details>
 <summary>Details: browser sessions, privacy, projects, agent caches and relocated directories</summary>
@@ -245,6 +264,9 @@ disk = "/"                   # mountpoint on the overview
 [refresh]                    # seconds
 cpu = 1.0
 processes = 2.0
+
+[clean]
+every = "daily"              # how often `sot clean -d` runs: hourly, daily, weekly, monthly
 
 [keymap]                     # binding id = keys, see `sot --keys`
 "sot.process.kill" = "ctrl+k"

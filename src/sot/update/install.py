@@ -18,6 +18,8 @@ PIPX = "pipx"
 PIP = "pip"
 DEB = "deb"
 RPM = "rpm"
+UVX = "uvx"
+PIPX_RUN = "pipx run"
 
 PACKAGE_PREFIX = Path("/opt/sot")
 DPKG_RECORD = Path("/var/lib/dpkg/info/sot.list")
@@ -44,12 +46,12 @@ def detect_install() -> Install:
 
     if prefix.parent.name == "archive-v0":
         return Install(
-            "uvx", prefix, "uvx runs a cached copy. Use `uvx sot@latest` instead."
+            UVX, prefix, "uvx runs a cached copy. Use `uvx sot@latest` instead."
         )
     # `pipx run` environments carry the same metadata but sit outside venvs/.
     if (prefix / "pipx_metadata.json").exists() and prefix.parent.name != "venvs":
         return Install(
-            "pipx run", prefix, "pipx runs a cached copy. Use `pipx run sot` instead."
+            PIPX_RUN, prefix, "pipx runs a cached copy. Use `pipx run sot` instead."
         )
 
     try:

@@ -20,6 +20,7 @@ class CleanTarget(NamedTuple):
     ``path``. With ``older_than`` only files not modified for that many days
     go, and directories stay. ``action`` replaces deleting the paths, which
     then only measure the target, unless ``measure`` does that too.
+    ``attended`` targets need someone there: scheduled runs leave them alone.
     """
 
     name: str
@@ -31,6 +32,7 @@ class CleanTarget(NamedTuple):
     action: Callable[[], list[str]] | None = None
     measure: Callable[[], int] | None = None
     review: bool = False
+    attended: bool = False
 
 
 def target_paths(target: CleanTarget) -> list[Path]:
@@ -109,6 +111,52 @@ def measure_target(target: CleanTarget) -> int:
         disk_usage(path, target.keep, target.older_than)
         for path in target_paths(target)
     )
+
+
+def _changed_since(path: str, cutoff: float) -> bool:
+    """Whether anything at or under ``path`` changed after ``cutoff``.
+
+    Unpacking keeps a file's old mtime, so ctime counts too. What can't be read
+    counts as changed: the caller leaves it alone.
+    """
+
+    def changed(st: os.stat_result) -> bool:
+        return max(st.st_mtime, st.st_ctime) > cutoff
+
+    try:
+        st = os.lstat(path)
+        if changed(st):
+            return True
+        if not stat.S_ISDIR(st.st_mode):
+            return False
+        pending = [path]
+        while pending:
+            with os.scandir(pending.pop()) as entries:
+                for entry in entries:
+                    if changed(entry.stat(follow_symlinks=False)):
+                        return True
+                    if entry.is_dir(follow_symlinks=False):
+                        pending.append(entry.path)
+    except OSError:
+        return True
+    return False
+
+
+def idle_paths(path: Path, days: int) -> list[Path]:
+    """The entries of ``path``, or ``path`` if it's a file, unchanged for ``days``.
+
+    Entries are judged whole. Going file by file would strip old files out of
+    a package or a build and leave the rest looking intact.
+    """
+    cutoff = time.time() - days * 86400
+    try:
+        if path.is_dir() and not path.is_symlink():
+            entries = list(path.iterdir())
+        else:
+            entries = [path] if os.path.lexists(path) else []
+    except OSError:
+        return []
+    return [entry for entry in entries if not _changed_since(str(entry), cutoff)]
 
 
 def _remove(path: str, keep: Sequence[str], cutoff: float | None) -> list[str]:

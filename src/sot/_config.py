@@ -24,6 +24,9 @@ EXAMPLE = """\
 # cpu = 2.0
 # processes = 2.0
 
+# [clean]
+# every = "daily"              # how often `sot clean --daemon` runs: hourly, daily, weekly, monthly
+
 # [keymap]                     # binding id = keys, see `sot --keys`
 # "sot.process.kill" = "ctrl+k"
 """
@@ -41,12 +44,17 @@ def state_path() -> Path:
     return _xdg("XDG_STATE_HOME", ".local/state") / "sot" / "state.toml"
 
 
+def clean_log_path() -> Path:
+    return state_path().parent / "clean.log"
+
+
 @dataclass
 class Config:
     theme: str | None = None
     default_view: str | None = None
     net: str | None = None
     disk: str | None = None
+    clean_every: str | None = None
     refresh: dict[str, float] = field(default_factory=dict)
     keymap: dict[str, str] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
@@ -66,6 +74,7 @@ def _read(path: Path, warnings: list[str]) -> dict:
 def load_config(path: Path | None = None) -> Config:
     """Read the config, dropping (and reporting) anything that isn't valid."""
     from ._theme import THEMES
+    from .clean.schedule import SCHEDULES
     from .tui import refresh
     from .tui.keymap import VIEWS
 
@@ -86,6 +95,13 @@ def load_config(path: Path | None = None) -> Config:
     for key in ("net", "disk"):
         if isinstance(data.get(key), str):
             setattr(config, key, data[key])
+
+    clean = data.get("clean")
+    every = clean.get("every") if isinstance(clean, dict) else None
+    if isinstance(every, str) and every in SCHEDULES:
+        config.clean_every = every
+    elif every is not None:
+        config.warnings.append(f"Unknown clean.every {every!r}, using the default")
 
     for name, seconds in (data.get("refresh") or {}).items():
         valid = isinstance(seconds, (int, float)) and seconds > 0
@@ -144,3 +160,12 @@ def remembered_zoom() -> int:
 
 def remember_zoom(level: int) -> None:
     _remember("zoom", level)
+
+
+def remembered_clean_schedule() -> str | None:
+    value = _remembered().get("clean_schedule")
+    return value if isinstance(value, str) else None
+
+
+def remember_clean_schedule(every: str) -> None:
+    _remember("clean_schedule", every)

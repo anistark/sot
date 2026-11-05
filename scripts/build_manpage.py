@@ -41,7 +41,7 @@ def build_manpage():
         "  disk    - Disks view; --list prints a table\n"
         "  clean   - Clean view; --dry-run prints what would be cleaned, --force adds\n"
         "            data still in use, --privacy cookies and history, --projects\n"
-        "            build output of idle projects\n"
+        "            build output of idle projects, --daemon cleans on a schedule\n"
         "  ps      - Processes view with listening ports and dev environments\n"
         "  update  - Move to the newest minor or patch release of this major version\n"
         "  upgrade - Move to the newest release, major versions included"
@@ -104,6 +104,21 @@ Also clear browser cookies, history and site data, and recent items
 .TP
 .B sot clean --projects ~/code
 Also clear build output and dependencies of projects idle for 14 days
+.TP
+.B sot clean --daemon
+Clean hourly in the background, through launchd, systemd or cron
+.TP
+.B sot clean -d weekly
+Clean weekly instead; also hourly, daily or monthly
+.TP
+.B sot clean -d status
+Show the schedule, the last run and the log
+.TP
+.B sot clean -d stop
+Turn scheduled cleaning off
+.TP
+.B sot clean --scheduled --dry-run
+Preview what a scheduled run would remove
 .TP
 .B sot ps
 Open the Processes view with ports and dev environments
@@ -299,6 +314,9 @@ theme = "cyberpunk"
 default_view = "processes"
 net = "en0"
 disk = "/"
+
+[clean]
+every = "daily"          # how often sot clean --daemon runs
 
 [refresh]
 cpu = 1.0
