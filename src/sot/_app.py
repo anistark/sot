@@ -21,6 +21,7 @@ from ._config import (
     remembered_zoom,
 )
 from ._theme import DEFAULT_THEME, THEMES, set_theme, theme
+from .clean.schedule import SCHEDULES
 from .tui import zoom
 from .tui.app import SotApp
 
@@ -313,8 +314,23 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="DIR",
         help="Also clear build output and dependencies of projects under DIR",
     )
-
-    # Add ps subcommand
+    clean_parser.add_argument(
+        "--daemon",
+        "-d",
+        nargs="?",
+        const="start",
+        choices=[*SCHEDULES, "start", "stop", "status"],
+        metavar="WHEN",
+        help=(
+            "Clean in the background: hourly, daily, weekly or monthly (default: "
+            "config, or hourly). stop and status manage it"
+        ),
+    )
+    clean_parser.add_argument(
+        "--scheduled",
+        action="store_true",
+        help="Clean once without asking, as the daemon does; add --dry-run to preview",
+    )
     subparsers.add_parser(
         "ps",
         help="Processes view: processes, listening ports, dev environments",
@@ -399,6 +415,12 @@ def run(argv=None):  # noqa: C901
         start_mode = "disks"
 
     if args.command == "clean":
+        if args.daemon or args.scheduled:
+            from .clean.daemon import daemon_command, scheduled_clean
+
+            if args.daemon:
+                return daemon_command(args, config.clean_every)
+            return scheduled_clean(args)
         if args.dry_run or not interactive:
             from .clean.cli import clean_command
 

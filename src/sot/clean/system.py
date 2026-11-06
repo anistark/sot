@@ -26,6 +26,7 @@ class SystemSpec(NamedTuple):
     requires_sudo: bool = False
     older_than: int | None = None
     privacy: bool = False
+    attended: bool = False
 
 
 SYSTEM: tuple[SystemSpec, ...] = (
@@ -33,9 +34,10 @@ SYSTEM: tuple[SystemSpec, ...] = (
         "Mail Downloads",
         "Attachments Mail opened",
         (
-            "{home}/Library/Containers/com.apple.mail/Data/Library/Mail Downloads",
+            "{mac_containers}/com.apple.mail/Data/Library/Mail Downloads",
             "{home}/Library/Mail Downloads",
         ),
+        attended=True,
     ),
     SystemSpec(
         "Messages Previews",
@@ -49,7 +51,7 @@ SYSTEM: tuple[SystemSpec, ...] = (
         requires_sudo=True,
         older_than=30,
     ),
-    SystemSpec("Trash", "Trash bin contents", ("{xdg_data}/Trash",)),
+    SystemSpec("Trash", "Trash bin contents", ("{xdg_data}/Trash",), attended=True),
     SystemSpec(
         "Core Dumps",
         "Crashed process memory dumps",
@@ -134,6 +136,7 @@ def system_targets(
                     spec.description,
                     requires_sudo=spec.requires_sudo,
                     older_than=spec.older_than,
+                    attended=spec.attended,
                 )
             )
     return targets

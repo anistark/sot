@@ -60,6 +60,7 @@ Print disks and partitions as a plain list instead of the TUI
 
 .SH COMMAND \fI\,'sot clean'\/\fR
 usage: sot clean [\-h] [\-\-dry\-run] [\-\-force] [\-\-privacy] [\-\-projects [DIR]]
+                 [\-\-daemon [WHEN]] [\-\-scheduled]
 
 .SH OPTIONS \fI\,'sot clean'\/\fR
 .TP
@@ -77,6 +78,14 @@ Also clear browser cookies, history and site data, and recent items
 .TP
 \fB\-\-projects\fR \fI\,[DIR]\/\fR
 Also clear build output and dependencies of projects under DIR
+
+.TP
+\fB\-\-daemon\fR \fI\,[WHEN]\/\fR, \fB\-d\fR \fI\,[WHEN]\/\fR
+Clean in the background: hourly, daily, weekly or monthly (default: config, or hourly). stop and status manage it
+
+.TP
+\fB\-\-scheduled\fR
+Clean once without asking, as the daemon does; add \-\-dry\-run to preview
 
 .SH COMMAND \fI\,'sot ps'\/\fR
 usage: sot ps [\-h]
@@ -171,6 +180,21 @@ Also clear browser cookies, history and site data, and recent items
 .TP
 .B sot clean --projects ~/code
 Also clear build output and dependencies of projects idle for 14 days
+.TP
+.B sot clean --daemon
+Clean hourly in the background, through launchd, systemd or cron
+.TP
+.B sot clean -d weekly
+Clean weekly instead; also hourly, daily or monthly
+.TP
+.B sot clean -d status
+Show the schedule, the last run and the log
+.TP
+.B sot clean -d stop
+Turn scheduled cleaning off
+.TP
+.B sot clean --scheduled --dry-run
+Preview what a scheduled run would remove
 .TP
 .B sot ps
 Open the Processes view with ports and dev environments
@@ -366,6 +390,9 @@ theme = "cyberpunk"
 default_view = "processes"
 net = "en0"
 disk = "/"
+
+[clean]
+every = "daily"          # how often sot clean --daemon runs
 
 [refresh]
 cpu = 1.0

@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Review table** - Models, VM disks, simulators, toolchains and backups are measured and shown but never deleted
 - **`sot clean --privacy`** - Adds browser cookies, history and site data, and recent items; `p` in the Clean view
 - **`sot clean --projects DIR`** - Adds `node_modules`, `target`, `.venv` and other build output in projects idle for 14 days; `--force` includes active ones
+- **`sot clean --daemon`** - Cleans in the background through launchd, a systemd user timer or cron, so nothing stays running and the schedule survives reboots
+  - Hourly by default; `sot clean -d daily`, `weekly` or `monthly`, or `every` under `[clean]` in the config, change it
+  - `sot clean -d status` shows the schedule and last run, `sot clean -d stop` turns it off, and each run is logged to `~/.local/state/sot/clean.log`
+  - A run never asks, so it leaves the Trash, Mail attachments, the Go cache and other apps' sandboxes alone and only clears what's been idle for 3 days; `sot clean --scheduled --dry-run` previews one
 - **System view** - What `sot info` prints, as panels, with uptime, memory and battery kept live
 - **Config file** - `~/.config/sot/config.toml` sets the theme, default view, `--net`/`--disk` defaults, refresh rates and key bindings; `sot --config-path` shows the path, `sot --keys` lists every binding id
   - A theme picked with `Ctrl+P` is remembered for the next start

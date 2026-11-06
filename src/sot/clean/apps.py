@@ -17,7 +17,7 @@ from .browsers import BROWSERS
 
 APP_DIRS = (
     "{mac_app_support}/*",
-    "{home}/Library/Containers/*/Data/Library/Application Support/*",
+    "{mac_containers}/*/Data/Library/Application Support/*",
     "{xdg_config}/*",
     "{appdata}/*",
     "{localappdata}/*",

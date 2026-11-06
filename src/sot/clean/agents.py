@@ -24,8 +24,9 @@ from __future__ import annotations
 
 import glob
 import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Mapping, NamedTuple
+from typing import Iterator, Mapping, NamedTuple
 
 import psutil
 
@@ -74,6 +75,9 @@ CACHE_ROOTS: dict[str, CacheRoot] = {
     # macOS.
     "mac_caches": CacheRoot(None, "Library/Caches"),
     "mac_app_support": CacheRoot(None, "Library/Application Support"),
+    # Other apps' sandboxes, see ``without_consent_roots``.
+    "mac_containers": CacheRoot(None, "Library/Containers"),
+    "mac_group_containers": CacheRoot(None, "Library/Group Containers"),
     # Windows.
     "appdata": CacheRoot("APPDATA", "AppData/Roaming"),
     "localappdata": CacheRoot("LOCALAPPDATA", "AppData/Local"),
@@ -83,6 +87,25 @@ CACHE_ROOTS: dict[str, CacheRoot] = {
     # VS Code portable mode keeps user data alongside the app instead.
     "vscode_portable": CacheRoot("VSCODE_PORTABLE", None),
 }
+
+
+CONSENT_ROOTS = frozenset({"mac_containers", "mac_group_containers"})
+_withheld: frozenset[str] = frozenset()
+
+
+@contextmanager
+def without_consent_roots() -> Iterator[None]:
+    """Resolve paths without the ones macOS guards with a consent dialog.
+
+    Your terminal holds that consent, a background job doesn't. Its read blocks
+    until someone answers a dialog they never expected, so the run hangs.
+    """
+    global _withheld
+    _withheld = CONSENT_ROOTS
+    try:
+        yield
+    finally:
+        _withheld = frozenset()
 
 
 def resolve_roots(environ: Mapping[str, str] | None = None) -> dict[str, Path]:
@@ -97,6 +120,8 @@ def resolve_roots(environ: Mapping[str, str] | None = None) -> dict[str, Path]:
     roots = {}
 
     for name, root in CACHE_ROOTS.items():
+        if name in _withheld:
+            continue
         value = env.get(root.env, "").strip() if root.env else ""
         if value:
             roots[name] = Path(value).expanduser()
