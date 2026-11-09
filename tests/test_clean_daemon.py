@@ -41,9 +41,18 @@ def backdate(path: Path) -> None:
         os.utime(item, (OLD, OLD), follow_symlinks=False)
 
 
+class OsView:
+    """``os`` as one module sees it, so swapping a call there leaves the rest
+    of the process, pathlib included, on the real one."""
+
+    def __getattr__(self, name):
+        return getattr(os, name)
+
+
 @pytest.fixture
 def aged(monkeypatch):
     """Judge age by mtime alone, since tests can't backdate a ctime."""
+    monkeypatch.setattr(targets, "os", OsView())
     real = os.lstat
 
     class Stat:
@@ -57,7 +66,7 @@ def aged(monkeypatch):
         def st_ctime(self):
             return self._st.st_mtime
 
-    monkeypatch.setattr("sot.clean.targets.os.lstat", lambda p: Stat(real(p)))
+    monkeypatch.setattr(targets.os, "lstat", lambda p: Stat(real(p)))
     real_scandir = os.scandir
 
     class Entry:
@@ -80,7 +89,7 @@ def aged(monkeypatch):
         def __exit__(self, *exc):
             self._scan.close()
 
-    monkeypatch.setattr("sot.clean.targets.os.scandir", Scan)
+    monkeypatch.setattr(targets.os, "scandir", Scan)
 
 
 def cache_with(tmp_path: Path) -> Path:
@@ -146,7 +155,7 @@ def test_what_cant_be_read_is_left_alone(tmp_path, aged, monkeypatch):
             raise PermissionError(path)
         return allowed(path)
 
-    monkeypatch.setattr("sot.clean.targets.os.scandir", refuse)
+    monkeypatch.setattr(targets.os, "scandir", refuse)
 
     # Listing the cache still works, so only the locked entry drops out.
     assert idle_paths(cache, 3) == [cache / "open"]
