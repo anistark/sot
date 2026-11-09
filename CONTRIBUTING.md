@@ -341,7 +341,7 @@ See `HOMEBREW_MANPAGE.md` for Homebrew-specific installation details.
 The docs at [anistark.github.io/sot](https://anistark.github.io/sot/) are built with [Eleventy](https://www.11ty.dev/), Tailwind CSS and TypeScript from `docs/`, and published to GitHub Pages by `.github/workflows/docs.yml` on every push to `main`. You need Node.js 22.18 or newer (`docs/.nvmrc` pins the version CI uses).
 
 ```sh
-just docs-dev      # serve with live reload at http://localhost:8080/sot/
+just docs-dev      # serve with live reload at http://localhost:8080/sot/ and on your LAN / Tailscale
 just docs-build    # build into docs/_site, as CI does
 ```
 

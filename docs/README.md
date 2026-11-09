@@ -11,6 +11,8 @@ just docs-dev      # http://localhost:8080/sot/ with live reload
 just docs-build    # docs/_site, as CI builds it
 ```
 
+The dev server listens on every network interface and prints your LAN and Tailscale addresses next to localhost, so you can check the site from a phone or another machine. On macOS, allow `node` the first time the firewall asks.
+
 Or by hand, from `docs/`:
 
 ```sh

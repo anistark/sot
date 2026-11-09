@@ -65,7 +65,7 @@ docs-data:
 	uv run python scripts/build_docs_data.py
 
 docs-dev: docs-data
-	@echo "📚 Serving the docs at http://localhost:8080/sot/ ..."
+	@echo "📚 Serving the docs on localhost and your network (LAN, Tailscale) ..."
 	cd docs && npm install && npm run dev
 
 docs-build: docs-data
@@ -191,7 +191,7 @@ help:
 	@echo ""
 	@echo "Installation:"
 	@echo "  just build-man              - Build man page"
-	@echo "  just docs-dev               - Serve the docs site with live reload"
+	@echo "  just docs-dev               - Serve the docs with live reload, on your network too"
 	@echo "  just docs-build             - Build the docs site into docs/_site"
 	@echo "  just build                  - Build SOT locally (includes man page)"
 	@echo "  just install                - Install SOT system-wide"

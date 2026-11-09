@@ -80,6 +80,10 @@ export default function (eleventyConfig: UserConfig) {
 
   eleventyConfig.addGlobalData("pathPrefix", pathPrefix);
   eleventyConfig.addGlobalData("siteUrl", siteUrl);
+
+  // The dev server listens on every interface; print the LAN and Tailscale
+  // addresses too, so the docs can be opened from a phone or another machine.
+  eleventyConfig.setServerOptions({ showAllHosts: true });
 }
 
 export const config = {
