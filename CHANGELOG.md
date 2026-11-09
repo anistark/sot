@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [7.0.0](https://github.com/anistark/sot/releases/tag/v7.0.0) - 2026-11-09
+
+sot is now one app with six switchable views. Key bindings changed: `x` kills (was `k`), and `j`/`k` move in every list. See **Changed** below.
+
 ### Added
 - **One app, six views** - Overview (`1`), Processes (`2`), Disks (`3`), System (`4`), Bench (`5`) and Clean (`6`) live in one app; `sot ps`, `sot disk`, `sot bench` and `sot clean` open it on their view
   - Switch with the number keys or by clicking the header tabs; each view keeps its selection, sort and scroll while hidden, and stops polling until you come back
