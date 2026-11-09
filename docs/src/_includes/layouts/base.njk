@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-base="{{ pathPrefix }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- set pageTitle = ("sot · " + site.tagline) if page.url == "/" else (title + " · sot docs") %}
+  {%- set pageDescription = (description or site.description) | plainText %}
+  {%- set pageUrl = siteUrl + (page.url | replace("/", "", 1)) %}
+  <title>{{ pageTitle }}</title>
+  <meta name="description" content="{{ pageDescription }}">
+  {%- if noindex %}
+  <meta name="robots" content="noindex">
+  {%- else %}
+  <link rel="canonical" href="{{ pageUrl }}">
+  <link rel="alternate" type="text/markdown" title="{{ title }} as Markdown" href="{{ pageUrl }}index.html.md">
+  {%- endif %}
+  <link rel="alternate" type="text/plain" title="llms.txt" href="{{ siteUrl }}llms.txt">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="sot">
+  <meta property="og:locale" content="en">
+  <meta property="og:title" content="{{ 'sot: a system monitor for the terminal' if page.url == '/' else title + ' · sot' }}">
+  <meta property="og:description" content="{{ pageDescription }}">
+  <meta property="og:url" content="{{ pageUrl }}">
+  <meta property="og:image" content="{{ siteUrl }}og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="sot running in a terminal window">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f7f0e4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1a1b26" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  {% structuredData title, description %}
+  <link rel="preload" href="/assets/fonts/roboto-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <script>try{var t=localStorage.getItem("sot-docs-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+  <link rel="stylesheet" href="/assets/main.css">
+  <script type="module" src="/assets/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <div class="window">
+    <header class="titlebar">
+      <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <button type="button" id="tree-toggle" class="lg:hidden hover:text-fg" aria-controls="tree" aria-expanded="false">[tree]</button>
+      <div class="min-w-0 flex-1 truncate text-center">
+        <span class="text-link">~/sot/docs</span>{% if page.url != "/" %}<span class="text-fg">{{ page.url | replace(r/\/$/, "") }}</span>{% endif %}<span class="hidden sm:inline text-faint"> — zsh</span>
+      </div>
+      <button type="button" data-open="palette" class="flex h-6 items-center gap-2 rounded-md border border-line px-2 hover:border-faint hover:text-fg">
+        <span>search</span><kbd class="hidden sm:inline-block">/</kbd>
+      </button>
+      <a href="{{ site.repo }}" target="_blank" rel="noopener" class="hover:text-fg" aria-label="sot on GitHub" title="sot on GitHub">
+        <svg class="size-[1.05rem]" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+      </a>
+    </header>
+
+    <div class="panes">
+      <nav id="tree" class="pane pane-tree" aria-label="Documentation">
+        <span class="pane-title">~/sot/docs</span>
+        <div class="pane-body px-3 pt-4 pb-3">
+          {% include "partials/tree.njk" %}
+        </div>
+      </nav>
+
+      <main id="main" class="pane pane-main is-active">
+        {%- set firstCmd = cmds[0] if cmds else "" %}
+        {%- set paneLabel = paneTitle or ((("sot --help" if firstCmd == "sot" else "sot " + firstCmd + " --help") if firstCmd else (command or "cat " + page.inputPath | replace("./src/", "")))) %}
+        <span class="pane-title">{{ paneLabel }}</span>
+        <div id="content" class="pane-body px-[2.5ch] pt-7 pb-10 sm:px-[4ch]" tabindex="-1" data-pagefind-body>
+          {{ content | safe }}
+        </div>
+        <span class="pane-sub" id="scroll-pos" aria-hidden="true">top</span>
+      </main>
+
+      {%- set toc = content | outline(outlineDepth or 2) %}
+      <aside class="pane pane-outline" aria-label="On this page">
+        <span class="pane-title">outline</span>
+        <div class="pane-body px-3 pt-4 pb-3 text-[0.8125rem]">
+          {%- if toc.length %}
+          <nav class="toc">
+            {%- for h in toc %}
+            <a href="#{{ h.id }}" class="lvl-{{ h.level }}">{{ h.text }}</a>
+            {%- endfor %}
+          </nav>
+          {%- else %}
+          <p class="text-faint">(no headings)</p>
+          {%- endif %}
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span class="session">[sot]</span>
+      <nav class="windows" aria-label="Sections">
+        {%- for w in nav.windows %}
+        <a href="{{ w.url }}" data-window="{{ loop.index }}"{% if w.name == window %} aria-current="page"{% endif %}><span>{{ loop.index }}:</span>{{ w.name }}{% if w.name == window %}*{% endif %}</a>
+        {%- endfor %}
+      </nav>
+      <div class="right">
+        <button type="button" data-open="keys" class="hidden md:block">? keys</button>
+        <button type="button" data-theme-toggle class="hidden sm:block">theme:<span data-theme-name>dark</span></button>
+        <a href="/changelog/" class="version">v{{ sot.version or "dev" }}</a>
+      </div>
+    </footer>
+  </div>
+
+  {% include "partials/dialogs.njk" %}
+
+  <script type="application/json" id="nav-data">{{ nav.tree | dump | safe }}</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+---
+# A Markdown copy of every page at its URL + index.html.md, for agents (see llms.txt).
+pagination:
+  data: collections.docs
+  size: 1
+  alias: doc
+permalink: "{{ doc.url }}index.html.md"
+eleventyExcludeFromCollections: true
+---
+{{ doc | pageMarkdown | safe }}

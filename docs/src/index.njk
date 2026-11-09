@@ -1,0 +1,63 @@
+---
+layout: layouts/base.njk
+title: sot
+window: readme
+paneTitle: sot --version
+---
+{%- set install %}{% include "snippets/install.md" %}{% endset %}
+<h1 class="sr-only">sot, a system monitor for the terminal</h1>
+
+{{ "sot --version" | prompt(true) | safe }}
+<div class="grid max-w-[94ch] gap-x-[4ch] gap-y-5 pt-3 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+  <div class="box flex min-w-[30ch] flex-col items-center px-[3ch] pt-6 pb-5">
+    <span class="box-title">System Observation Tool</span>
+    {{ sot.logos.classic | logo("logo") | safe }}
+  </div>
+  <dl class="grid grid-cols-[auto_1fr] gap-x-[3ch] gap-y-1">
+    <dt class="text-muted">Version:</dt><dd class="font-semibold text-ok">{{ sot.version or "dev" }}</dd>
+    <dt class="text-muted">Python:</dt><dd class="font-semibold text-link">3.10 or newer</dd>
+    <dt class="text-muted">Platform:</dt><dd class="font-semibold text-key">macOS · Linux · Windows</dd>
+    <dt class="text-muted">License:</dt><dd class="font-semibold text-flag">MIT</dd>
+  </dl>
+</div>
+
+{{ "cat README.md" | prompt | safe }}
+<article class="term-prose home">
+  {{ overview.intro | join("\n\n") | md | safe }}
+
+  <figure class="box !px-2 !pt-4 !pb-2">
+    <span class="box-title">demo.gif</span>
+    <img src="/assets/img/demo.gif" width="1600" height="973" loading="lazy" decoding="async"
+      alt="sot walkthrough: overview, processes, disks, system, bench, clean, command palette and themes">
+  </figure>
+
+  <h2 id="install"><a class="header-anchor" href="#install" aria-hidden="true"></a>Install</h2>
+  <p>macOS and Linux, one line (installs Python 3.10+ and pipx if missing), or your package manager of choice. On Windows, use <code>uv</code> or <code>pipx</code>. More ways in <a href="/install/">install</a>.</p>
+  {{ install | md | safe }}
+
+  <h2 id="views"><a class="header-anchor" href="#views" aria-hidden="true"></a>One app, six views</h2>
+  <p>Every command that opens a screen opens the same app on a different view, so you can hop between them with the number keys.</p>
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    {%- for v in overview.views %}
+    <a class="card" href="/usage/#views">
+      <span class="flex items-baseline gap-[1ch]"><kbd>{{ v.key }}</kbd><span class="font-semibold text-strong">{{ v.name }}</span></span>
+      <span class="mt-1.5 block text-[0.8125rem] leading-relaxed text-muted">{{ v.shows }}</span>
+    </a>
+    {%- endfor %}
+  </div>
+
+  <h2 id="commands"><a class="header-anchor" href="#commands" aria-hidden="true"></a>Commands</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+      <tbody>
+        {%- for c in overview.commands %}
+        <tr><td><a href="{{ c.url }}"><code>{{ c.command }}</code></a></td><td>{{ c.does }}</td></tr>
+        {%- endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p>Built with <a href="https://github.com/textualize/textual" class="external" target="_blank" rel="noopener">Textual</a>, <a href="https://github.com/textualize/rich" class="external" target="_blank" rel="noopener">Rich</a> and <a href="https://github.com/giampaolo/psutil" class="external" target="_blank" rel="noopener">psutil</a>. Tested on macOS and Ubuntu; if it works (or doesn't) on your system, <a href="https://github.com/anistark/sot/issues" class="external" target="_blank" rel="noopener">open an issue</a>.</p>
+</article>
+
+{% include "partials/next.njk" %}

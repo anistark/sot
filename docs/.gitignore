@@ -1,0 +1,4 @@
+node_modules/
+_site/
+# Written by scripts/build_docs_data.py from sot itself.
+src/_data/sot.json

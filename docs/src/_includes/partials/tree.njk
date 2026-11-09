@@ -1,0 +1,24 @@
+{%- macro entry(item) -%}
+<a href="{{ item.url }}"{% if item.url == page.url %} aria-current="page"{% endif %}>{{ item.title }}</a>
+{%- endmacro -%}
+<div class="tree">
+  <div class="root">.</div>
+  <ul>
+    {%- for item in nav.tree %}
+    {%- if item.dir %}
+    <li>
+      <span class="dir">{{ item.dir }}/</span>
+      <ul>
+        {%- for child in item.children %}
+        <li>{{ entry(child) }}</li>
+        {%- endfor %}
+      </ul>
+    </li>
+    {%- else %}
+    <li>{{ entry(item) }}</li>
+    {%- endif %}
+    {%- endfor %}
+  </ul>
+  {%- set dirs = nav.tree | selectattr("dir") | length %}
+  <p class="mt-4 text-faint">{{ dirs }} director{{ "y" if dirs == 1 else "ies" }}, {{ nav.tree | flattenNav | length }} files</p>
+</div>

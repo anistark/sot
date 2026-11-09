@@ -1,0 +1,23 @@
+{
+  "intro": [
+    "**sot** is a system monitor for the terminal, in the spirit of [top](https://en.wikipedia.org/wiki/Top_(software)).",
+    "CPU, memory, GPU, disks, network and processes in one live dashboard, plus tools to inspect your machine, benchmark disks and free up space. Works on macOS, Linux and Windows."
+  ],
+  "views": [
+    { "key": "1", "name": "Overview", "shows": "CPU per core, health score, top processes, memory, GPU, disk, network and socket graphs" },
+    { "key": "2", "name": "Processes", "shows": "Process table, listening ports and dev environments" },
+    { "key": "3", "name": "Disks", "shows": "Physical disks and partitions, usage bars, read/write stats" },
+    { "key": "4", "name": "System", "shows": "What sot info prints, with uptime, memory and battery kept live" },
+    { "key": "5", "name": "Bench", "shows": "Pick a disk and watch each benchmark finish" },
+    { "key": "6", "name": "Clean", "shows": "Scan, tick what to remove, dry run or clean" }
+  ],
+  "commands": [
+    { "command": "sot", "url": "/commands/", "does": "Live dashboard: CPU, memory, GPU, disk, network, connections and processes" },
+    { "command": "sot ps", "url": "/commands/ps/", "does": "Processes, listening ports and running dev environments" },
+    { "command": "sot disk", "url": "/commands/disk/", "does": "Every physical disk with its partitions, usage and I/O" },
+    { "command": "sot info", "url": "/commands/info/", "does": "System summary with an OS logo, like neofetch" },
+    { "command": "sot bench", "url": "/commands/bench/", "does": "Disk benchmark: sequential throughput, random IOPS and latency" },
+    { "command": "sot clean", "url": "/commands/clean/", "does": "Find and remove caches, logs, temp files and build output" },
+    { "command": "sot update", "url": "/commands/update/", "does": "Move to a newer release, through the tool that installed sot" }
+  ]
+}

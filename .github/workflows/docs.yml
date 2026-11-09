@@ -1,0 +1,101 @@
+name: Docs
+
+# Builds the docs site in docs/ and publishes it to GitHub Pages. Pull requests
+# only build it, to catch broken pages before they land.
+#
+# One-time setup:
+#   - GitHub > Settings > Pages > Build and deployment: set Source to "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/sot/**"
+      - "scripts/build_docs_data.py"
+      - "images/**"
+      - "CHANGELOG.md"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "src/sot/**"
+      - "scripts/build_docs_data.py"
+      - "images/**"
+      - "CHANGELOG.md"
+      - "uv.lock"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Let a running deploy finish; superseded pull request builds can stop.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The site shows sot's real --help output, keys and config template.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.14"
+          enable-cache: false
+
+      - name: Generate data from sot
+        run: uv run --locked --no-dev python scripts/build_docs_data.py
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: docs/.nvmrc
+
+      - name: Install
+        working-directory: docs
+        run: npm ci
+
+      - name: Type check
+        working-directory: docs
+        run: npm run check
+
+      - name: Read the Pages settings
+        id: pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Build
+        working-directory: docs
+        env:
+          PATH_PREFIX: ${{ steps.pages.outcome == 'success' && format('{0}/', steps.pages.outputs.base_path) || '/sot/' }}
+          SITE_URL: ${{ steps.pages.outputs.base_url || 'https://anistark.github.io/sot' }}
+        run: npm run build
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/_site
+
+  deploy:
+    name: Deploy
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

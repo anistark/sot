@@ -1,0 +1,39 @@
+<dialog id="palette" class="dialog" aria-label="Search the docs">
+  <div class="pane is-active">
+    <span class="pane-title">search</span>
+    <div class="flex items-center gap-[1ch] border-b border-line px-[2ch] pt-4 pb-3">
+      <span class="text-accent" aria-hidden="true">❯</span>
+      <input id="palette-input" type="text" class="min-w-0 flex-1 bg-transparent text-strong outline-none placeholder:text-faint"
+        placeholder="search the docs, jump to a page, switch theme" autocomplete="off" spellcheck="false"
+        role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list">
+    </div>
+    <ul id="palette-list" class="palette-list min-h-0 flex-1 overflow-y-auto py-2" role="listbox" aria-label="Results"></ul>
+    <div class="flex gap-5 border-t border-line px-[2ch] py-2 text-xs text-faint">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="keys" class="dialog" aria-label="Keyboard shortcuts">
+  <div class="pane is-active">
+    <span class="pane-title">keys</span>
+    <div class="pane-body px-[2ch] pt-5 pb-4">
+      <p class="mb-3 text-muted">The same keys as sot, where they make sense.</p>
+      <div class="table-wrap">
+        <table>
+          <tbody>
+            <tr><td><kbd>/</kbd> <kbd>Ctrl+K</kbd></td><td>Search, jump to a page or switch theme</td></tr>
+            <tr><td><kbd>1</kbd>-<kbd>6</kbd></td><td>Switch section (the windows in the status bar)</td></tr>
+            <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Previous / next page</td></tr>
+            <tr><td><kbd>j</kbd> <kbd>k</kbd></td><td>Scroll down / up</td></tr>
+            <tr><td><kbd>Ctrl+D</kbd> <kbd>Ctrl+U</kbd></td><td>Half a page down / up</td></tr>
+            <tr><td><kbd>g</kbd> <kbd>G</kbd></td><td>Top / bottom</td></tr>
+            <tr><td><kbd>t</kbd></td><td>Switch between light and dark</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Show these keys</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Close</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</dialog>

@@ -336,6 +336,17 @@ The man page is packaged in:
 
 See `HOMEBREW_MANPAGE.md` for Homebrew-specific installation details.
 
+## 📚 Docs Site
+
+The docs at [anistark.github.io/sot](https://anistark.github.io/sot/) are built with [Eleventy](https://www.11ty.dev/), Tailwind CSS and TypeScript from `docs/`, and published to GitHub Pages by `.github/workflows/docs.yml` on every push to `main`. You need Node.js 22.18 or newer (`docs/.nvmrc` pins the version CI uses).
+
+```sh
+just docs-dev      # serve with live reload at http://localhost:8080/sot/
+just docs-build    # build into docs/_site, as CI does
+```
+
+Pages are Markdown in `docs/src/`. The `--help` output, the key bindings table and the config template are not written by hand: `scripts/build_docs_data.py` reads them from sot (`build_parser()`, the keymap and `EXAMPLE`) into `docs/src/_data/sot.json`, so changing a flag or a binding updates the docs too. Each page is also published as Markdown, listed in `/llms.txt`, for agents. See `docs/README.md` for how the site fits together.
+
 ## 🏗️ Project Structure
 
 ```sh

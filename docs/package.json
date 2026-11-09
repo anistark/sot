@@ -1,0 +1,33 @@
+{
+  "name": "sot-docs",
+  "private": true,
+  "description": "The sot documentation site",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "eleventy --config=eleventy.config.ts --serve",
+    "build": "eleventy --config=eleventy.config.ts",
+    "check": "tsc -p tsconfig.json && tsc -p src/assets/ts/tsconfig.json"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.1.8",
+    "@fontsource-variable/roboto-mono": "^5.3.0",
+    "@fontsource/roboto-mono": "^5.3.0",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/fontkit": "^2.0.9",
+    "@types/node": "^26.6.6",
+    "@types/prismjs": "^1.26.6",
+    "esbuild": "^0.28.2",
+    "fontkit": "^2.0.4",
+    "markdown-it": "^15.0.3",
+    "markdown-it-anchor": "^10.1.0",
+    "pagefind": "^1.6.0",
+    "postcss": "^8.5.32",
+    "prismjs": "^1.30.0",
+    "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2"
+  }
+}

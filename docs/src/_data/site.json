@@ -1,0 +1,6 @@
+{
+  "title": "sot",
+  "tagline": "Command-line system observation tool",
+  "description": "sot is a system monitor for the terminal in the spirit of top: CPU, memory, GPU, disks, network and processes in one live dashboard, plus tools to inspect your machine, benchmark disks and free up space.",
+  "repo": "https://github.com/anistark/sot"
+}
