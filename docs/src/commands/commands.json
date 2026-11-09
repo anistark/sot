@@ -1,0 +1,4 @@
+{
+  "layout": "layouts/doc.njk",
+  "window": "commands"
+}

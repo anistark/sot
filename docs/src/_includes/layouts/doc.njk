@@ -1,0 +1,21 @@
+---
+layout: layouts/base.njk
+---
+{#- Command pages first "run" `sot <cmd> --help`, then `cat` their notes. Other pages just `cat` themselves. -#}
+{%- for c in cmds %}
+{{ ("sot --help" if c == "sot" else "sot " + c + " --help") | prompt(loop.first) | safe }}
+{%- if sot.commands[c] %}
+{{ sot.commands[c].help | help | safe }}
+{%- else %}
+{% output undefined, "sot " + c + " --help" %}
+{%- endif %}
+{%- endfor %}
+{{ (command or "cat " + page.inputPath | replace("./src/", "")) | prompt(not cmds) | safe }}
+<article class="term-prose">
+  <h1>{{ title }}</h1>
+  {%- if description %}
+  <p class="lede">{{ description | mdInline | safe }}</p>
+  {%- endif %}
+  {{ content | safe }}
+</article>
+{% include "partials/next.njk" %}

@@ -1,0 +1,895 @@
+@import "tailwindcss";
+
+/* Roboto Mono, served with the site. Box-drawing, block and arrow glyphs fall back to the system monospace font. */
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("fonts/roboto-mono-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("fonts/roboto-mono-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Roboto Mono";
+  font-style: italic;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url("fonts/roboto-mono-latin-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F;
+}
+
+@theme {
+  --font-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --font-sans: var(--font-mono);
+}
+
+/* Utilities follow the active theme: bg-bg, text-accent, border-line, ... */
+@theme inline {
+  --color-backdrop: var(--backdrop);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-fg: var(--fg);
+  --color-strong: var(--strong);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-heading: var(--heading);
+  --color-link: var(--link);
+  --color-flag: var(--flag);
+  --color-key: var(--key);
+  --color-ok: var(--ok);
+  --color-sel: var(--sel);
+}
+
+/* ── Themes ─────────────────────────────────────────────────────────────
+   Light is Cappuccino, a warm reading palette: cream paper, espresso text,
+   cinnamon and caramel accents. Dark is Tokyo Night. The page follows the
+   system setting; data-theme="light" or "dark" (the `t` key) overrides it.
+   light-dark() picks the first value in light mode, the second in dark. */
+
+:root {
+  color-scheme: light dark;
+  --backdrop: light-dark(#e6d8c3, #101014);
+  --bg: light-dark(#f7f0e4, #1a1b26);
+  --surface: light-dark(#f0e6d5, #16161e);
+  --raised: light-dark(#e7d9c4, #292e42);
+  --fg: light-dark(#4a3a2c, #a9b1d6);
+  --strong: light-dark(#2b1e14, #c0caf5);
+  --muted: light-dark(#7d6a58, #737aa2);
+  --faint: light-dark(#b09c86, #545c7e);
+  --line: light-dark(#e2d4bf, #292e42);
+  --accent: light-dark(#b4532a, #7aa2f7);
+  --heading: light-dark(#6f4e37, #bb9af7);
+  --link: light-dark(#2e6b6e, #7dcfff);
+  --flag: light-dark(#9a6a12, #e0af68);
+  --key: light-dark(#8e4162, #ff9e64);
+  --ok: light-dark(#5f7a3a, #9ece6a);
+  --sel: light-dark(rgb(180 83 42 / 0.1), rgb(122 162 247 / 0.14));
+  --grad-a: light-dark(#6f4e37, #7aa2f7);
+  --grad-b: light-dark(#b4532a, #7dcfff);
+  --grad-c: light-dark(#c8913e, #bb9af7);
+  --shadow: light-dark(0 30px 70px -28px rgb(74 58 44 / 0.4), 0 30px 80px -24px rgb(0 0 0 / 0.7));
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────── */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background:
+      radial-gradient(60rem 40rem at 10% -10%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%),
+      radial-gradient(50rem 40rem at 110% 110%, color-mix(in oklab, var(--heading) 10%, transparent), transparent 70%),
+      var(--backdrop);
+    background-attachment: fixed;
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.7;
+    font-feature-settings: "liga" 0, "calt" 0;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+    color: var(--strong);
+  }
+  :focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--faint) transparent;
+  }
+}
+
+/* ── Window, panes and bars ───────────────────────────────────────────── */
+
+@layer components {
+  .window {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    background: var(--bg);
+  }
+  @media (width >= 64rem) {
+    .window {
+      height: calc(100dvh - 2rem);
+      min-height: 0;
+      margin: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+  }
+
+  .titlebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 2.5rem;
+    padding: 0 0.875rem;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in oklab, var(--surface) 85%, transparent);
+    backdrop-filter: blur(10px);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .dots {
+    display: flex;
+    gap: 0.45rem;
+  }
+  .dots i {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    background: var(--key);
+  }
+  .dots i:nth-child(2) {
+    background: var(--flag);
+  }
+  .dots i:nth-child(3) {
+    background: var(--accent);
+  }
+
+  .pane {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    transition: border-color 150ms;
+  }
+  .pane.is-active {
+    border-color: color-mix(in oklab, var(--accent) 65%, transparent);
+  }
+  .pane-title,
+  .pane-sub {
+    position: absolute;
+    z-index: 2;
+    max-width: calc(100% - 2rem);
+    padding: 0 0.6ch;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .pane-title {
+    top: 0;
+    left: 0.875rem;
+    transform: translateY(-50%);
+  }
+  .pane-sub {
+    right: 0.875rem;
+    bottom: 0;
+    transform: translateY(50%);
+  }
+  .pane.is-active > .pane-title {
+    color: var(--accent);
+  }
+  .pane-body {
+    height: 100%;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .panes {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .pane-tree,
+  .pane-outline {
+    display: none;
+  }
+  @media (width >= 64rem) {
+    .panes {
+      display: grid;
+      grid-template-columns: 15.5rem minmax(0, 1fr);
+      gap: 0.75rem;
+      padding: 1.1rem 0.75rem 0.9rem;
+    }
+    .pane-tree {
+      display: block;
+    }
+  }
+  @media (width >= 80rem) {
+    .panes {
+      grid-template-columns: 15.5rem minmax(0, 1fr) 15rem;
+    }
+    .pane-outline {
+      display: block;
+    }
+  }
+  /* Phones and tablets: one pane, the page scrolls, the tree opens over it. */
+  @media (width < 64rem) {
+    .pane-main {
+      flex: 1;
+      border: 0;
+      border-radius: 0;
+    }
+    .pane-main > .pane-title,
+    .pane-main > .pane-sub {
+      display: none;
+    }
+    .pane-main > .pane-body {
+      height: auto;
+      overflow: visible;
+    }
+    .pane-tree.is-open {
+      display: block;
+      position: fixed;
+      inset: 3.25rem 0.75rem 2.6rem;
+      z-index: 40;
+      box-shadow: var(--shadow);
+    }
+  }
+
+  .statusbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: stretch;
+    height: 1.875rem;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    font-size: 0.75rem;
+    line-height: 1.875rem;
+    white-space: nowrap;
+  }
+  .statusbar .session {
+    padding: 0 1.25ch;
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .statusbar .windows {
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .statusbar .windows a {
+    padding: 0 1ch;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .statusbar .windows a:hover {
+    color: var(--fg);
+    background: var(--raised);
+  }
+  .statusbar .windows a[aria-current] {
+    color: var(--accent);
+    background: var(--sel);
+    font-weight: 600;
+  }
+  .statusbar .windows a span {
+    color: var(--faint);
+  }
+  .statusbar .windows a[aria-current] span {
+    color: inherit;
+  }
+  .statusbar .right {
+    display: flex;
+    margin-left: auto;
+  }
+  .statusbar .right > * {
+    padding: 0 1.25ch;
+    color: var(--muted);
+  }
+  .statusbar .right button:hover,
+  .statusbar .right a:hover {
+    color: var(--fg);
+    background: var(--raised);
+  }
+  .statusbar .right .version {
+    background: var(--raised);
+    color: var(--fg);
+  }
+
+  /* ── File tree, drawn with borders (the web font has no box-drawing glyphs) ── */
+
+  .tree {
+    --row: 1.75rem;
+    font-size: 0.8125rem;
+    line-height: var(--row);
+  }
+  .tree ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tree li {
+    position: relative;
+    padding-left: 2.6ch;
+  }
+  .tree li::before,
+  .tree li::after {
+    content: "";
+    position: absolute;
+    left: 0.6ch;
+    border-color: var(--faint);
+  }
+  .tree li::before {
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid;
+  }
+  .tree li:last-child::before {
+    bottom: auto;
+    height: calc(var(--row) / 2);
+  }
+  .tree li::after {
+    top: calc(var(--row) / 2);
+    width: 1.5ch;
+    border-top: 1px solid;
+  }
+  .tree a {
+    display: block;
+    padding: 0 0.75ch;
+    border-radius: 3px;
+    color: var(--fg);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tree a:hover {
+    background: var(--sel);
+    color: var(--strong);
+  }
+  .tree a[aria-current="page"] {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+  }
+  .tree .dir {
+    padding-left: 0.75ch;
+    color: var(--link);
+    font-weight: 600;
+  }
+  .tree .root {
+    color: var(--muted);
+  }
+
+  /* ── Outline pane (.toc: Tailwind already owns .outline) ── */
+
+  .toc a {
+    display: block;
+    padding: 0.15rem 0 0.15rem 2ch;
+    text-indent: -2ch;
+    color: var(--muted);
+    text-decoration: none;
+    line-height: 1.5;
+  }
+  .toc a::before {
+    content: "# ";
+    color: var(--faint);
+  }
+  .toc a.lvl-3 {
+    padding-left: 4ch;
+  }
+  .toc a.lvl-3::before {
+    content: "## ";
+  }
+  .toc a:hover {
+    color: var(--fg);
+  }
+  .toc a.is-current {
+    color: var(--accent);
+  }
+  .toc a.is-current::before {
+    color: var(--accent);
+  }
+
+  /* ── Prompt lines ── */
+
+  .prompt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 1ch;
+    margin: 1.75rem 0 0.5rem;
+  }
+  .prompt:first-child {
+    margin-top: 0;
+  }
+  .prompt .cwd {
+    color: var(--link);
+    font-weight: 600;
+  }
+  .prompt .sym {
+    color: var(--accent);
+  }
+  .prompt .cmd {
+    color: var(--strong);
+    font-weight: 500;
+  }
+  .prompt.typed .cmd {
+    width: calc(var(--n) * 1ch);
+    overflow: hidden;
+    white-space: nowrap;
+    animation: typing min(calc(var(--n) * 30ms), 650ms) steps(var(--n), end) both;
+  }
+  .cursor {
+    display: inline-block;
+    width: 1ch;
+    height: 1.2em;
+    margin-left: 0.25ch;
+    vertical-align: -0.2em;
+    background: var(--accent);
+    animation: blink 1.1s steps(1) infinite;
+  }
+  .ghost {
+    color: var(--faint);
+    text-decoration: none;
+  }
+  a.ghost:hover {
+    color: var(--muted);
+  }
+
+  /* ── Command output ── */
+
+  .term-output {
+    margin: 0 0 1rem;
+    overflow-x: auto;
+    color: var(--fg);
+    line-height: 1.6;
+    white-space: pre;
+    font-family: inherit;
+  }
+  .term-output.missing {
+    color: var(--key);
+    white-space: pre-wrap;
+  }
+  .help .head {
+    color: var(--heading);
+    font-weight: 700;
+  }
+  .help .prog {
+    color: var(--accent);
+  }
+  .help .flag {
+    color: var(--flag);
+  }
+  .help .meta {
+    color: var(--key);
+  }
+  .help .choice {
+    color: var(--link);
+  }
+
+  /* ── Boxes (Rich-style panels inside the page) ── */
+
+  .box {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.5rem 2ch 1.25rem;
+  }
+  .box-title {
+    position: absolute;
+    top: 0;
+    left: 1.5ch;
+    transform: translateY(-50%);
+    padding: 0 0.6ch;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .logo {
+    height: 3.6rem;
+    width: auto;
+  }
+  .home > p:first-child > strong:first-child,
+  .gradient-text {
+    background: linear-gradient(90deg, var(--grad-a), var(--grad-b), var(--grad-c));
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ── Prose: Markdown, the way a terminal Markdown viewer draws it ── */
+
+  .term-prose {
+    max-width: 94ch;
+  }
+  .term-prose > * + * {
+    margin-top: 1rem;
+  }
+  .term-prose h1 {
+    color: var(--strong);
+    font-weight: 700;
+  }
+  .term-prose h1::before {
+    content: "# ";
+    color: var(--heading);
+  }
+  .term-prose .lede {
+    color: var(--muted);
+  }
+  .term-prose h2 {
+    margin-top: 2.5rem;
+    color: var(--heading);
+    font-weight: 700;
+  }
+  .term-prose h3 {
+    margin-top: 2rem;
+    color: var(--strong);
+    font-weight: 600;
+  }
+  .term-prose h2,
+  .term-prose h3 {
+    scroll-margin-top: 1.5rem;
+  }
+  .term-prose .header-anchor {
+    color: color-mix(in oklab, var(--heading) 55%, transparent);
+    text-decoration: none;
+  }
+  .term-prose h3 .header-anchor {
+    color: var(--faint);
+  }
+  .term-prose h2 > .header-anchor::before {
+    content: "##";
+  }
+  .term-prose h3 > .header-anchor::before {
+    content: "###";
+  }
+  .term-prose .header-anchor:hover {
+    color: var(--accent);
+  }
+  .term-prose a:not(.header-anchor, .card) {
+    color: var(--link);
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+  }
+  .term-prose a:not(.header-anchor, .card):hover {
+    text-decoration-style: solid;
+  }
+  .term-prose a.external::after {
+    content: "↗";
+    margin-left: 0.2ch;
+    font-size: 0.8em;
+    color: var(--muted);
+  }
+  .term-prose strong {
+    color: var(--strong);
+    font-weight: 700;
+  }
+  .term-prose :not(pre) > code {
+    padding: 0.1em 0.45ch;
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--flag);
+    font-size: 0.95em;
+  }
+  .term-prose ul > li,
+  .term-prose ol > li {
+    position: relative;
+    padding-left: 2.5ch;
+  }
+  .term-prose li + li {
+    margin-top: 0.35rem;
+  }
+  .term-prose ul > li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5ch;
+    color: var(--accent);
+  }
+  .term-prose ul ul > li::before {
+    content: "-";
+    color: var(--muted);
+  }
+  .term-prose ul ul,
+  .term-prose ol ul {
+    margin-top: 0.35rem;
+  }
+  .term-prose ol {
+    counter-reset: item;
+  }
+  .term-prose ol > li {
+    counter-increment: item;
+    padding-left: 3.5ch;
+  }
+  .term-prose ol > li::before {
+    content: counter(item) ".";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+  .term-prose blockquote {
+    padding-left: 2ch;
+    border-left: 2px solid var(--faint);
+    color: var(--muted);
+  }
+  .term-prose hr {
+    margin: 2.5rem 0;
+    border: 0;
+    border-top: 1px dashed var(--line);
+  }
+  .term-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+  }
+  .term-prose details {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.5rem 2ch;
+  }
+  .term-prose details[open] {
+    padding-bottom: 1rem;
+  }
+  .term-prose summary {
+    cursor: pointer;
+    list-style: none;
+    color: var(--strong);
+  }
+  .term-prose summary::-webkit-details-marker {
+    display: none;
+  }
+  .term-prose summary::before {
+    content: "[+] ";
+    color: var(--accent);
+  }
+  .term-prose details[open] > summary {
+    margin-bottom: 0.75rem;
+  }
+  .term-prose details[open] > summary::before {
+    content: "[-] ";
+  }
+  .term-prose details > * + * {
+    margin-top: 1rem;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .table-wrap th {
+    padding: 0.45rem 1.5ch;
+    background: var(--surface);
+    color: var(--heading);
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .table-wrap td {
+    padding: 0.45rem 1.5ch;
+    border-top: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .table-wrap tbody tr:hover {
+    background: var(--sel);
+  }
+  .table-wrap td:first-child {
+    white-space: nowrap;
+  }
+
+  kbd {
+    display: inline-block;
+    min-width: 2.2ch;
+    padding: 0 0.6ch;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--key);
+    font-family: inherit;
+    font-size: 0.85em;
+    line-height: 1.6;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* ── Code examples: a small framed panel ── */
+
+  .term-block {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .term-block figcaption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.2rem 1.5ch;
+    border-bottom: 1px solid var(--line);
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+  .term-block .copy {
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .term-block .copy:hover {
+    color: var(--accent);
+  }
+  .term-block .copy.done {
+    color: var(--ok);
+  }
+  .term-block pre {
+    padding: 0.85rem 2ch;
+    overflow-x: auto;
+    line-height: 1.65;
+  }
+  .term-block .line.cmd::before {
+    content: "$ ";
+    color: var(--accent);
+    user-select: none;
+  }
+  .token.comment {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .token.command,
+  .token.function,
+  .token.builtin {
+    color: var(--accent);
+  }
+  .token.parameter {
+    color: var(--flag);
+  }
+  .token.string {
+    color: var(--ok);
+  }
+  .token.operator,
+  .token.punctuation {
+    color: var(--muted);
+  }
+  .token.property,
+  .token.key {
+    color: var(--link);
+  }
+  .token.table {
+    color: var(--heading);
+    font-weight: 600;
+  }
+  .token.number,
+  .token.boolean {
+    color: var(--key);
+  }
+
+  /* ── Home ── */
+
+  .card {
+    display: block;
+    padding: 0.85rem 1.5ch;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--fg);
+    text-decoration: none;
+    transition:
+      border-color 150ms,
+      background 150ms;
+  }
+  .card:hover {
+    border-color: color-mix(in oklab, var(--accent) 65%, transparent);
+    background: var(--sel);
+  }
+
+  /* ── Dialogs: command palette and key help ── */
+
+  .dialog {
+    width: min(42rem, calc(100vw - 2rem));
+    max-height: min(32rem, calc(100dvh - 4rem));
+    margin: 12dvh auto auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    overflow: visible;
+  }
+  .dialog::backdrop {
+    background: color-mix(in oklab, var(--backdrop) 70%, transparent);
+    backdrop-filter: blur(3px);
+  }
+  .dialog > .pane {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+    box-shadow: var(--shadow);
+  }
+  .palette-list [aria-selected="true"] {
+    background: var(--sel);
+  }
+  .palette-list [aria-selected="true"] .label {
+    color: var(--accent);
+  }
+  .palette-list mark {
+    background: none;
+    color: var(--flag);
+  }
+
+  .skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -3rem;
+    z-index: 50;
+    padding: 0.25rem 1ch;
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .skip-link:focus {
+    top: 0.5rem;
+  }
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt.typed .cmd,
+  .cursor {
+    animation: none;
+  }
+}

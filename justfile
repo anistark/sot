@@ -59,6 +59,19 @@ build-man:
 	uv run python scripts/build_manpage.py
 	@echo "✅ Man page built successfully!"
 
+# Docs site (docs/, Eleventy): data generated from sot, then the site
+docs-data:
+	@echo "📚 Generating docs data from sot..."
+	uv run python scripts/build_docs_data.py
+
+docs-dev: docs-data
+	@echo "📚 Serving the docs on localhost and your network (LAN, Tailscale) ..."
+	cd docs && npm install && npm run dev
+
+docs-build: docs-data
+	@echo "📚 Building the docs into docs/_site..."
+	cd docs && npm ci && npm run check && npm run build
+
 # Redraw the README's PyPI download stats
 stats:
 	@echo "📊 Drawing PyPI download stats..."
@@ -178,6 +191,8 @@ help:
 	@echo ""
 	@echo "Installation:"
 	@echo "  just build-man              - Build man page"
+	@echo "  just docs-dev               - Serve the docs with live reload, on your network too"
+	@echo "  just docs-build             - Build the docs site into docs/_site"
 	@echo "  just build                  - Build SOT locally (includes man page)"
 	@echo "  just install                - Install SOT system-wide"
 	@echo "  just uninstall              - Uninstall SOT from system and local"

@@ -1,0 +1,97 @@
+{
+  "windows": [
+    {
+      "name": "readme",
+      "url": "/"
+    },
+    {
+      "name": "install",
+      "url": "/install/"
+    },
+    {
+      "name": "usage",
+      "url": "/usage/"
+    },
+    {
+      "name": "commands",
+      "url": "/commands/"
+    },
+    {
+      "name": "config",
+      "url": "/configuration/"
+    },
+    {
+      "name": "changelog",
+      "url": "/changelog/"
+    }
+  ],
+  "tree": [
+    {
+      "title": "README",
+      "url": "/",
+      "command": "cat README.md"
+    },
+    {
+      "title": "install",
+      "url": "/install/"
+    },
+    {
+      "title": "usage",
+      "url": "/usage/"
+    },
+    {
+      "title": "keys",
+      "url": "/keys/"
+    },
+    {
+      "dir": "commands",
+      "children": [
+        {
+          "title": "sot",
+          "url": "/commands/",
+          "command": "sot --help"
+        },
+        {
+          "title": "ps",
+          "url": "/commands/ps/",
+          "command": "sot ps --help"
+        },
+        {
+          "title": "disk",
+          "url": "/commands/disk/",
+          "command": "sot disk --help"
+        },
+        {
+          "title": "info",
+          "url": "/commands/info/",
+          "command": "sot info --help"
+        },
+        {
+          "title": "bench",
+          "url": "/commands/bench/",
+          "command": "sot bench --help"
+        },
+        {
+          "title": "clean",
+          "url": "/commands/clean/",
+          "command": "sot clean --help"
+        },
+        {
+          "title": "update",
+          "url": "/commands/update/",
+          "command": "sot update --help"
+        }
+      ]
+    },
+    {
+      "title": "configuration",
+      "url": "/configuration/"
+    },
+    {
+      "title": "changelog",
+      "url": "/changelog/",
+      "command": "cat CHANGELOG.md",
+      "optional": true
+    }
+  ]
+}

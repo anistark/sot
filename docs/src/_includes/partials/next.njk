@@ -1,0 +1,12 @@
+{%- set n = nav.tree | neighbours(page.url) %}
+<div class="mt-14" data-pagefind-ignore>
+  <div class="prompt">
+    <span class="cwd">~/sot</span><span class="sym" aria-hidden="true">❯</span>
+    <span><span class="cursor" aria-hidden="true"></span>{% if n.next %}<a class="ghost" href="{{ n.next.url }}" rel="next" aria-label="Next page: {{ n.next.title }}">{{ n.next | itemCommand }}</a>{% endif %}</span>
+  </div>
+  <p class="mt-1 flex flex-wrap gap-x-4 text-xs text-faint">
+    {%- if n.prev %}<a href="{{ n.prev.url }}" rel="prev" class="hover:text-fg"># prev: <span class="text-muted">{{ n.prev | itemCommand }}</span></a>{% endif %}
+    {%- if n.next %}<a href="{{ n.next.url }}" class="hover:text-fg"># next: <span class="text-muted">{{ n.next | itemCommand }}</span></a>{% endif %}
+    <span class="hidden md:inline"># keys: <kbd>[</kbd> <kbd>]</kbd></span>
+  </p>
+</div>

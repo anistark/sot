@@ -78,7 +78,7 @@ exclude = [
 Code = "https://github.com/anistark/sot"
 Issues = "https://github.com/anistark/sot/issues"
 Homepage = "https://github.com/anistark/sot"
-Documentation = "https://github.com/anistark/sot#readme"
+Documentation = "https://anistark.github.io/sot/"
 
 [project.scripts]
 sot = "sot._app:run"
