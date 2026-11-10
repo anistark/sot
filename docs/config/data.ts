@@ -48,7 +48,6 @@ export interface SotData {
   keys: Binding[];
   config_example: string;
   themes: string[];
-  logos: Record<string, string[]>;
 }
 
 export interface Overview {

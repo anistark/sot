@@ -47,7 +47,7 @@
       <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
       <button type="button" id="tree-toggle" class="lg:hidden hover:text-fg" aria-controls="tree" aria-expanded="false">[tree]</button>
       <div class="min-w-0 flex-1 truncate text-center">
-        <span class="text-link">~/sot/docs</span>{% if page.url != "/" %}<span class="text-fg">{{ page.url | replace(r/\/$/, "") }}</span>{% endif %}<span class="hidden sm:inline text-faint"> — zsh</span>
+        {% mark "mark-title", "mr-[1ch] inline-block size-3.5 align-[-0.15rem] text-strong" %}<span class="text-link">~/sot/docs</span>{% if page.url != "/" %}<span class="text-fg">{{ page.url | replace(r/\/$/, "") }}</span>{% endif %}<span class="hidden sm:inline text-faint"> — zsh</span>
       </div>
       <button type="button" data-open="palette" class="flex h-6 items-center gap-2 rounded-md border border-line px-2 hover:border-faint hover:text-fg">
         <span>search</span><kbd class="hidden sm:inline-block">/</kbd>

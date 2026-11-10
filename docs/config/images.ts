@@ -1,6 +1,7 @@
 /**
- * Icons and the social preview image, drawn from sot's own logo in the Tokyo
- * Night palette: favicon.svg, favicon.ico, apple-touch-icon.png and og.png.
+ * Icons and the social preview image, drawn from sot's mark (images/sot.png,
+ * traced in brand.ts): favicon.svg, favicon.ico, apple-touch-icon.png and the
+ * Tokyo Night og.png.
  *
  * Text is set in Roboto Mono by turning glyphs into SVG paths (fontkit), so
  * the image looks the same on every machine, with no system fonts involved.
@@ -9,8 +10,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as fontkit from "fontkit";
 import sharp from "sharp";
+import { MARK, markShapes, markSvg, markWaves } from "./brand.ts";
 import { DOCS_ROOT, sotData } from "./data.ts";
-import { logoGeometry, logoRects } from "./terminal.ts";
 
 // Tokyo Night.
 const C = {
@@ -69,37 +70,29 @@ function chevron(x: number, y: number, size: number, stroke: string): string {
   return `<path d="M${x} ${y - h * 2}l${h} ${h}l${-h} ${h}" fill="none" stroke="${stroke}" stroke-width="${size * 0.1}" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
-function gradient(id: string, width: number): string {
-  return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${width}" y2="0"><stop offset="0" stop-color="${C.blue}"/><stop offset=".5" stop-color="${C.cyan}"/><stop offset="1" stop-color="${C.magenta}"/></linearGradient>`;
+/** The mark at `size` pixels, its top-left corner at (x, y), inside a larger SVG. */
+function placeMark(id: string, x: number, y: number, size: number, fill: string): string {
+  const { square } = MARK;
+  const k = size / square.size;
+  const { defs, body } = markShapes(id, { fill });
+  return `<defs>${defs}</defs><g transform="translate(${x - square.x * k} ${y - square.y * k}) scale(${k})">${body}</g>`;
 }
 
-/** The sot logo, scaled to `width` and centred in a square tile. */
-function iconSvg(lines: string[], size: number, radius: number): string {
-  const logo = logoGeometry(lines);
-  const pad = size * 0.12;
-  const scale = (size - pad * 2) / logo.width;
-  const y = (size - logo.height * scale) / 2;
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">`,
-    `<defs>${gradient("g", logo.width)}</defs>`,
-    `<rect width="${size}" height="${size}" rx="${radius}" fill="${C.bg}"/>`,
-    `<g transform="translate(${pad} ${y}) scale(${scale})" fill="url(#g)" shape-rendering="crispEdges">${logoRects(logo)}</g>`,
-    `</svg>`,
-  ].join("");
+/** iOS rounds the corners and wants no transparency: a full-bleed square with opaque waves. */
+function touchIconSvg(size: number): string {
+  const { square: s } = MARK;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${s.x} ${s.y} ${s.size} ${s.size}" width="${size}" height="${size}"><rect x="${s.x}" y="${s.y}" width="${s.size}" height="${s.size}" fill="#000"/>${markWaves("#fff")}</svg>`;
 }
 
 /** 1200×630 social preview: a terminal window running `sot --version`. */
-function ogSvg(lines: string[], version: string): string {
+function ogSvg(version: string): string {
   const W = 1200;
   const H = 630;
   const win = { x: 56, y: 56, w: W - 112, h: H - 112 };
-  const logo = logoGeometry(lines);
-  const unit = 11;
   const parts: string[] = [];
 
   parts.push(
     `<defs>`,
-    gradient("logo", logo.width),
     `<radialGradient id="glowA" cx="0.12" cy="0.05" r="0.6"><stop offset="0" stop-color="${C.blue}" stop-opacity="0.22"/><stop offset="1" stop-color="${C.blue}" stop-opacity="0"/></radialGradient>`,
     `<radialGradient id="glowB" cx="0.95" cy="1" r="0.6"><stop offset="0" stop-color="${C.magenta}" stop-opacity="0.2"/><stop offset="1" stop-color="${C.magenta}" stop-opacity="0"/></radialGradient>`,
     `<clipPath id="win"><rect x="${win.x}" y="${win.y}" width="${win.w}" height="${win.h}" rx="18"/></clipPath>`,
@@ -127,19 +120,19 @@ function ogSvg(lines: string[], version: string): string {
   };
   promptLine(win.y + 128, "sot --version");
 
-  // The logo, then what sot is.
-  const logoY = win.y + 166;
-  parts.push(
-    `<g transform="translate(${px} ${logoY}) scale(${unit})" fill="url(#logo)" shape-rendering="crispEdges">${logoRects(logo)}</g>`,
-  );
-  const tx = px + logo.width * unit + 64;
-  parts.push(text("System Observation Tool", tx, logoY + 44, 34, C.fg, 700).svg);
-  parts.push(text("A system monitor for the terminal,", tx, logoY + 90, 24, C.fgDark).svg);
-  parts.push(text("in the spirit of top.", tx, logoY + 124, 24, C.fgDark).svg);
+  // The mark, then what sot is.
+  const markY = win.y + 162;
+  const markSize = 150;
+  parts.push(placeMark("mark", px, markY, markSize, C.fg));
+  const tx = px + markSize + 56;
+  parts.push(text("sot", tx, markY + 56, 60, C.fg, 700).svg);
+  parts.push(text("System Observation Tool", tx, markY + 100, 28, C.blue, 700).svg);
+  parts.push(text("A system monitor for the terminal,", tx, markY + 140, 24, C.fgDark).svg);
+  parts.push(text("in the spirit of top.", tx, markY + 172, 24, C.fgDark).svg);
 
   // ~/sot ❯ uv tool install sot █
-  const end = promptLine(win.y + 382, "uv tool install sot");
-  parts.push(`<rect x="${end + 10}" y="${win.y + 360}" width="15" height="28" fill="${C.blue}"/>`);
+  const end = promptLine(win.y + 408, "uv tool install sot");
+  parts.push(`<rect x="${end + 10}" y="${win.y + 386}" width="15" height="28" fill="${C.blue}"/>`);
 
   // tmux status bar.
   const sy = win.y + win.h - 44;
@@ -188,21 +181,22 @@ const png = (svg: string, size?: number) => {
 let lastKey = "";
 
 export async function buildImages(outputDir: string): Promise<void> {
-  const data = sotData();
-  const lines = data?.logos.classic;
-  if (!lines) return;
-  const key = JSON.stringify([lines, data.version]);
-  if (key === lastKey) return;
+  const version = sotData()?.version ?? "dev";
+  if (version === lastKey) return;
 
-  const favicon = iconSvg(lines, 64, 14);
-  // iOS rounds the corners itself, so the touch icon is a full square.
-  const touch = iconSvg(lines, 180, 0);
+  // Black like images/sot.png, white on a dark browser theme.
+  const favicon = markSvg({
+    id: "m",
+    squareClass: "sq",
+    head: "<style>.sq{fill:#000}@media (prefers-color-scheme:dark){.sq{fill:#fff}}</style>",
+  });
+  const icoMark = (size: number) => markSvg({ id: "m", fill: "#000", size });
   const [ico16, ico32, ico48, touchPng, og] = await Promise.all([
-    png(favicon, 16),
-    png(favicon, 32),
-    png(favicon, 48),
-    png(touch, 180),
-    sharp(Buffer.from(ogSvg(lines, data.version))).png({ compressionLevel: 9 }).toBuffer(),
+    png(icoMark(16), 16),
+    png(icoMark(32), 32),
+    png(icoMark(48), 48),
+    png(touchIconSvg(180), 180),
+    sharp(Buffer.from(ogSvg(version))).png({ compressionLevel: 9 }).toBuffer(),
   ]);
 
   await mkdir(outputDir, { recursive: true });
@@ -219,5 +213,5 @@ export async function buildImages(outputDir: string): Promise<void> {
     writeFile(path.join(outputDir, "apple-touch-icon.png"), touchPng),
     writeFile(path.join(outputDir, "og.png"), og),
   ]);
-  lastKey = key;
+  lastKey = version;
 }

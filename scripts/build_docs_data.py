@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from sot.__about__ import __version__  # noqa: E402
 from sot._app import build_parser  # noqa: E402
 from sot._config import EXAMPLE  # noqa: E402
-from sot._theme import CLASSIC_LOGO, CYBER_LOGO, THEMES  # noqa: E402
+from sot._theme import THEMES  # noqa: E402
 from sot.tui.keymap import all_bindings  # noqa: E402
 
 
@@ -99,7 +99,6 @@ def build() -> dict:
         "keys": keys,
         "config_example": EXAMPLE.rstrip(),
         "themes": list(THEMES),
-        "logos": {"classic": list(CLASSIC_LOGO), "cyberpunk": list(CYBER_LOGO)},
     }
 
 

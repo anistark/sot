@@ -29,10 +29,11 @@ docs/
 ├── config/
 │   ├── data.ts            the nav, site and sot data every part reads
 │   ├── markdown.ts        markdown-it: heading anchors, framed code blocks, $ prompts
-│   ├── terminal.ts        prompts, coloured --help output, key caps, the logo, outline
+│   ├── terminal.ts        prompts, coloured --help output, key caps, outline
+│   ├── brand.ts           sot's ≈ mark, traced from images/sot.png
 │   ├── llms.ts            llms.txt, llms-full.txt and each page as Markdown
 │   ├── seo.ts             schema.org structured data
-│   ├── images.ts          favicons and the social preview image, from sot's logo
+│   ├── images.ts          favicons and the social preview image, from the mark
 │   └── assets.ts          Tailwind (PostCSS), esbuild and Pagefind, run inside Eleventy
 └── src/
     ├── _data/
@@ -55,6 +56,6 @@ docs/
 - **Themes**: light is Cappuccino, a warm reading palette (cream paper, espresso text, cinnamon and caramel), and dark is [Tokyo Night](https://github.com/folke/tokyonight.nvim). The site follows the system setting; `t` or the status bar switches, and the search palette has `theme system` to go back. The colours are CSS variables at the top of `main.css`, one `light-dark()` pair each.
 - **For agents**: every page also exists as Markdown at its URL + `index.html.md` (`/commands/clean/index.html.md`), listed in `/llms.txt` ([llmstxt.org](https://llmstxt.org)) with all of them in `/llms-full.txt`. They're built from the same page sources, so a new shortcode needs a Markdown version in `config/llms.ts`; the build fails until it has one.
 - **Search engines**: canonical URLs, Open Graph and Twitter cards, schema.org data (`SoftwareApplication` on the home page, `TechArticle` and breadcrumbs elsewhere), `sitemap.xml` and `robots.txt`. Crawlers only read `robots.txt` at a domain's root, so under `anistark.github.io/sot/` it only takes effect once the site has its own domain; until then, submit `sitemap.xml` in Google Search Console.
-- **Icons and preview image**: `favicon.svg`, `favicon.ico`, `apple-touch-icon.png` and the 1200×630 `og.png` are drawn at build time from sot's logo in the Tokyo Night palette, with sharp. The preview's text is Roboto Mono turned into paths with fontkit, so it renders the same on any machine.
-- **Fonts**: Roboto Mono, served with the site. It has no box-drawing or block glyphs, so the file tree is drawn with CSS borders and sot's logo is drawn as SVG from the same characters the app prints.
+- **Logo and icons**: sot's ≈ mark (`images/sot.png`) is traced into `config/brand.ts` as an SVG with the waves cut out, so the page shows through them as in the PNG. The site uses it in the title bar and on the home page, and `favicon.svg` (white on dark browser themes), `favicon.ico`, `apple-touch-icon.png` and the 1200×630 Tokyo Night `og.png` are drawn from it at build time with sharp. The preview's text is Roboto Mono turned into paths with fontkit, so it renders the same on any machine.
+- **Fonts**: Roboto Mono, served with the site. It has no box-drawing glyphs, so the file tree is drawn with CSS borders.
 - **Base path**: the site lives under `/sot/` on GitHub Pages. CI takes the path and URL from the repository's Pages settings, so a custom domain needs no change here; locally, set `PATH_PREFIX=/` and `SITE_URL` to try one.

@@ -1,6 +1,6 @@
 /**
  * Filters and shortcodes that draw terminal pieces: prompts, `--help` output,
- * key caps, the sot logo and the page outline.
+ * key caps and the page outline.
  */
 import { type Binding, type NavEntry, type NavItem, configPathOutput, flatten, repoMarkdownSource, sotData } from "./data.ts";
 import { escapeHtml, markdown } from "./markdown.ts";
@@ -135,66 +135,6 @@ export function output(text: string | undefined, label = "this output"): string 
 
 export function missingData(what: string): string {
   return `<pre class="term-output missing">zsh: ${escapeHtml(what)}: no data. Run <code>just docs-data</code> to generate it from sot.</pre>`;
-}
-
-// Which quadrants of a character cell each block glyph fills: [top-left, top-right, bottom-left, bottom-right].
-export const QUADRANTS: Record<string, [number, number, number, number]> = {
-  "▀": [1, 1, 0, 0],
-  "▄": [0, 0, 1, 1],
-  "█": [1, 1, 1, 1],
-  "▌": [1, 0, 1, 0],
-  "▐": [0, 1, 0, 1],
-  "▖": [0, 0, 1, 0],
-  "▗": [0, 0, 0, 1],
-  "▘": [1, 0, 0, 0],
-  "▝": [0, 1, 0, 0],
-  "▙": [1, 0, 1, 1],
-  "▛": [1, 1, 1, 0],
-  "▜": [1, 1, 0, 1],
-  "▟": [0, 1, 1, 1],
-  "▚": [1, 0, 0, 1],
-  "▞": [0, 1, 1, 0],
-};
-
-export interface LogoGeometry {
-  /** Filled quadrants as [x, y] in units: a character cell is 2 units wide and 4 tall. */
-  quadrants: [number, number][];
-  width: number;
-  height: number;
-}
-
-/** Where sot's block-character logo has ink, one 1×2-unit quadrant at a time. */
-export function logoGeometry(lines: string[]): LogoGeometry {
-  const rows = lines.map((line) => [...line]);
-  const start = Math.min(...rows.map((r) => r.findIndex((c) => c.trim() !== "")).filter((i) => i >= 0));
-  const end = Math.max(...rows.map((r) => r.length - [...r].reverse().findIndex((c) => c.trim() !== "")));
-  const quadrants: [number, number][] = [];
-  rows.forEach((row, y) => {
-    row.slice(start, end).forEach((char, x) => {
-      QUADRANTS[char]?.forEach((on, i) => {
-        if (on) quadrants.push([x * 2 + (i % 2), y * 4 + Math.floor(i / 2) * 2]);
-      });
-    });
-  });
-  return { quadrants, width: (end - start) * 2, height: rows.length * 4 };
-}
-
-/** The logo's quadrants as SVG rects, slightly oversized so neighbours don't show hairline gaps. */
-export function logoRects(geometry: LogoGeometry): string {
-  return geometry.quadrants.map(([x, y]) => `<rect x="${x}" y="${y}" width="1.04" height="2.04"/>`).join("");
-}
-
-/**
- * Draw sot's block-character logo as an SVG. The web font has no block
- * glyphs, so drawing it keeps the shapes crisp and the cells square.
- */
-export function logoSvg(lines: string[] | undefined, className = "logo"): string {
-  if (!lines?.length) return "";
-  const geometry = logoGeometry(lines);
-  const id = `grad-${className.replace(/\W+/g, "-")}`;
-  // One gradient across the whole logo, not one per rect.
-  const gradient = `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${geometry.width}" y2="0"><stop offset="0" style="stop-color:var(--grad-a)"/><stop offset=".5" style="stop-color:var(--grad-b)"/><stop offset="1" style="stop-color:var(--grad-c)"/></linearGradient>`;
-  return `<svg class="${className}" viewBox="0 0 ${geometry.width} ${geometry.height}" role="img" aria-label="sot" shape-rendering="crispEdges"><defs>${gradient}</defs><g fill="url(#${id})">${logoRects(geometry)}</g></svg>`;
 }
 
 export interface OutlineEntry {

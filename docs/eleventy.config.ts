@@ -1,6 +1,7 @@
 import { HtmlBasePlugin } from "@11ty/eleventy";
 import type UserConfig from "@11ty/eleventy/UserConfig";
 import { buildCss, buildJs, buildSearch } from "./config/assets.ts";
+import { markSvg } from "./config/brand.ts";
 import { flatten, navData } from "./config/data.ts";
 import { buildImages } from "./config/images.ts";
 import { type DocPage, llmsFull, llmsTxt, pageMarkdown, plainText } from "./config/llms.ts";
@@ -12,7 +13,6 @@ import {
   itemCommand,
   keyCaps,
   keysTable,
-  logoSvg,
   neighbours,
   outline,
   output,
@@ -47,7 +47,6 @@ export default function (eleventyConfig: UserConfig) {
   eleventyConfig.addFilter("neighbours", neighbours);
   eleventyConfig.addFilter("flattenNav", flatten);
   eleventyConfig.addFilter("itemCommand", itemCommand);
-  eleventyConfig.addFilter("logo", logoSvg);
   eleventyConfig.addFilter("plainText", plainText);
   eleventyConfig.addFilter("md", (text: string) => markdown.render(text));
   eleventyConfig.addFilter("mdInline", (text: string) => markdown.renderInline(text));
@@ -61,6 +60,7 @@ export default function (eleventyConfig: UserConfig) {
   eleventyConfig.addShortcode("configTemplate", configTemplate);
   eleventyConfig.addShortcode("output", output);
   eleventyConfig.addShortcode("repoMarkdown", repoMarkdown);
+  eleventyConfig.addShortcode("mark", (id: string, className: string, label?: string) => markSvg({ id, className, label }));
   eleventyConfig.addShortcode("structuredData", function (this: { page: { url: string } }, title: string, description?: string) {
     return structuredData({ url: this.page.url, title, description }, siteUrl);
   });

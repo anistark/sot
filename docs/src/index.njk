@@ -11,7 +11,7 @@ paneTitle: sot --version
 <div class="grid max-w-[94ch] gap-x-[4ch] gap-y-5 pt-3 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
   <div class="box flex min-w-[30ch] flex-col items-center px-[3ch] pt-6 pb-5">
     <span class="box-title">System Observation Tool</span>
-    {{ sot.logos.classic | logo("logo") | safe }}
+    {% mark "mark-home", "size-24 text-strong", "sot" %}
   </div>
   <dl class="grid grid-cols-[auto_1fr] gap-x-[3ch] gap-y-1">
     <dt class="text-muted">Version:</dt><dd class="font-semibold text-ok">{{ sot.version or "dev" }}</dd>

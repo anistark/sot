@@ -532,10 +532,6 @@
     white-space: nowrap;
   }
 
-  .logo {
-    height: 3.6rem;
-    width: auto;
-  }
   .home > p:first-child > strong:first-child,
   .gradient-text {
     background: linear-gradient(90deg, var(--grad-a), var(--grad-b), var(--grad-c));
